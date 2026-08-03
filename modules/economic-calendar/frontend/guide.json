@@ -1,0 +1,265 @@
+{
+  "id": "economic-calendar",
+  "nav": {
+    "label": "Economic Calendar",
+    "icon": "CalendarClock",
+    "group": "analysis",
+    "order": 10
+  },
+  "title": "Economic Calendar API Guide",
+  "heading": "Analysis — Economic calendar",
+  "intro": [
+    "Scheduled economic releases, keyed by event and time, with the instruments each one moves. A background worker keeps the listing current and watches the minutes around a print so an actual lands as soon as it is published.",
+    "Reads never fetch — they serve what the worker last saved."
+  ],
+  "endpoints": [
+    {
+      "id": "calendar",
+      "path": "/api/v1/calendar",
+      "title": "Scheduled releases",
+      "desc": "Events in a window, filtered by instrument, currency or impact. Symbols are forgiving: gold, xauusd and XAU/USD all resolve.",
+      "params": [
+        {
+          "name": "symbol",
+          "example": "GBPUSD",
+          "level": "optional",
+          "desc": "Only events that move this instrument — both currency legs for an FX pair."
+        },
+        {
+          "name": "currency",
+          "example": "",
+          "level": "optional",
+          "desc": "Filter by currency, comma-separated: USD,EUR."
+        },
+        {
+          "name": "impact",
+          "example": "high",
+          "level": "optional",
+          "desc": "high | moderate | low, comma-separated. Most real market movers are tagged moderate."
+        },
+        {
+          "name": "range",
+          "example": "today",
+          "level": "optional",
+          "desc": "today | tomorrow | this_week."
+        },
+        {
+          "name": "hours",
+          "example": "",
+          "level": "optional",
+          "desc": "The next N hours instead of a named range."
+        },
+        {
+          "name": "days",
+          "example": "",
+          "level": "optional",
+          "desc": "The next N days."
+        },
+        {
+          "name": "limit",
+          "example": "",
+          "level": "optional",
+          "desc": "Cap the number returned (default 50)."
+        }
+      ]
+    },
+    {
+      "id": "calendar-next",
+      "path": "/api/v1/calendar/next",
+      "title": "What is due next",
+      "desc": "The next releases, soonest first — the quickest way to ask 'what is coming'.",
+      "params": [
+        {
+          "name": "symbol",
+          "example": "gold",
+          "level": "optional",
+          "desc": "Only what moves this instrument."
+        },
+        {
+          "name": "currency",
+          "example": "",
+          "level": "optional",
+          "desc": "Filter by currency."
+        },
+        {
+          "name": "limit",
+          "example": "5",
+          "level": "optional",
+          "desc": "How many (default 5)."
+        }
+      ]
+    },
+    {
+      "id": "calendar-status",
+      "path": "/api/v1/calendar/status",
+      "title": "Worker health",
+      "desc": "Is the calendar still arriving? Last fetch, how many events are held, and the last failure if there was one.",
+      "params": []
+    }
+  ],
+  "notes": [
+    "Filtering to high impact alone throws away most of a day's events — Employment Cost Index, Chicago PMI and Michigan Sentiment are all tagged moderate. high,moderate is usually what you want."
+  ],
+  "sections": [
+    {
+      "id": "week",
+      "type": "table",
+      "title": "This week's high-impact releases",
+      "sub": "What is scheduled, and what has already printed. `actual` fills in within a minute of publication.",
+      "icon": "CalendarClock",
+      "endpoint": "/api/v1/calendar",
+      "query": {
+        "impact": "high",
+        "range": "this_week"
+      },
+      "refresh_seconds": 120,
+      "rows": "events",
+      "footer": "{count} event(s) this week",
+      "columns": [
+        {
+          "key": "time",
+          "label": "Time",
+          "format": "time"
+        },
+        {
+          "key": "currency",
+          "label": "Ccy",
+          "format": "code"
+        },
+        {
+          "key": "event",
+          "label": "Event"
+        },
+        {
+          "key": "impact",
+          "label": "Impact",
+          "format": "badge"
+        },
+        {
+          "key": "actual",
+          "label": "Actual"
+        },
+        {
+          "key": "forecast",
+          "label": "Forecast",
+          "muted": true
+        },
+        {
+          "key": "previous",
+          "label": "Previous",
+          "muted": true
+        }
+      ]
+    },
+    {
+      "id": "by-instrument",
+      "type": "table",
+      "title": "Releases that move an instrument",
+      "sub": "An FX pair returns both currency legs. Symbols are forgiving — gold, xauusd and XAU/USD all resolve.",
+      "icon": "Search",
+      "endpoint": "/api/v1/calendar",
+      "inputs": [
+        {
+          "name": "symbol",
+          "label": "Instrument",
+          "default": "GBPUSD",
+          "placeholder": "GBPUSD"
+        },
+        {
+          "name": "range",
+          "label": "Window",
+          "default": "this_week",
+          "options": [
+            {
+              "value": "today",
+              "label": "today"
+            },
+            {
+              "value": "tomorrow",
+              "label": "tomorrow"
+            },
+            {
+              "value": "this_week",
+              "label": "this week"
+            },
+            {
+              "value": "next_week",
+              "label": "next week"
+            }
+          ]
+        },
+        {
+          "name": "impact",
+          "label": "Impact",
+          "default": "",
+          "options": [
+            {
+              "value": "",
+              "label": "any"
+            },
+            {
+              "value": "high",
+              "label": "high"
+            },
+            {
+              "value": "moderate",
+              "label": "moderate"
+            },
+            {
+              "value": "low",
+              "label": "low"
+            }
+          ]
+        }
+      ],
+      "submit": "Find releases",
+      "rows": "events",
+      "lead": "{count} event(s)",
+      "empty": "Nothing scheduled for that instrument in that window.",
+      "columns": [
+        {
+          "key": "time",
+          "label": "Time",
+          "format": "time"
+        },
+        {
+          "key": "currency",
+          "label": "Ccy",
+          "format": "code"
+        },
+        {
+          "key": "event",
+          "label": "Event"
+        },
+        {
+          "key": "impact",
+          "label": "Impact",
+          "format": "badge"
+        },
+        {
+          "key": "actual",
+          "label": "Actual"
+        },
+        {
+          "key": "forecast",
+          "label": "Forecast",
+          "muted": true
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "label": "Use it in an agent",
+      "to": "/analysis-agents",
+      "icon": "Bot",
+      "primary": false
+    },
+    {
+      "label": "Module Store",
+      "to": "/modules",
+      "icon": "Puzzle",
+      "primary": false
+    }
+  ]
+}

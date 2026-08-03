@@ -1,0 +1,325 @@
+{
+  "id": "news",
+  "nav": {
+    "label": "News",
+    "icon": "Newspaper",
+    "group": "analysis",
+    "order": 50
+  },
+  "title": "News API Guide",
+  "heading": "Analysis — Market news",
+  "intro": [
+    "Articles from TradingView and FXStreet, each scored for likely market impact and tagged with the instruments it is actually about — so \"gold news in the last six hours\" is one call, not a search you filter yourself.",
+    "Reads never fetch. A background fetcher polls both sources every 30–60 seconds and writes to the database; if a source starts returning nothing, /news/status says which one and how many it brought."
+  ],
+  "sections": [
+    {
+      "id": "latest",
+      "type": "list",
+      "title": "Latest news",
+      "sub": "The most recent stories, refreshed every 30 seconds.",
+      "icon": "Newspaper",
+      "endpoint": "/api/v1/news/latest",
+      "query": {
+        "limit": 8
+      },
+      "refresh_seconds": 30,
+      "rows": "articles",
+      "empty": "Nothing published recently.",
+      "status": {
+        "endpoint": "/api/v1/news/status",
+        "ok": "healthy",
+        "label_ok": "fetching",
+        "label_bad": "not fetching",
+        "error": "last_error"
+      },
+      "item": {
+        "title": "{title}",
+        "badge": "{impact}",
+        "meta": "{time} · {source} · impact {impact_score}",
+        "body": "{description}"
+      }
+    },
+    {
+      "id": "explore",
+      "type": "list",
+      "title": "Explore news",
+      "sub": "Filters combine. An instrument, an impact level and a window is usually all you need.",
+      "icon": "Search",
+      "endpoint": "/api/v1/news",
+      "query": {
+        "limit": 10
+      },
+      "inputs": [
+        {
+          "name": "symbol",
+          "label": "Instrument",
+          "default": "XAUUSD",
+          "placeholder": "gold, GBPUSD, nas100"
+        },
+        {
+          "name": "impact",
+          "label": "Impact",
+          "default": "",
+          "options": [
+            {
+              "value": "",
+              "label": "any"
+            },
+            {
+              "value": "high",
+              "label": "high"
+            },
+            {
+              "value": "medium",
+              "label": "medium"
+            },
+            {
+              "value": "low",
+              "label": "low"
+            }
+          ]
+        },
+        {
+          "name": "hours",
+          "label": "Last N hours",
+          "default": "24",
+          "placeholder": "24"
+        },
+        {
+          "name": "q",
+          "label": "Text search",
+          "default": "",
+          "placeholder": "fed, inflation…"
+        }
+      ],
+      "submit": "Search",
+      "rows": "articles",
+      "lead": "{count} article(s)",
+      "empty": "Nothing matched those filters.",
+      "item": {
+        "title": "{title}",
+        "badge": "{impact}",
+        "meta": "{time} · {source} · impact {impact_score}",
+        "body": "{description}"
+      }
+    },
+    {
+      "id": "heaviness",
+      "type": "table",
+      "title": "Today against yesterday",
+      "sub": "The sum of impact scores, not a headline count — severity and volume in one number.",
+      "icon": "Activity",
+      "endpoint": "/api/v1/news/impact",
+      "query": {
+        "range": "today"
+      },
+      "refresh_seconds": 120,
+      "rows": "top_instruments",
+      "lead": "{articles} articles · impact {impact_total} · {change.direction} than the day before ({change.impact_total_pct}%)",
+      "footer": "high {by_impact.high} · medium {by_impact.medium} · low {by_impact.low}   —   yesterday: {previous.articles} articles, impact {previous.impact_total}",
+      "empty": "Nothing published in this window.",
+      "columns": [
+        {
+          "key": "symbol",
+          "label": "Instrument",
+          "format": "code"
+        },
+        {
+          "key": "articles",
+          "label": "Articles"
+        }
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "news",
+      "path": "/api/v1/news",
+      "title": "Get news articles",
+      "desc": "Every filter combines, so you can ask directly: gold news in the last 6 hours, today's high-impact stories, or a topic search.",
+      "params": [
+        {
+          "name": "symbol",
+          "example": "XAUUSD",
+          "level": "optional",
+          "desc": "Instruments the article is about. Forgiving: gold, XAU/USD, cable, nas100 all resolve."
+        },
+        {
+          "name": "impact",
+          "example": "",
+          "level": "optional",
+          "desc": "high | medium | low (comma-separated for several)."
+        },
+        {
+          "name": "min_score",
+          "example": "",
+          "level": "optional",
+          "desc": "Floor on the 0–100 impact score."
+        },
+        {
+          "name": "hours",
+          "example": "6",
+          "level": "optional",
+          "desc": "Published in the last N hours (also minutes, days)."
+        },
+        {
+          "name": "range",
+          "example": "",
+          "level": "optional",
+          "desc": "today | yesterday | this_week | last_7_days."
+        },
+        {
+          "name": "since",
+          "example": "",
+          "level": "optional",
+          "desc": "Explicit ISO start on release time (with until)."
+        },
+        {
+          "name": "until",
+          "example": "",
+          "level": "optional",
+          "desc": "Explicit ISO end."
+        },
+        {
+          "name": "source",
+          "example": "",
+          "level": "optional",
+          "desc": "tradingview | fxstreet."
+        },
+        {
+          "name": "category",
+          "example": "",
+          "level": "optional",
+          "desc": "Forex Majors, Cryptocurrencies, Commodities, Economic Indicators…"
+        },
+        {
+          "name": "q",
+          "example": "",
+          "level": "optional",
+          "desc": "Text search over title, description and body."
+        },
+        {
+          "name": "full",
+          "example": "",
+          "level": "optional",
+          "desc": "true to include the article body and impact reasons (omitted by default)."
+        },
+        {
+          "name": "limit",
+          "example": "",
+          "level": "optional",
+          "desc": "Max articles (default 50)."
+        },
+        {
+          "name": "order",
+          "example": "",
+          "level": "optional",
+          "desc": "desc (newest first, default) or asc."
+        }
+      ]
+    },
+    {
+      "id": "news-latest",
+      "path": "/api/v1/news/latest",
+      "title": "Latest articles",
+      "desc": "The most recent stories, newest first — optionally only those about an instrument or at an impact level.",
+      "params": [
+        {
+          "name": "symbol",
+          "example": "",
+          "level": "optional",
+          "desc": "Only articles about this instrument."
+        },
+        {
+          "name": "impact",
+          "example": "",
+          "level": "optional",
+          "desc": "high | medium | low."
+        },
+        {
+          "name": "limit",
+          "example": "10",
+          "level": "optional",
+          "desc": "How many (default 10)."
+        }
+      ]
+    },
+    {
+      "id": "news-impact",
+      "path": "/api/v1/news/impact",
+      "title": "How heavy the news is",
+      "desc": "Is today busier than yesterday? Counting articles cannot say — ten filler pieces are not louder than one central-bank decision. This returns the SUM of impact scores for a period, with the counts by level and the busiest instruments, and compares it against the window of the same length immediately before, ending with a plain heavier / lighter / similar verdict.",
+      "params": [
+        {
+          "name": "range",
+          "example": "today",
+          "level": "optional",
+          "desc": "today | yesterday | this_week | last_7_days."
+        },
+        {
+          "name": "hours",
+          "example": "",
+          "level": "optional",
+          "desc": "The last N hours instead of a range."
+        },
+        {
+          "name": "days",
+          "example": "",
+          "level": "optional",
+          "desc": "The last N days instead of a range."
+        },
+        {
+          "name": "symbol",
+          "example": "",
+          "level": "optional",
+          "desc": "Only news about this instrument."
+        },
+        {
+          "name": "impact",
+          "example": "",
+          "level": "optional",
+          "desc": "high | medium | low."
+        },
+        {
+          "name": "q",
+          "example": "",
+          "level": "optional",
+          "desc": "Text search."
+        },
+        {
+          "name": "compare",
+          "example": "",
+          "level": "optional",
+          "desc": "false to skip the comparison and just measure the one window."
+        }
+      ]
+    },
+    {
+      "id": "news-status",
+      "path": "/api/v1/news/status",
+      "title": "Fetcher health",
+      "desc": "Last cycle, how many articles are stored, how many arrived last cycle PER SOURCE, and the last error from either. A source that silently returns an empty list is reported as a fault, not as a quiet day.",
+      "params": []
+    }
+  ],
+  "notes": [
+    "The impact score is computed from the article, not supplied by the source. Two outlets covering the same release will score alike; a market-moving headline and a colour piece will not.",
+    "Instrument tags are earned, not guessed from the title alone — an article about the Fed is tagged for the dollar pairs and the indices it actually moves.",
+    "\"Is today busier?\" is answered by the SUM of impact scores, and the comparison window is the same LENGTH as the one you asked for, ending where it begins. Comparing today against a fixed 24 hours would call every morning quiet."
+  ],
+  "actions": [
+    {
+      "label": "Use it in an agent",
+      "to": "/analysis-agents",
+      "icon": "Bot",
+      "primary": false
+    },
+    {
+      "label": "Module Store",
+      "to": "/modules",
+      "icon": "Puzzle",
+      "primary": false
+    }
+  ]
+}

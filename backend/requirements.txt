@@ -1,0 +1,28 @@
+# EntryStation backend — Python dependencies (pinned to the working local versions).
+# Install into a venv:  pip install -r backend/requirements.txt
+# Then once:            python -m playwright install --with-deps chromium
+
+fastapi==0.136.3
+uvicorn[standard]==0.48.0
+sse-starlette==3.4.4
+pydantic==2.13.4
+
+psycopg[binary]==3.3.4
+
+email-validator==2.3.0    # required by pydantic EmailStr fields
+
+bcrypt==5.0.0
+PyJWT==2.13.0
+cryptography==48.0.0
+
+anthropic==0.112.0
+openai==2.47.0
+
+requests==2.34.2
+curl_cffi==0.15.0
+beautifulsoup4==4.14.3
+# (lxml intentionally omitted — code uses the stdlib 'html.parser'; lxml has no
+#  wheel for Python 3.14 and building it needs extra system headers.)
+
+python-multipart==0.0.29
+playwright==1.60.0

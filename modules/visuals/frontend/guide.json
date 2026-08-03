@@ -1,0 +1,280 @@
+{
+  "id": "visuals",
+  "nav": {
+    "label": "Visuals",
+    "icon": "Image",
+    "group": "modules",
+    "order": 92
+  },
+  "title": "Visuals Guide",
+  "heading": "Visuals — the app draws instead of describing",
+  "intro": [
+    "Ask to see something and you get a picture. \"Show me the BTC chart\" draws real candles; propose a trade and the entry, stop and target are ruled across it. The assistant reaches for this on its own whenever showing beats telling.",
+    "Anything that is not a price chart is HTML the AI writes — a risk breakdown, a position summary, a comparison table — screenshotted into an image. That is the whole extensibility story: a new kind of visual is different markup, not a new feature.",
+    "Images are stored and referred to by id, never passed through the model as data. Show one in chat with its url; put one on Telegram by handing send_telegram its id."
+  ],
+  "sections": [
+    {
+      "id": "health",
+      "type": "status",
+      "title": "Can this machine draw?",
+      "sub": "Answered by actually rendering a pixel, not by trusting that a library imported.",
+      "icon": "Activity",
+      "endpoint": "/api/v1/visuals/status",
+      "refresh_seconds": 120,
+      "lead": "Renderer: {renderer}",
+      "footer": "{last_error}",
+      "status": {
+        "endpoint": "/api/v1/visuals/status",
+        "ok": "healthy",
+        "label_ok": "ready",
+        "label_bad": "cannot render",
+        "error": "last_error"
+      }
+    },
+    {
+      "id": "draw",
+      "type": "status",
+      "title": "Draw a chart",
+      "sub": "A real render off live candles — the fastest way to see what the assistant produces.",
+      "icon": "CandlestickChart",
+      "endpoint": "/api/v1/visuals/chart",
+      "inputs": [
+        {
+          "name": "symbol",
+          "label": "Instrument",
+          "default": "XAUUSD",
+          "placeholder": "gold, BTCUSD, cable"
+        },
+        {
+          "name": "timeframe",
+          "label": "Timeframe",
+          "default": "M15",
+          "options": [
+            {
+              "value": "M5",
+              "label": "M5"
+            },
+            {
+              "value": "M15",
+              "label": "M15"
+            },
+            {
+              "value": "M30",
+              "label": "M30"
+            },
+            {
+              "value": "H1",
+              "label": "H1"
+            },
+            {
+              "value": "H4",
+              "label": "H4"
+            },
+            {
+              "value": "D1",
+              "label": "D1"
+            }
+          ]
+        },
+        {
+          "name": "count",
+          "label": "Candles",
+          "default": "120",
+          "placeholder": "120"
+        }
+      ],
+      "submit": "Draw",
+      "lead": "Drawn — {bytes} bytes. Open it at {url}"
+    },
+    {
+      "id": "gallery",
+      "type": "table",
+      "title": "What you have drawn",
+      "sub": "The most recent images, newest first. The last 200 are kept.",
+      "icon": "Images",
+      "endpoint": "/api/v1/visuals",
+      "query": {
+        "limit": 12
+      },
+      "refresh_seconds": 60,
+      "rows": "visuals",
+      "empty": "Nothing drawn yet — ask the assistant to show you a chart.",
+      "columns": [
+        {
+          "key": "title",
+          "label": "Title"
+        },
+        {
+          "key": "kind",
+          "label": "Kind",
+          "format": "badge"
+        },
+        {
+          "key": "url",
+          "label": "Image",
+          "format": "code"
+        },
+        {
+          "key": "created_at",
+          "label": "Made",
+          "format": "time"
+        }
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "visuals-chart",
+      "path": "/api/v1/visuals/chart",
+      "title": "Draw a price chart",
+      "desc": "Fetches the candles itself and returns an id and a url for the PNG. Candlesticks and volume in the app's own palette, price on the right where the platforms put it. Any of entry, sl and tp given are ruled across and labelled on the price axis — and the scale is widened so a target above the highs is still on the picture.",
+      "params": [
+        {
+          "name": "symbol",
+          "example": "XAUUSD",
+          "level": "required",
+          "desc": "Forgiving: gold, nasdaq, btc, cable all resolve."
+        },
+        {
+          "name": "timeframe",
+          "example": "M15",
+          "level": "optional",
+          "desc": "M1 … W1. Default M15."
+        },
+        {
+          "name": "count",
+          "example": "120",
+          "level": "optional",
+          "desc": "How many candles (10–600). Default 120."
+        },
+        {
+          "name": "entry",
+          "example": "",
+          "level": "optional",
+          "desc": "Rule an entry line across."
+        },
+        {
+          "name": "sl",
+          "example": "",
+          "level": "optional",
+          "desc": "Rule a stop line across."
+        },
+        {
+          "name": "tp",
+          "example": "",
+          "level": "optional",
+          "desc": "Rule a target line across."
+        },
+        {
+          "name": "title",
+          "example": "",
+          "level": "optional",
+          "desc": "Heading. Defaults to SYMBOL · TIMEFRAME."
+        },
+        {
+          "name": "note",
+          "example": "",
+          "level": "optional",
+          "desc": "Small text top-right."
+        },
+        {
+          "name": "width",
+          "example": "",
+          "level": "optional",
+          "desc": "CSS pixels, 320–2000. Default 1000."
+        },
+        {
+          "name": "height",
+          "example": "",
+          "level": "optional",
+          "desc": "CSS pixels, 200–1400. Default 560."
+        },
+        {
+          "name": "account",
+          "example": "",
+          "level": "optional",
+          "desc": "Read the candles through this account rather than the active one."
+        }
+      ]
+    },
+    {
+      "id": "visuals-html",
+      "path": "/api/v1/visuals/html",
+      "title": "Screenshot your own HTML",
+      "desc": "POST {html, title?, width?, height?, full_page?}. The renderer has NO NETWORK — inline every style, use system fonts, and draw with CSS or inline SVG; an external stylesheet or font simply will not arrive. full_page (default true) lets the content decide the height, which is what a card wants and a chart does not.",
+      "params": [
+        {
+          "name": "html",
+          "example": "",
+          "level": "required",
+          "desc": "A complete standalone HTML document (body of the POST)."
+        },
+        {
+          "name": "width",
+          "example": "760",
+          "level": "optional",
+          "desc": "CSS pixels, 200–2000."
+        },
+        {
+          "name": "title",
+          "example": "",
+          "level": "optional",
+          "desc": "What to call it in your gallery."
+        }
+      ]
+    },
+    {
+      "id": "visuals-png",
+      "path": "/api/v1/visuals/{id}.png",
+      "title": "The image itself",
+      "desc": "The PNG. No API key: an <img src> cannot carry one, so the random UUID in the path is the credential — nothing else reaches it and nothing here is listed. Use /api/v1/visuals to enumerate your own.",
+      "params": []
+    },
+    {
+      "id": "visuals-list",
+      "path": "/api/v1/visuals",
+      "title": "Your images",
+      "desc": "The most recent images you have made, newest first, with their ids and urls.",
+      "params": [
+        {
+          "name": "limit",
+          "example": "30",
+          "level": "optional",
+          "desc": "How many (max 100)."
+        }
+      ]
+    },
+    {
+      "id": "visuals-status",
+      "path": "/api/v1/visuals/status",
+      "title": "Renderer health",
+      "desc": "Whether this machine can draw, proven by drawing one. If it cannot, the error names what to install.",
+      "params": []
+    }
+  ],
+  "notes": [
+    "Nothing new was installed to make this work. The app already drives a real Chromium to log you into your broker, so the same browser takes the screenshots — a second headless browser would have been 300 MB to solve a solved problem.",
+    "The renderer has no network. That is deliberate: an image of your own positions should not depend on a CDN being up. Inline everything.",
+    "One browser is kept warm and closes itself after five minutes idle. The first render costs about two seconds, later ones about a fifth of that.",
+    "Charts are drawn as plain SVG — no charting library, nothing fetched at render time. The candles come live from your account.",
+    "Images never travel through the AI as data. A 60 KB PNG is roughly 80 000 characters of base64, which would cost more than the analysis that produced it; the model handles ids, and Telegram is handed the bytes directly.",
+    "Ask for a chart on Telegram and both modules cooperate: this one draws it, and send_telegram attaches it by id.",
+    "Every image carries a small “Powered by EntryStation” line with the site address — on the chart it is drawn into the canvas, on a card it is a strip at the foot. The mark is inlined as a data URI, because a logo that had to be fetched would be a logo that vanished the first time the box was offline.",
+    "A card is cropped to its CONTENT in both directions. A screenshot only ever crops to the viewport, so markup narrower than the width you asked for used to come out with dead space down the right."
+  ],
+  "actions": [
+    {
+      "label": "Use it in an agent",
+      "to": "/analysis-agents",
+      "icon": "Bot",
+      "primary": true
+    },
+    {
+      "label": "Module Store",
+      "to": "/modules",
+      "icon": "Puzzle",
+      "primary": false
+    }
+  ]
+}

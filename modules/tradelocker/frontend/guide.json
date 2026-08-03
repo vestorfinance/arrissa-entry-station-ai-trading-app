@@ -1,0 +1,91 @@
+{
+  "id": "tradelocker",
+  "nav": {
+    "label": "TradeLocker",
+    "icon": "Landmark",
+    "group": "trade",
+    "order": 85
+  },
+  "title": "TradeLocker Module Guide",
+  "heading": "Trading — TradeLocker",
+  "intro": [
+    "This module is a broker. With it installed, every trading endpoint — /api/v1/orders, /positions, /balance, /instruments, /market/candles — acts on your TradeLocker account whenever a TradeLocker account is the active one. The API you call does not change; only which broker answers it.",
+    "You connect with your own TradeLocker email, password and server. The password is used once to obtain JWT tokens and is never stored. You may hold several logins at once — a demo and a live one — and every account under each becomes selectable."
+  ],
+  "sections": [
+    {
+      "id": "connections",
+      "type": "table",
+      "title": "Your TradeLocker logins",
+      "sub": "Each login and the server it authenticates against. Connect and disconnect from the Accounts page.",
+      "icon": "Wallet",
+      "auth": "session",
+      "endpoint": "/api/tradelocker/connection",
+      "rows": "connections",
+      "empty": "No TradeLocker login connected yet — use Add account.",
+      "columns": [
+        {
+          "key": "email",
+          "label": "Email"
+        },
+        {
+          "key": "server",
+          "label": "Server",
+          "format": "code"
+        },
+        {
+          "key": "environment",
+          "label": "Environment",
+          "format": "badge"
+        },
+        {
+          "key": "connected_at",
+          "label": "Connected",
+          "format": "time",
+          "muted": true
+        }
+      ],
+      "action": {
+        "label": "Add account",
+        "to": "/accounts",
+        "icon": "Plus"
+      }
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "tl-connection",
+      "path": "/api/tradelocker/connection",
+      "title": "Connected logins",
+      "desc": "Every TradeLocker login on this account, with its server and environment. Session-authenticated (a bearer token), not an API key — connecting a broker is an account action, not a data read.",
+      "auth": "session",
+      "params": []
+    },
+    {
+      "id": "tl-accounts",
+      "path": "/api/accounts",
+      "title": "Accounts across every broker",
+      "desc": "Core's own endpoint, not this module's — it asks each installed broker for its accounts and files the answer under the broker's id. With this module installed you get a `tradelocker` key carrying your logins and the accounts under each.",
+      "auth": "session",
+      "params": []
+    }
+  ],
+  "notes": [
+    "Everything the app can do against Exness it can do here. The adapter subclasses the shared broker spine, so the SL/TP calculators, position sizing, break-even, lock-profit and bulk operations are the same code, not a second implementation.",
+    "The developer key in Admin → Settings is optional. TradeLocker authenticates with YOUR credentials; the partner key only raises a rate limit, so a self-hosted instance works without one.",
+    "Which broker a call goes to is decided by the ACTIVE account, not by the endpoint. Switch the active account on the Accounts page and the whole app follows it."
+  ],
+  "actions": [
+    {
+      "label": "Add a TradeLocker account",
+      "to": "/accounts",
+      "icon": "Plus"
+    },
+    {
+      "label": "Set risk parameters",
+      "to": "/risk-settings",
+      "icon": "ShieldCheck",
+      "primary": false
+    }
+  ]
+}

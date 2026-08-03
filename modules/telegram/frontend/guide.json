@@ -1,0 +1,159 @@
+{
+  "id": "telegram",
+  "nav": {
+    "label": "Telegram",
+    "icon": "Send",
+    "group": "modules",
+    "order": 90
+  },
+  "title": "Telegram Guide",
+  "heading": "Telegram — messages out, and a way in",
+  "intro": [
+    "Connect a bot once and the app can message you: an agent tool the assistant reaches for when you ask to be told something, a flow node that writes the message itself from what the run found, and an endpoint for anything else you build.",
+    "The same bot works in reverse. Message it and your own agent answers — same tools, same accounts, same memory as the web chat. \"How are my positions\", \"analyse gold\", \"close EURUSD\" all work from your phone with no app installed.",
+    "Setup is one field. Talk to @BotFather in Telegram, send /newbot, paste the token it gives you into a Telegram connection, then message your bot once so it knows where to reply."
+  ],
+  "sections": [
+    {
+      "id": "status",
+      "type": "status",
+      "title": "Your bot",
+      "sub": "Whether the token works, and where a message would go if one were sent now.",
+      "icon": "Send",
+      "endpoint": "/api/v1/telegram/status",
+      "refresh_seconds": 30,
+      "lead": "@{bot} · replies to chat {chat_id}",
+      "footer": "Listening for incoming messages: {listening}. No chat means you have not messaged the bot yet and have not set a Chat ID.",
+      "action": {
+        "label": "Connections",
+        "to": "/connections",
+        "icon": "Plug",
+        "primary": false
+      }
+    },
+    {
+      "id": "chats",
+      "type": "table",
+      "title": "Chats your bot knows",
+      "sub": "A bot only learns a chat when someone writes to it — these are the ones the Telegram node offers you to send to.",
+      "icon": "MessagesSquare",
+      "endpoint": "/api/v1/telegram/chats",
+      "auth": "session",
+      "refresh_seconds": 60,
+      "rows": "chats",
+      "empty": "None yet — message your bot, or add it to a group and say something.",
+      "columns": [
+        {
+          "key": "label",
+          "label": "Chat"
+        },
+        {
+          "key": "chat_id",
+          "label": "Chat ID",
+          "format": "code"
+        },
+        {
+          "key": "kind",
+          "label": "Type",
+          "format": "badge"
+        }
+      ]
+    },
+    {
+      "id": "send",
+      "type": "status",
+      "title": "Send a message",
+      "sub": "A real send, to your real chat — the fastest way to prove the token is right.",
+      "icon": "MessageSquare",
+      "endpoint": "/api/v1/telegram/send",
+      "inputs": [
+        {
+          "name": "text",
+          "label": "Message",
+          "default": "Hello from EntryStation.",
+          "placeholder": "Anything. Markdown works."
+        },
+        {
+          "name": "chat_id",
+          "label": "Chat ID (optional)",
+          "default": "",
+          "placeholder": "Leave blank for your connected chat"
+        }
+      ],
+      "submit": "Send",
+      "lead": "Sent to chat {chat_id}."
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "telegram-send",
+      "path": "/api/v1/telegram/send",
+      "title": "Send a message",
+      "desc": "Sends to the Chat ID on your connection, or — if you left that blank — to wherever you last messaged the bot from. Long messages are split on paragraph boundaries rather than truncated, because Telegram rejects anything over 4096 characters outright.",
+      "params": [
+        {
+          "name": "text",
+          "example": "Gold broke 2400.",
+          "level": "required",
+          "desc": "The message. Markdown is supported."
+        },
+        {
+          "name": "chat_id",
+          "example": "",
+          "level": "optional",
+          "desc": "Where to send it — a numeric id, negative for a group, or an @username. Several may be given, comma-separated; each is delivered on its own so one bad id cannot swallow the rest."
+        },
+        {
+          "name": "connection",
+          "example": "",
+          "level": "optional",
+          "desc": "Which bot to send as, by the name you gave it. Only needed if you have more than one."
+        }
+      ]
+    },
+    {
+      "id": "telegram-status",
+      "path": "/api/v1/telegram/status",
+      "title": "Connection status",
+      "desc": "Whether a bot is connected, which bot it is, which chat it would reply to, and whether the listener that carries incoming messages to your agent is running.",
+      "params": []
+    },
+    {
+      "id": "telegram-bots",
+      "path": "/api/v1/telegram/bots",
+      "title": "Your bots",
+      "desc": "The Telegram connections you have added — what the node's \"Send as\" picker offers. Signed-in request, not an API key.",
+      "params": []
+    },
+    {
+      "id": "telegram-chats",
+      "path": "/api/v1/telegram/chats",
+      "title": "Chats the bot has seen",
+      "desc": "Every chat your bot has been written to, newest first, with the name of the person or group. Telegram has no call that lists a bot's chats, so this is built as messages arrive — which is what lets the node offer a menu instead of asking you to hunt for a numeric id. Signed-in request, not an API key.",
+      "params": []
+    }
+  ],
+  "notes": [
+    "The flow node takes plain words, not a template. \"Send me the setup and why, short\" is the whole configuration — the node has the run's findings in front of it and writes the message from them.",
+    "The node can also pick WHICH bot sends and WHICH chats receive — both optional, and both worth leaving alone if you have one bot and one chat. A chat you choose there always beats one the model suggests.",
+    "Sending to several chats delivers to each separately, so a chat the bot was removed from is reported without stopping the others.",
+    "A chart can be sent as a photo. The assistant passes the image it drew as bytes with the text as its caption, because an image the app rendered has no public URL to link to.",
+    "Incoming messages are long-polled, not webhooked. A self-hosted box behind a home router has no public URL for Telegram to call, and long-polling works from behind anything — at rest it is about one request a minute.",
+    "Send /reset in the chat to start a new conversation. The last few turns are kept so a follow-up like \"and enter\" still means something.",
+    "Anyone who can message your bot is talking to your agent, with your accounts. Keep the token private, and do not add the bot to a group you do not control."
+  ],
+  "actions": [
+    {
+      "label": "Connect a bot",
+      "to": "/connections",
+      "icon": "Plug",
+      "primary": true
+    },
+    {
+      "label": "Use it in an agent",
+      "to": "/analysis-agents",
+      "icon": "Bot",
+      "primary": false
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+# ── secrets & sessions (NEVER commit) ──────────────────────────────
+.env
+*/.env
+**/.env
+.session_cache.json
+**/.session_cache.json
+.myfxbook_session
+**/.myfxbook_session
+*.session
+# runtime logs — request URLs can carry api_key=ak_live_… tokens
+*.log
+.uvicorn.log
+**/.uvicorn.log
+# keep the template
+!.env.example
+
+# ── captured browser data / HAR (may hold credentials) ─────────────
+.edge_profile/
+*.har
+
+# ── python ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ── node / frontend build ──────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+
+# ── os / editor ────────────────────────────────────────────────────
+.DS_Store
+*.swp
+
+# partnership API credentials
+.partneship_pass
+
+# Paystack API keys (test + live) — stored encrypted in admin_settings, never committed
+.paystack_credentials
+
+# database dumps (contain user data + encrypted secrets)
+*_db_dump.sql
+*.dump
+research-har/          # captured HAR sessions — reference material, not shipped code

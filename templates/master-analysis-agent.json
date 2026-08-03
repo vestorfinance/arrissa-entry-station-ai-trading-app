@@ -1,0 +1,106 @@
+{
+  "arrissa_analysis_agent": 1,
+  "name": "Full Market Analysis",
+  "description": "Analyses any instrument end to end — price structure, news, economic calendar, Fed rate odds, retail sentiment and market-moving Trump headlines — then presents one clear, structured read with a directional bias, key levels and risks.",
+  "flow": {
+    "nodes": [
+      {
+        "id": "trigger_master",
+        "type": "trigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "kind": "trigger-agent-call",
+          "values": {
+            "requirement": "The instrument/market to analyse, e.g. \"gold\", \"EURUSD\", \"US30\", \"bitcoin\". Optionally a timeframe or focus (\"scalp\", \"swing\", \"today\")."
+          }
+        }
+      },
+      {
+        "id": "market_master",
+        "type": "marketData",
+        "position": { "x": 300, "y": 150 },
+        "data": {
+          "kind": "market-data",
+          "values": {
+            "text": "Get the current quote and recent M15 candles for the requested instrument. Read the trend, momentum and the nearest support/resistance levels so the rest of the analysis has price context."
+          }
+        }
+      },
+      {
+        "id": "news_master",
+        "type": "news",
+        "position": { "x": 300, "y": 300 },
+        "data": {
+          "kind": "news",
+          "values": {
+            "text": "The most market-moving news from the last 24 hours about the requested instrument (and its currencies). Prefer high-impact stories; note the direction each implies."
+          }
+        }
+      },
+      {
+        "id": "calendar_master",
+        "type": "economicCalendar",
+        "position": { "x": 300, "y": 450 },
+        "data": {
+          "kind": "economic-calendar",
+          "values": {
+            "text": "High-impact economic releases for the requested instrument's currencies over the next 24-48 hours, plus anything that just printed (actual vs forecast). Include event names and times."
+          }
+        }
+      },
+      {
+        "id": "fed_master",
+        "type": "fedWatch",
+        "position": { "x": 300, "y": 600 },
+        "data": {
+          "kind": "fed-watch",
+          "values": {
+            "text": "The latest CME FedWatch probabilities for the next FOMC meeting (cut/hold/hike) — the macro rate backdrop that drives gold, the dollar and indices."
+          }
+        }
+      },
+      {
+        "id": "sentiment_master",
+        "type": "sentimentVolume",
+        "position": { "x": 300, "y": 750 },
+        "data": {
+          "kind": "sentiment-volume",
+          "values": {
+            "text": "Retail long/short positioning for the requested instrument, read as a contrarian signal. Flag if the sample of positions is thin so it isn't over-read."
+          }
+        }
+      },
+      {
+        "id": "truth_master",
+        "type": "truthSocial",
+        "position": { "x": 300, "y": 900 },
+        "data": {
+          "kind": "truth-social",
+          "values": {
+            "text": "Any market-moving Trump posts in the last 24 hours (tariffs, the Fed, oil, the dollar, geopolitics) that could affect the requested instrument."
+          }
+        }
+      },
+      {
+        "id": "respond_master",
+        "type": "respond",
+        "position": { "x": 300, "y": 1050 },
+        "data": {
+          "kind": "respond",
+          "values": {
+            "text": "Synthesise everything gathered into ONE clear, structured analysis of the requested instrument. Format:\n\n**Bias:** bullish / bearish / neutral, with a conviction (low/medium/high) in one line.\n**Price & structure:** current level, trend and the nearest key support/resistance (from the market data).\n**News & fundamentals:** what the recent headlines imply for direction.\n**Macro backdrop:** Fed rate odds and the calendar events that matter, with dates/times.\n**Positioning:** retail sentiment, read contrarian (note if thin).\n**Political risk:** any relevant Trump headlines.\n**Key levels & invalidation:** the levels to watch and what would flip the view.\n\n**Trade setup (actionable):** end with the single BEST opportunity as a concrete plan — direction (buy/sell), a specific ENTRY price, STOP LOSS and TAKE PROFIT (derived from the key levels / structure), a one-line reason, and a **Confidence: N/5** (integer 1-5 rating how good and ripe the trade is — 5 = high-conviction, everything aligns; 1 = weak/speculative). If there is no clean setup right now, say 'No trade — wait for <condition>' (Confidence: 1/5).\n\nBe concise, decisive and evidence-based; cite the data you used. If a source returned an error or nothing, say so in one line and continue."
+          }
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e_t_m", "type": "connector", "source": "trigger_master", "target": "market_master" },
+      { "id": "e_m_n", "type": "connector", "source": "market_master", "target": "news_master" },
+      { "id": "e_n_c", "type": "connector", "source": "news_master", "target": "calendar_master" },
+      { "id": "e_c_f", "type": "connector", "source": "calendar_master", "target": "fed_master" },
+      { "id": "e_f_s", "type": "connector", "source": "fed_master", "target": "sentiment_master" },
+      { "id": "e_s_t", "type": "connector", "source": "sentiment_master", "target": "truth_master" },
+      { "id": "e_t_r", "type": "connector", "source": "truth_master", "target": "respond_master" }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <!-- theme-color paints the iOS Safari status/URL bar to match the app bg -->
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" href="/favicon-dark.png?v=3" />
+    <link rel="apple-touch-icon" href="/favicon-dark.png?v=3" />
+    <title>EntryStation</title>
+    <script>
+      // Set theme + favicon + font before first paint to avoid a flash.
+      (function () {
+        try {
+          var v = localStorage.getItem('arrissa.theme');
+          var pref = (v === 'light' || v === 'dark') ? v : 'system';
+          var eff = pref === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : pref;
+          document.documentElement.setAttribute('data-theme', eff);
+          var m = document.querySelector('meta[name="color-scheme"]');
+          if (m) m.setAttribute('content', eff);
+          // keep the Safari bar colour in sync with a manual (non-system) choice
+          var bar = eff === 'light' ? '#ffffff' : '#000000';
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (t) { t.setAttribute('content', bar); });
+          // favicon matches the sidebar emblem for the active theme
+          var icon = (eff === 'light' ? '/favicon-light.png' : '/favicon-dark.png') + '?v=3';
+          document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(function (l) { l.setAttribute('href', icon); });
+          // fonts: Apple devices use the native system font; everything else uses Inter (loaded below)
+          var ua = navigator.userAgent || '';
+          var isApple = /iPhone|iPad|iPod|Macintosh|Mac OS X/i.test(ua)
+            || (navigator.platform && /Mac|iPhone|iPad|iPod/.test(navigator.platform));
+          document.documentElement.setAttribute('data-font', isApple ? 'apple' : 'inter');
+          if (!isApple) {
+            var p1 = document.createElement('link'); p1.rel = 'preconnect'; p1.href = 'https://fonts.googleapis.com';
+            var p2 = document.createElement('link'); p2.rel = 'preconnect'; p2.href = 'https://fonts.gstatic.com'; p2.crossOrigin = '';
+            var css = document.createElement('link'); css.rel = 'stylesheet';
+            css.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+            document.head.appendChild(p1); document.head.appendChild(p2); document.head.appendChild(css);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

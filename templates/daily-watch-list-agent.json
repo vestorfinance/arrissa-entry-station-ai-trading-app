@@ -1,0 +1,62 @@
+{
+  "arrissa_analysis_agent": 1,
+  "system": true,
+  "id": "00000000-0000-4000-a000-000000000001",
+  "name": "Daily News Watch (system)",
+  "description": "System agent. Reads the last 24 hours of news and political posts and names the instruments they make interesting today, out of the whole unfiltered universe. It is the ONLY AI step in the watch list — the calendar, trend/volatility, sentiment and price-level work is all done in code. Not a signal service.",
+  "flow": {
+    "cot": false,
+    "_template": 2,
+    "nodes": [
+      {
+        "id": "trigger_news_watch",
+        "type": "trigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "kind": "trigger-agent-call",
+          "values": {
+            "requirement": "The full list of instruments to choose from. The caller passes the whole universe (majors, minors, indices, crypto) unfiltered."
+          }
+        }
+      },
+      {
+        "id": "news_news_watch",
+        "type": "news",
+        "position": { "x": 300, "y": 150 },
+        "data": {
+          "kind": "news",
+          "values": {
+            "text": "Every HIGH-IMPACT story from the last 24 hours, across all currencies and markets — not filtered to one instrument. For each, note which instruments it moves and in which direction."
+          }
+        }
+      },
+      {
+        "id": "truth_news_watch",
+        "type": "truthSocial",
+        "position": { "x": 300, "y": 300 },
+        "data": {
+          "kind": "truth-social",
+          "values": {
+            "text": "High-market-impact political posts from the last 24 hours — tariffs, the Fed, energy, sanctions, specific economies — and which instruments each one moves."
+          }
+        }
+      },
+      {
+        "id": "respond_news_watch",
+        "type": "respond",
+        "position": { "x": 300, "y": 450 },
+        "data": {
+          "kind": "respond",
+          "values": {
+            "text": "From the instrument list in the request, name ONLY the instruments that the last 24 hours of news and political posts make genuinely interesting to watch today. This is a watch list, not a signal service: do not give entries, do not say buy or sell, and do not comment on price levels or timing — code handles those. For each instrument you name, give one short line: which story or post makes it interesting and which way it leans. Name an instrument only when a real story touches it; if the news flow is quiet, name few or none. Ignore instruments no story touches."
+          }
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e_nw1", "type": "connector", "source": "trigger_news_watch", "target": "news_news_watch" },
+      { "id": "e_nw2", "type": "connector", "source": "news_news_watch", "target": "truth_news_watch" },
+      { "id": "e_nw3", "type": "connector", "source": "truth_news_watch", "target": "respond_news_watch" }
+    ]
+  }
+}
