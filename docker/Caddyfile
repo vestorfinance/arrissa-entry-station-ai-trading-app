@@ -1,0 +1,47 @@
+# {$DOMAIN} is set from .env by compose. Caddy gets and renews its own
+# certificate over HTTP-01, which is why port 80 has to be reachable.
+{$DOMAIN} {
+	encode zstd gzip
+	root * /srv/web
+
+	handle /api/* {
+		reverse_proxy app:8000
+	}
+	handle /ws/* {
+		reverse_proxy app:8000
+	}
+
+	# Hashed build assets, and the rule that matters most here.
+	#
+	# `try_files … /index.html` is right for app ROUTES and wrong for /assets:
+	# a missing bundle would answer 200 with the SPA's HTML, and because .js is
+	# a cacheable extension any CDN in front will store that HTML against the
+	# script URL. Every visitor afterwards gets a page where a module should be
+	# and the browser refuses it on MIME grounds. It has happened; it took the
+	# live site down and could not be purged without changing the bundle hash.
+	#
+	# The header follows the FILE, not the path. Putting `immutable` on the whole
+	# handler hands a transient 404 a year-long lifetime under a URL the live
+	# index.html depends on, which is a worse outage than the one it replaced.
+	@asset_hit {
+		path /assets/*
+		file
+	}
+	handle @asset_hit {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+	handle /assets/* {
+		header Cache-Control "no-store"
+		respond 404
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+		# index.html names the hashed bundles, so a stale copy asks for files that
+		# may no longer exist. With no directive at all browsers cache it
+		# heuristically, which is how that happens by itself.
+		header Cache-Control "no-cache"
+	}
+}

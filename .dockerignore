@@ -1,0 +1,15 @@
+.git
+.venv
+node_modules
+frontend/node_modules
+frontend/dist
+dist
+.edge_profile
+.session_cache.json
+*.har
+research-har
+**/.env
+*_db_dump.sql
+__pycache__
+**/__pycache__
+*.pyc

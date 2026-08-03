@@ -1,0 +1,80 @@
+# EntryStation Community, in three containers.
+#
+#   cp .env.docker.example .env && docker compose up -d
+#
+# The volumes are the part worth reading. Three things are written at runtime and
+# every one of them is expensive to lose:
+#
+#   modules       what you have installed, including anything paid. Without this
+#                 a `docker compose pull` removes them and the paid ones have to
+#                 be fetched again against a licence that counts rebinds.
+#   edge-profile  the warm browser profile. It is what gets the Exness login
+#                 through reCAPTCHA from a datacenter IP; cold, it is the one
+#                 thing most likely to start failing.
+#   pgdata        the database.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: entrystation
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: entrystation
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U entrystation"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    # Microsoft publishes Edge for amd64 only. On an arm64 host this runs the
+    # amd64 image under emulation, which is slower but keeps the browser the
+    # warm profile was made for. Delete the line to run native and fall back to
+    # bundled Chromium.
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://entrystation:${DB_PASSWORD}@db:5432/entrystation
+      FERNET_KEY: ${FERNET_KEY:?set FERNET_KEY in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # A residential proxy, if the datacenter IP ever starts being scored down.
+      EXNESS_PROXY: ${EXNESS_PROXY:-}
+    volumes:
+      # ONE volume at /data holding all three. Mounting modules, the profile and
+      # the session cache separately meant nesting mounts inside a mount, which
+      # Docker allows and nobody can reason about later.
+      - data:/data
+      # The built frontend, handed to Caddy. It lives in the app image, and Caddy
+      # is a different container with a different filesystem, so it is copied out
+      # on start rather than being invisible.
+      - web:/web
+    # 1GB of shared memory. Chromium's default 64MB in a container is what makes
+    # a browser crash halfway through a login for no visible reason.
+    shm_size: 1gb
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  data:
+  web:
+  caddy_data:
+  caddy_config:

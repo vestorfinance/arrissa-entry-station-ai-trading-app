@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -34,7 +35,15 @@ from pathlib import Path
 import db
 import registry
 
-MODULES_DIR = Path(__file__).parent.parent / "modules"
+# Where installed modules live.
+#
+# Configurable because a packaged install cannot write into its own image: in a
+# container the code is read-only at /app and this points at a mounted volume,
+# so a module installed on Tuesday survives Wednesday's `docker compose pull`.
+# Left unset it is the directory beside the code, which is what a git checkout
+# wants and what every existing install already does.
+MODULES_DIR = Path(os.environ.get("ENTRYSTATION_MODULES_DIR")
+                   or Path(__file__).parent.parent / "modules")
 MANIFEST = "module.json"
 CORE_VERSION = "1.0.0"
 
