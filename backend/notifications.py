@@ -44,6 +44,18 @@ def _connection_gaps(user_id) -> list:
         kind = t.get("kind")
         if kind in mine:
             continue
+        # A `managed_by` kind is NOT a row in the connections table. A broker
+        # login is deliberately not stored there — the password is used once for
+        # a session and thrown away — so asking that table whether Exness is
+        # connected returns "no" for an account that is connected and trading.
+        # The broker seam is the only thing that knows.
+        if t.get("managed_by"):
+            try:
+                import brokers
+                if brokers.has_connection(user_id, kind):
+                    continue
+            except Exception:
+                continue          # cannot tell: say nothing rather than nag
         # A kind that exists only because a module is loaded is a kind that
         # module is waiting on. That is the whole signal: nobody installs a
         # module in order to leave it unconnected.
@@ -155,16 +167,100 @@ def _broker_gaps(user_id) -> list:
     return out
 
 
+def _ai_gap(user_id) -> list:
+    """No model the app can actually call.
+
+    The chat says so when you open it, the agents say so when they run, and
+    neither is anywhere you look BEFORE trying. On a Community box this is the
+    single most common reason the product appears to do nothing: nothing is
+    broken, there is simply no key behind any model."""
+    try:
+        import ai_keys
+        cfg = ai_keys.config(user_id)
+    except Exception:
+        return []
+
+    models = cfg.get("models") or []
+    ready = [m for m in models if m.get("available", True)]
+    if ready:
+        return []
+
+    # Where the key is actually entered. This used to be Settings and moved to
+    # Connections; the chat's own warning still names the old page, and sending
+    # somebody to a screen that no longer has the thing is worse than saying
+    # nothing.
+    return [{
+        "id": "ai:none",
+        "kind": "config", "severity": "blocked",
+        "title": "No AI model is configured",
+        "body": "Arrissa and every analysis agent need a model to call. Connect a "
+                "provider and pick a model.",
+        "action": "Connect a provider", "to": "/connections",
+    }]
+
+
+def _module_faults() -> list:
+    """Installed, and not running. A module that failed to load is invisible
+    everywhere except a log nobody is reading."""
+    out = []
+    try:
+        import modules as module_system
+        rows = (module_system.status() or {}).get("modules") or []
+    except Exception:
+        return out
+    for m in rows:
+        if m.get("status") == "error" or m.get("error"):
+            out.append({
+                "id": f"module-error:{m['id']}",
+                "kind": "module", "severity": "blocked",
+                "title": f"{m.get('name') or m['id']} failed to load",
+                "body": (m.get("error") or "")[:180],
+                "action": "Open the store", "to": "/modules",
+            })
+        elif m.get("status") == "disabled":
+            out.append({
+                "id": f"module-off:{m['id']}",
+                "kind": "module", "severity": "todo",
+                "title": f"{m.get('name') or m['id']} is switched off",
+                "body": "It is installed but not running, so nothing uses it.",
+                "action": "Turn it on", "to": "/modules",
+            })
+    return out
+
+
+def _mail_gap() -> list:
+    """No SMTP. Nothing that leaves the app by email leaves it at all."""
+    try:
+        import mailer
+        mailer._smtp()               # noqa: SLF001 — raises when unconfigured
+        return []
+    except RuntimeError:
+        pass                         # unconfigured: that is the whole point
+    except Exception:
+        return []                    # no database, no opinion
+    return [{
+        "id": "smtp:none",
+        "kind": "config", "severity": "todo",
+        "title": "No mail server configured",
+        "body": "Licence receipts and verification emails cannot be sent. A "
+                "single-user install works without one.",
+        "action": "Set it up", "to": "/settings",
+    }]
+
+
 def for_user(user_id, *, is_operator: bool = False) -> dict:
     """Everything this person can act on, worst first."""
     items = []
     items += _connection_gaps(user_id)
     items += _broker_gaps(user_id)
+    items += _ai_gap(user_id)
     # Updates are the operator's business. Showing "a module update is ready" to
     # somebody who cannot install one is telling them off for a thing they are
     # not allowed to fix.
     if is_operator:
         items += _update_items()
+        items += _module_faults()
+        items += _mail_gap()
 
     rank = {"blocked": 0, "todo": 1, "info": 2}
     items.sort(key=lambda i: rank.get(i.get("severity"), 3))

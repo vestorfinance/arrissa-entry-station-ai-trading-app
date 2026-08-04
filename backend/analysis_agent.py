@@ -275,7 +275,7 @@ def _llm(ctx, node_values, system, user, want_json=False):
         # (every node then falls back to defaults — e.g. a data node loses its symbol).
         msg = str(e)
         if "insufficient_quota" in msg or "exceeded your current quota" in msg:
-            msg = f"{_model_label(ctx, provider, model)} quota exhausted — add credits/billing or switch provider in Settings"
+            msg = f"{_model_label(ctx, provider, model)} quota exhausted — add credits/billing, or switch provider on the Connections page"
         elif ("invalid_api_key" in msg or "Incorrect API key" in msg or " 401" in msg
                 or "Invalid API Key" in msg or "valid API key" in msg
                 or "API key not valid" in msg):
@@ -593,7 +593,7 @@ def _compose(ctx, node_values, text, context, extra=None):
     if ctx.get("_llm_error"):
         return (f"⚠️ This agent's AI model could not be reached: {ctx['_llm_error']}. "
                 "The data below was still gathered, but no analysis/decision could be written. "
-                "Fix the provider key in Settings and run again.")
+                "Fix the provider key on the Connections page and run again.")
     last = context.get("last")
     return f"Analysis complete. Latest result: {_short(last)}" if last else "No data gathered."
 
@@ -1851,7 +1851,7 @@ def build_flow(instruction, current_flow, ctx):
     Returns {"flow": {nodes, edges}, "name", "description", "note"} on success,
     or {"error": ...} when there's no usable AI key or the reply doesn't parse."""
     if not (ctx.get("provider") and ctx.get("model") and ctx.get("api_key")):
-        return {"error": "No AI model is configured. Add a provider key in Settings first."}
+        return {"error": "No AI model is configured. Connect a provider on the Connections page first."}
 
     existing = current_flow or {}
     cur_nodes = existing.get("nodes") or []

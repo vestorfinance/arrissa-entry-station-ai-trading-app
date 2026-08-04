@@ -521,7 +521,7 @@ export default function Dashboard() {
           <textarea
             ref={inputRef}
             className="chat-input"
-            placeholder={locked ? 'Subscribe to chat with Arrissa…' : noModelsReady ? 'Add an AI model in Settings to start…' : 'Message Arrissa…'}
+            placeholder={locked ? 'Subscribe to chat with Arrissa…' : noModelsReady ? 'Connect an AI provider to start…' : 'Message Arrissa…'}
             value={input}
             rows={1}
             disabled={composerDisabled}
@@ -566,7 +566,7 @@ export default function Dashboard() {
       onChange={changeModel}
       disabled={noModels}
       align="left"
-      placeholder={noModelsReady ? 'No models — add in Settings' : 'Select model'}
+      placeholder={noModelsReady ? 'No models — add in Connections' : 'Select model'}
       options={models.map((m) => ({ value: m.key, label: m.name }))}
     />
   )
@@ -584,7 +584,7 @@ export default function Dashboard() {
             ) : noModelsReady ? (
               <div className="alert alert--warn chat-config" style={{ maxWidth: 620 }}>
                 <AlertTriangle size={16} strokeWidth={1.75} />
-                <span>No AI model configured. Add a provider key and pick a model in <Link to="/settings">Settings → AI models</Link>.</span>
+                <span>No AI model configured. Connect a provider and pick a model in <Link to="/connections">Connections</Link>.</span>
               </div>
             ) : (
               <div className="chat-welcome">
