@@ -53,7 +53,7 @@ MANIFEST = "module.json"
 # nothing to notice.
 #
 # Raise it in the same commit as the change. See FINDINGS.md.
-CORE_VERSION = "1.4.38"
+CORE_VERSION = "1.4.39"
 
 # Loaded this boot: id -> {"manifest", "path", "status", "error"}
 _loaded: dict = {}
@@ -80,6 +80,12 @@ def read_manifest(path: Path) -> dict:
         raise ValueError(f"module id {m['id']!r} must be alphanumeric with - or _")
     if m.get("edition") not in (None, "free", "paid"):
         raise ValueError("edition must be 'free' or 'paid'")
+    # `other` is the store page's heading for "installed from a file, not listed
+    # here". A catalogued module declaring it lands under a heading that
+    # contradicts the fact it is on sale, which is what happened to MCP.
+    if m.get("group") == "other":
+        raise ValueError("group 'other' is reserved for modules installed from a file — "
+                         "use broker, trading, analysis or connect")
     return m
 
 
