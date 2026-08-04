@@ -6182,13 +6182,13 @@ a.dv-card-title:hover { text-decoration: underline; }
 .node-text-modal-area--short { min-height: 76px; flex: none; }
 
 .api-doc {
-  margin-top: 14px;
-  padding: 14px 16px;
+  margin-top: 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;              /* tight, so the conditional list below still has room */
   overflow-y: auto;      /* the field stays put; only the reference scrolls */
   min-height: 0;
 }
@@ -6197,17 +6197,19 @@ a.dv-card-title:hover { text-decoration: underline; }
   letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--text-secondary);
 }
-.api-doc-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: baseline; }
+.api-doc-row { display: grid; grid-template-columns: 108px 1fr; gap: 8px; align-items: baseline; }
 .api-doc-key {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px; font-weight: 700;
   color: var(--text-primary);
 }
-.api-doc-vals { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.api-doc-vals { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
 /* A value is a button, not a label. Reading the documentation and filling the
    field are the same act, so they are the same click. */
 .api-doc-val {
   cursor: pointer;
+  height: 21px;
+  padding: 0 9px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11.5px;
   background: var(--input-bg);
@@ -6217,4 +6219,69 @@ a.dv-card-title:hover { text-decoration: underline; }
 .api-doc-note { font-size: 11.5px; color: var(--text-secondary); }
 @media (max-width: 600px) {
   .api-doc-row { grid-template-columns: 1fr; gap: 5px; }
+}
+
+/* ── variables a trigger declares ─────────────────────────
+   The agent states what it needs and everything downstream can use it, instead
+   of each node re-deriving the instrument from the same sentence. */
+.var-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; margin-top: 6px; }
+.var-key { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+.var-req {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 32px; padding: 0 11px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.var-req svg { opacity: .25; }
+.var-req--on { color: var(--text-primary); }
+.var-req--on svg { opacity: 1; color: var(--tone-ok); }
+.var-del {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.var-del:hover { background: var(--surface-2); color: var(--tone-bad); }
+.var-add { margin-top: 8px; align-self: flex-start; }
+
+/* ── several calls, one per condition ─────────────────────
+   Collapsed by default: a list of conditions is not what somebody opening this
+   window usually came for, and it must not push the field itself off the top. */
+.api-rules { margin-top: 10px; }
+.api-rules-head {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.api-rules-head > span:first-child {
+  display: grid; place-items: center;
+  width: 17px; height: 17px; border-radius: 5px;
+  background: var(--bg-tertiary);
+  font-size: 13px; line-height: 1;
+}
+.api-rules-head em {
+  font-style: normal; font-size: 11px; font-weight: 700;
+  padding: 1px 7px; border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+}
+.api-rules-hint { margin-left: auto; font-weight: 400; font-size: 11.5px; color: var(--text-secondary); }
+.api-rules-body { padding: 10px 2px 0; display: flex; flex-direction: column; }
+.api-rule { display: grid; grid-template-columns: 0.8fr 1.2fr auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.api-rule .input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .api-rule { grid-template-columns: 1fr auto; }
+  .api-rule-params { grid-column: 1 / -1; }
+  .api-rules-hint { display: none; }
 }

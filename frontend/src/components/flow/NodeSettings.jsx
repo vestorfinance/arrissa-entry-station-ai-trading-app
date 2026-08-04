@@ -261,7 +261,21 @@ function ScheduleSettings({ values, set }) {
 // editor; runtime args (e.g. the trigger's requirement) are shown read-only.
 export default function NodeSettings({ node, models = [], agents = [], defaultModel = '',
                                        onChange, onDelete, onClose }) {
+  const [rulesOpen, setRulesOpen] = useState(false)
   const [big, setBig] = useState(null)     // which text arg is open in the big window
+
+  // The variables a trigger declares. Everything downstream can then use them —
+  // `symbol={{symbol}}` in a parameter, `trade_type=scalper` as a condition — so
+  // the instrument stops being something each node re-derives from the prose.
+  const vars = values.vars || []
+  const setVars = (v) => set('vars', v)
+  const isTrigger = ['trigger-agent-call', 'trigger', 'trigger-interval', 'triggerInterval']
+    .includes(node.data.kind)
+
+  // The conditional calls on a data node. Ordered, first match wins, and a rule
+  // with no condition is the default — which is why order is editable.
+  const rules = values.api_rules || []
+  const setRules = (r) => set('api_rules', r)
 
   // What this node's API accepts. Core nodes spell it apiDoc; module nodes send
   // api_doc through the palette. Same thing, two naming conventions meeting.
@@ -332,6 +346,43 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
 
         {node.data.kind === 'trigger-interval' && (
           <ScheduleSettings values={values} set={(v) => onChange(node.id, v)} />
+        )}
+
+        {isTrigger && (
+          <div className="field">
+            <span className="field-label">
+              Variables this agent needs
+              <span className="muted"> · used downstream as {'{{name}}'}</span>
+            </span>
+            {vars.map((v, i) => (
+              <div className="var-row" key={i}>
+                <input
+                  className="input var-key"
+                  value={v.key || ''}
+                  placeholder="symbol"
+                  onChange={(e) => setVars(vars.map((x, j) =>
+                    (j === i ? { ...x, key: e.target.value.trim() } : x)))}
+                />
+                {/* Required means the run REFUSES without it, rather than
+                    proceeding on a guess and presenting the result as asked-for. */}
+                <button type="button"
+                        className={'var-req' + (v.required ? ' var-req--on' : '')}
+                        title={v.required ? 'Required' : 'Optional'}
+                        onClick={() => setVars(vars.map((x, j) =>
+                          (j === i ? { ...x, required: !x.required } : x)))}>
+                  <Check size={13} strokeWidth={2.5} /> required
+                </button>
+                <button type="button" className="var-del" title="Remove"
+                        onClick={() => setVars(vars.filter((_, j) => j !== i))}>
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <button type="button" className="btn btn--sm var-add"
+                    onClick={() => setVars([...vars, { key: '', required: true }])}>
+              <Plus size={13} strokeWidth={2} /> Add a variable
+            </button>
+          </div>
         )}
 
         {(node.data.args || []).map((a) => (
@@ -505,6 +556,62 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
                 reading the module's source to find out that News takes
                 `min_score`. Clicking a value writes `key=value` into the field,
                 so the documentation is also the way to fill it in. */}
+            {/* One call is the common case and stays a single field above. This is
+                for when it is not: several calls, each with the condition it
+                applies under, tried top to bottom with the first match winning.
+                So the specific rules go above the general one, and a rule with no
+                condition at the bottom is the default.
+                Collapsed by default — a list of conditions is not what somebody
+                opening this window usually came for. */}
+            {big === 'api_params' && (
+              <div className="api-rules">
+                <button type="button" className="api-rules-head"
+                        onClick={() => setRulesOpen((o) => !o)}>
+                  <span>{rulesOpen ? '−' : '+'}</span>
+                  Conditional calls
+                  {rules.length > 0 && <em>{rules.length}</em>}
+                  <span className="api-rules-hint">
+                    e.g. trade_type=scalper → a different call
+                  </span>
+                </button>
+
+                {rulesOpen && (
+                  <div className="api-rules-body">
+                    {rules.map((r, i) => (
+                      <div className="api-rule" key={i}>
+                        <input
+                          className="input api-rule-when"
+                          value={r.when || ''}
+                          placeholder="trade_type=scalper   (empty = default)"
+                          onChange={(e) => setRules(rules.map((x, j) =>
+                            (j === i ? { ...x, when: e.target.value } : x)))}
+                        />
+                        <input
+                          className="input api-rule-params"
+                          value={r.params || ''}
+                          placeholder="symbol={{symbol}}&timeframe=M1"
+                          onChange={(e) => setRules(rules.map((x, j) =>
+                            (j === i ? { ...x, params: e.target.value } : x)))}
+                        />
+                        <button type="button" className="var-del" title="Remove"
+                                onClick={() => setRules(rules.filter((_, j) => j !== i))}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn--sm var-add"
+                            onClick={() => setRules([...rules, { when: '', params: '' }])}>
+                      <Plus size={13} strokeWidth={2} /> Add a condition
+                    </button>
+                    <p className="api-doc-note">
+                      Tried top to bottom, first match wins. Use {'{{name}}'} for anything
+                      the trigger declared. Leave the condition empty for a default.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Blank is never the answer. A node with nothing documented says so,
                 and names itself, rather than leaving an empty modal that looks
                 identical to a bug — which is exactly what it was. */}

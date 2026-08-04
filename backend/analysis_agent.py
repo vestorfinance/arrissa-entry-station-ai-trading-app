@@ -379,7 +379,103 @@ def _trace_result(v):
     return v
 
 
-def _explicit_params(nv):
+# ── variables ────────────────────────────────────────────────────────────────
+# A trigger can declare the inputs its agent expects — `symbol`, `trade_type` —
+# and those become variables every node downstream can use. Two things then stop
+# being guesswork: a node can say `symbol={{symbol}}` instead of hoping a model
+# reads the right instrument out of the request, and a node can choose WHICH call
+# to make based on what came in.
+_VAR_RE = _re_vars = __import__("re").compile(r"\{\{\s*([a-zA-Z_][\w]*)\s*\}\}|\$([a-zA-Z_][\w]*)")
+
+
+def _declared_vars(nodes):
+    """What the trigger says this agent needs: [{key, required}, …]."""
+    for n in nodes or []:
+        d = n.get("data") or {}
+        if (d.get("kind") or "") in ("trigger-agent-call", "trigger", "trigger-interval",
+                                     "triggerInterval"):
+            out = []
+            for v in ((d.get("values") or {}).get("vars") or []):
+                key = (v.get("key") or "").strip()
+                if key:
+                    out.append({"key": key, "required": bool(v.get("required"))})
+            if out:
+                return out
+    return []
+
+
+def _collect_vars(declared, request, given, ctx, nv):
+    """Fill the declared variables: what the caller passed, else what the request
+    says.
+
+    The caller wins outright. A chat agent that was told `symbol=US30` knows it
+    better than any reading of the sentence around it, and re-deriving something
+    already stated is how a request for US30 quietly becomes one for gold.
+
+    Only when something is missing is a model asked, and only about the missing
+    ones — asking about all of them would pay to re-derive what arrived."""
+    if not declared:
+        return dict(given or {})
+    got = {k: v for k, v in (given or {}).items() if v not in (None, "")}
+    missing = [d["key"] for d in declared if d["key"] not in got]
+    if missing and (request or "").strip():
+        try:
+            out = _llm(ctx, nv,
+                       "You read one instruction and pull out named values. Output ONLY a JSON "
+                       "object with these keys, and omit any the instruction does not give: "
+                       + ", ".join(missing) + ". Never invent a value.",
+                       f"Instruction: {request}", want_json=True)
+            if isinstance(out, dict):
+                for k in missing:
+                    v = out.get(k)
+                    if v not in (None, ""):
+                        got[k] = str(v)
+        except Exception:
+            pass
+    return got
+
+
+def _fill_vars(text, variables):
+    """Replace {{name}} and $name with what the trigger received.
+
+    An unknown name is left exactly as written rather than blanked. A parameter
+    that silently became `symbol=` would send a request nobody meant to send;
+    left as `symbol={{sybmol}}` it is a typo somebody can see."""
+    if not text or not variables:
+        return text
+
+    def sub(m):
+        name = m.group(1) or m.group(2)
+        v = variables.get(name)
+        return str(v) if v not in (None, "") else m.group(0)
+    return _VAR_RE.sub(sub, text)
+
+
+def _rule_matches(when, variables):
+    """`trade_type=scalper`, `symbol=US30&side=buy`, `impact!=low`.
+
+    Empty matches everything, which is what makes the last rule a default. All
+    conditions must hold — `&` is AND, because a rule that fired on any one of
+    several conditions could not express "US30 on a scalp"."""
+    when = (when or "").strip()
+    if not when:
+        return True
+    for part in when.replace("\n", "&").split("&"):
+        part = part.strip()
+        if not part:
+            continue
+        neg = "!=" in part
+        key, _, want = part.partition("!=" if neg else "=")
+        got = str(variables.get(key.strip(), "")).strip().lower()
+        want = want.strip().lower()
+        if neg and got == want:
+            return False
+        if not neg and got != want:
+            return False
+    return True
+
+
+def _explicit_params(nv, variables=None):
     """The parameters the USER typed on the node, if they typed any.
 
     `symbol=XAUUSD&count=15&timeframe=M15`, or the same one per line. Query-string
@@ -389,7 +485,20 @@ def _explicit_params(nv):
     Values arrive as strings and stay strings: every handler already coerces what
     it needs (`int(p.get("count"))`), and guessing types here would only differ
     from what the LLM path produces."""
-    raw = (nv.get("api_params") or "").strip()
+    variables = variables or {}
+
+    # A node may carry SEVERAL calls, each with the condition it applies under —
+    # "if trade_type=scalper fetch M1, if symbol=US30 fetch the index feed". They
+    # are tried in order and the first match wins, so the specific rules go above
+    # the general one and a rule with no condition at the end is the default.
+    raw = ""
+    for rule in (nv.get("api_rules") or []):
+        if _rule_matches(rule.get("when"), variables):
+            raw = (rule.get("params") or "").strip()
+            break
+    if not raw:
+        raw = (nv.get("api_params") or "").strip()
+    raw = _fill_vars(raw, variables)
     if not raw:
         return None
     from urllib.parse import parse_qsl
@@ -408,7 +517,7 @@ def _params(ctx, node_values, source_name, fields, text, context, default):
 
     The defaults still apply underneath, so a node can pin the one field it cares
     about and leave the rest alone."""
-    stated = _explicit_params(node_values)
+    stated = _explicit_params(node_values, context.get("vars"))
     if stated:
         merged = dict(default)
         merged.update(stated)
@@ -1166,7 +1275,7 @@ def _save_run(agent_id, user_id, request, result, source, analysis_id=None):
         print(f"[analysis_runs] save failed for agent {agent_id}: {e!r}", flush=True)
 
 
-def run_flow(flow, request, ctx, agent_id=None, source="chat"):
+def run_flow(flow, request, ctx, agent_id=None, source="chat", variables=None):
     """Execute an analysis-agent flow. Returns {response, trace} (or {error}).
     `request` is the free-text the caller wants analysed; `ctx` carries the LLM
     provider/key/model + user_id used by the reasoning nodes. When `agent_id` is
@@ -1208,7 +1317,23 @@ def run_flow(flow, request, ctx, agent_id=None, source="chat"):
     # An Octo body decides which of the nodes attached to it to call, so it needs
     # the graph. Nothing else reads this.
     ctx["_flow"] = {"nodes": nodes, "edges": edges}
-    context = {"request": request, "by_node": {}, "steps": [], "last": None, "chain": []}
+    # The variables this run has to work with. Declared on the trigger, filled from
+    # what the caller passed and — only for anything still missing — read out of
+    # the request. Every node sees them: `symbol={{symbol}}` in a parameter, and
+    # `trade_type=scalper` as the condition on which of several calls to make.
+    declared = _declared_vars(flow.get("nodes") or [])
+    run_vars = _collect_vars(declared, request, variables, ctx, {})
+    missing = [d["key"] for d in declared if d.get("required") and not run_vars.get(d["key"])]
+    if missing:
+        # Refused rather than run half-blind. An agent told it needs a symbol and
+        # given none would otherwise fetch whatever a model guessed and present
+        # the result as though it had been asked for.
+        return {"error": "this agent needs " + ", ".join(missing)
+                         + " — pass them, or name them in the request",
+                "missing": missing, "vars": run_vars}
+
+    context = {"request": request, "vars": run_vars, "by_node": {}, "steps": [],
+               "last": None, "chain": []}
     response, steps, visits = None, 0, {}
     queue = [start]
 
