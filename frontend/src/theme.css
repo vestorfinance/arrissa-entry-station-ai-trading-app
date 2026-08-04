@@ -6640,3 +6640,26 @@ a.dv-card-title:hover { text-decoration: underline; }
 .setup-brokers .btn { flex: none; }
 .setup-actions { justify-content: space-between; }
 @media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }
+
+/* Which of the two installs this is. They are different jobs — a local one has
+   no domain, no certificate and no ssh — so the guide asks before it starts
+   rather than hedging every step with "if you are on a server". */
+.ins-where { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 28px; }
+.ins-where-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  padding: 16px 18px; border-radius: var(--radius-card);
+  background: var(--surface-2); color: var(--text-secondary);
+  text-align: left; cursor: pointer;
+}
+.ins-where-btn b { font-size: 14.5px; color: var(--text-primary); }
+.ins-where-btn span { font-size: 12.5px; line-height: 1.5; }
+.ins-where-btn--on { background: var(--text-primary); }
+.ins-where-btn--on b, .ins-where-btn--on span, .ins-where-btn--on svg { color: var(--bg-primary); }
+/* Their server, asked once and written into every command below. Substituting
+   placeholders by hand is where installs are lost: it goes wrong at the step
+   where nothing has started yet and nothing says why. */
+.ins-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+@media (max-width: 720px) {
+  .ins-where { grid-template-columns: 1fr; }
+  .ins-form { grid-template-columns: 1fr; }
+}
