@@ -241,6 +241,14 @@ def bundles() -> list:
     out = []
     for b in raw:
         b = dict(b)
+        # An all-access bundle contains EVERY paid module, so it derives its
+        # membership rather than listing it. A hand-written list is a promise
+        # ("every paid module") kept by hand, and the day a module is published
+        # the bundle quietly stops containing everything while still saying it
+        # does — and undercharges, because the price derives from the list.
+        if b.get("all_access"):
+            b["includes"] = sorted(
+                mid for mid, m in mods.items() if (m.get("price_usd") or 0) > 0)
         # A member may be a module or another bundle — an all-access tier
         # contains the packs as well as the singles, and the full price has to
         # count each product once, at what it actually sells for.
