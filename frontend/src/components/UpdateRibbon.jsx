@@ -46,6 +46,11 @@ export default function UpdateRibbon() {
   if (!info) return null
 
   const mods = (info.modules || []).filter((m) => m.can_update)
+  // Updates that exist and cannot be taken. Counting only the takeable ones and
+  // then printing the count produced "0 module updates available" on a box that
+  // was showing "v1.0.3 available" against a module — true, unhelpful, and
+  // impossible to act on because it does not say what is in the way.
+  const stuck = (info.modules || []).filter((m) => !m.can_update)
   const coreNew = info.core?.update_available
 
   function dismiss() {
@@ -74,11 +79,24 @@ export default function UpdateRibbon() {
         {coreNew
           ? <>A new version of the app is available — <strong>{info.core.latest}</strong>, you
              are on {info.core.version}.</>
-          : <>{mods.length} module update{mods.length === 1 ? '' : 's'} available.</>}
+          : mods.length > 0
+            ? <>{mods.length} module update{mods.length === 1 ? '' : 's'} available.</>
+            : <>{stuck.length} module update{stuck.length === 1 ? '' : 's'} waiting on a
+               subscription: {stuck.map((m) => m.name).join(', ')}.</>}
         {coreNew && mods.length > 0 && <> {mods.length} module update{mods.length === 1 ? '' : 's'} too.</>}
+        {coreNew && mods.length === 0 && stuck.length > 0 && (
+          <> {stuck.length} module update{stuck.length === 1 ? '' : 's'} need a live
+             subscription.</>
+        )}
       </span>
 
       {done && <span className="upd-done"><Check size={13} /> {done}</span>}
+
+      {!done && mods.length === 0 && stuck.length > 0 && (
+        <button className="btn btn--sm upd-cmd" onClick={() => { dismiss(); window.location.assign('/modules') }}>
+          See why
+        </button>
+      )}
 
       {!done && mods.length > 0 && (
         <button className="btn btn--primary btn--sm" onClick={updateModules} disabled={busy}>
