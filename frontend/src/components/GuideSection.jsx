@@ -108,6 +108,13 @@ export default function GuideSection({ section, apiKey, base }) {
   // onto an endpoint; this one is the instructions for the part that happens on
   // the user's own machine, where this app cannot see or do anything.
   if (section.type === 'steps') {
+    // Filled in, not left as placeholders. A configuration somebody has to edit
+    // in two places before it works is a configuration they get wrong once and
+    // then blame the product for — and both values are already known here: the
+    // address they are reading this on, and their own key.
+    const fill = (t) => String(t || '')
+      .replaceAll('{origin}', window.location.origin)
+      .replaceAll('{api_key}', apiKey || 'YOUR_API_KEY')
     return (
       <section className="guide-sec">
         <div className="guide-sec-head">
@@ -120,8 +127,8 @@ export default function GuideSection({ section, apiKey, base }) {
           {(section.steps || []).map((st, i) => (
             <li key={i}>
               <strong>{st.title}</strong>
-              {st.body && <p>{st.body}</p>}
-              {st.code && <GuideCode>{st.code}</GuideCode>}
+              {st.body && <p>{fill(st.body)}</p>}
+              {st.code && <GuideCode>{fill(st.code)}</GuideCode>}
             </li>
           ))}
         </ol>
