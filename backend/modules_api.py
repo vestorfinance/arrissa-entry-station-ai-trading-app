@@ -205,6 +205,14 @@ def claim_entitlements(body: ClaimBody, request: Request, user=Depends(require_a
         # and tells somebody to fix a thing that is no longer how this works.
         out = first or out
     out = out or {"applied": False, "reason": "This instance has no name to claim with."}
+    # Opening this page is the check. Whatever the licence covers and this box
+    # does not have is fetched now, so "bought" and "installed" are one state
+    # rather than two with a button between them.
+    try:
+        import auto_update
+        out["installed"] = auto_update.install_owned()
+    except Exception as e:
+        print(f"[claim] install of owned modules failed: {e!r}", flush=True)
     if out.get("applied"):
         audit(user["email"], "module.claim", "licence", host,
               {"modules": out.get("modules", []), "as": host})

@@ -104,8 +104,15 @@ export default function Modules() {
     setBusy('licence'); setErr(null)
     try {
       const d = await api.claimEntitlements()
+      // Bought and installed are one state now, so the page has to show the new
+      // cards immediately rather than the ones it loaded a second ago.
+      if (d.installed?.length) {
+        api.moduleCatalog().then((v) => { setData(v) }).catch(() => {})
+        moduleBus.changed()
+      }
       setData(d)
-      if (d.applied) setNote(`Purchase found and applied${d.claimed?.length ? ` — ${d.claimed.join(', ')}` : ''}. `
+      if (d.installed?.length) setNote(`Purchase applied — ${d.installed.join(', ')} installed and ready.`)
+      else if (d.applied) setNote(`Purchase found and applied${d.claimed?.length ? ` — ${d.claimed.join(', ')}` : ''}. `
                              + 'Click Install on what you have bought.')
       else if (loud) setNote(d.reason || 'Nothing new to collect for this instance.')
       return d
@@ -150,9 +157,15 @@ export default function Modules() {
       // the mechanism and the key is the spare.
       if (!fromUrl) return
       try {
-        setData(await api.setModuleLicence(fromUrl))
-        setNote(`Payment received — licence applied${bought ? ` for ${bought}` : ''}. `
-                + 'Click Install on what you have just bought.')
+        await api.setModuleLicence(fromUrl)
+        // The key is only half of it. Somebody who has just paid should not
+        // then be told to press Install — the purchase already said that.
+        const got = await claim(false)
+        setData(await api.moduleCatalog())
+        moduleBus.changed()
+        setNote(got?.installed?.length
+          ? `Payment received — ${got.installed.join(', ')} installed and ready.`
+          : `Payment received — licence applied${bought ? ` for ${bought}` : ''}.`)
       } catch (e) {
         setErr(`Paid, but the key could not be applied here: ${e.message}. `
                + `Your key is ${fromUrl} — enter it under Licence.`)

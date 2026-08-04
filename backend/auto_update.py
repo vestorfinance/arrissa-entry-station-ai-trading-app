@@ -95,9 +95,49 @@ def collect(log=print) -> dict:
         out = catalog.claim(_instance.ident())
         if out.get("applied"):
             log(f"[auto-update] collected purchase: {', '.join(out.get('modules') or [])}")
+            # Owning it and not having it is not a state worth preserving.
+            out["installed"] = install_owned(log)
         return out
     except Exception as e:
         return {"applied": False, "reason": str(e)}
+
+
+def install_owned(log=print) -> list:
+    """Install everything this licence covers that is not here yet.
+
+    Buying a module and then being told to go and press Install is asking
+    somebody to do the one thing the transaction already said they wanted. The
+    store knows what this instance owns; owning it and not having it is not a
+    state worth preserving.
+
+    Only what is OWNED and DELIVERABLE — a module with no build behind it is
+    skipped rather than failed on, and nothing here decides entitlement, which
+    is `store.owns` upstream in the catalogue view."""
+    import catalog
+    import module_installer
+    import tempfile
+
+    got = []
+    try:
+        view = catalog.view()
+    except Exception as e:
+        log(f"[auto-update] could not read the catalogue: {e}")
+        return got
+
+    for m in view.get("modules", []):
+        if m.get("installed") or not m.get("owned") or not m.get("deliverable"):
+            continue
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                z = catalog.download(m["id"], tmp)
+                res = module_installer.install(z)
+            got.append(m["id"])
+            log(f"[auto-update] installed purchased module: {m['id']} {res.get('version')}")
+        except Exception as e:
+            # One that will not install must not stop the others — somebody who
+            # bought three modules should get the two that work.
+            log(f"[auto-update] could not install {m['id']}: {e}")
+    return got
 
 
 def run_once(log=print) -> dict:
@@ -109,6 +149,7 @@ def run_once(log=print) -> dict:
     # A licence bought a minute ago is what decides the next few lines, so it is
     # collected BEFORE the catalogue is read rather than after.
     collect(log)
+    install_owned(log)
 
     took, refused, failed = [], [], []
     try:

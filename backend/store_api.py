@@ -692,6 +692,11 @@ def store_checkout_verify(reference: str = Query(...)):
         # A refresh, or Paystack retrying. Same page, same key — not a second
         # licence, and not the JSON this used to fall back to.
         back = _safe_return(row.get("return_url") or "")
+        if back:
+            from fastapi.responses import RedirectResponse
+            from urllib.parse import urlencode
+            q = urlencode({"licence_key": row["licence_key"], "bought": row["product"]})
+            return RedirectResponse(f"{back.rstrip('/')}/modules?{q}", status_code=303)
         return _receipt_page(key=row["licence_key"], product=row["product"],
                              instance=row["instance_id"], back=back, modules=[],
                              email=row["email"], expires="", reference=reference)
@@ -767,6 +772,23 @@ def store_checkout_verify(reference: str = Query(...)):
         dest = _store.normalise_instance(row["instance_id"])
         if "." in dest and " " not in dest and not dest.startswith(("es-", "localhost")):
             back = f"https://{dest}"
+
+    # Straight back to the instance that paid, at its Modules page, with the key
+    # on the URL. The instance applies it and installs what was bought without
+    # anybody pressing anything, so paying and having it are one motion.
+    #
+    # The address is the one recorded when the CHECKOUT WAS STARTED — never
+    # anything supplied at this callback — and it has to be loopback or https to
+    # have been recorded at all. So the only person who can aim this redirect is
+    # the person who opened and paid for that checkout, at their own machine.
+    if back:
+        from fastapi.responses import RedirectResponse
+        from urllib.parse import urlencode
+        q = urlencode({"licence_key": key, "bought": row["product"]})
+        return RedirectResponse(f"{back.rstrip('/')}/modules?{q}", status_code=303)
+
+    # Nowhere to go back to — an older purchase, or a checkout begun somewhere
+    # that could not say where it was. The key is on screen instead of lost.
     return _receipt_page(key=key, product=row["product"], instance=row["instance_id"],
                          back=back, modules=grants, email=row["email"],
                          expires=str(expires)[:10] if expires else "",
