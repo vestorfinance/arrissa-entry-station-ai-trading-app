@@ -210,6 +210,10 @@ ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS smtp_from     TEXT;
 -- used for the BrandSocket stream + higher Trade-API rate limits. Fernet-encrypted.
 -- App-level AI provider keys (Fernet-encrypted). The whole app runs on THESE keys —
 -- there is no bring-your-own-key. arrissa-chat → deepseek, arrissa-pro → openai.
+-- This installation's own id, generated once at first boot. A licence binds to
+-- it rather than to a hostname, so `localhost` — not unique, not reachable —
+-- stops being a dead end. See backend/instance.py.
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS instance_id TEXT;
 -- Take entitled module updates without being asked. On unless turned off: the
 -- instances that most need a fix are the unattended ones.
 ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS auto_update BOOLEAN DEFAULT TRUE;

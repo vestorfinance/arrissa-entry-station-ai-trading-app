@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { Puzzle, Upload, Trash2, Power, PowerOff, RefreshCw, Check, KeyRound,
          ShoppingCart, Download, ExternalLink, AlertTriangle, Search, X,
-         Sparkles, ArrowUpCircle, Lock } from 'lucide-react'
+         Sparkles, ArrowUpCircle, Lock, Fingerprint, Copy} from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout.jsx'
 import * as api from '../services/api.js'
 import * as moduleBus from '../services/moduleBus.js'
@@ -52,12 +52,20 @@ const priceLabel = (m, nameOf, billing) =>
 // getting that wiring wrong is exactly what broke this page: the state lived in
 // one component and was read in the other, so every card threw on render.
 let operatorEmail = ''
+// This installation's own id. Held at module scope for the same reason as the
+// email: the Buy button lives in a different component from the page that
+// fetches it.
+let instanceId = ''
 
 function buyLink(url) {
   if (!url) return url
   try {
     const u = new URL(url)
-    u.searchParams.set('instance', window.location.host)
+    // The id, not the hostname. `localhost` is every install in the world, so a
+    // licence bound to it is bound to all of them and provable by none — which
+    // is what sent people to type a key by hand. Falls back to the host only
+    // until the id has loaded.
+    u.searchParams.set('instance', instanceId || window.location.host)
     if (operatorEmail) u.searchParams.set('email', operatorEmail)
     return u.toString()
   } catch { return url }
@@ -72,6 +80,8 @@ export default function Modules() {
   const [busy, setBusy] = useState(null)          // module id, 'install' or 'licence'
   const [note, setNote] = useState(null)
   const [upd, setUpd] = useState(null)     // the updates summary, incl. whether they self-install
+  const [inst, setInst] = useState(null)   // this installation's own id
+  const [idShown, setIdShown] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [licence, setLicence] = useState('')
   const [showLicence, setShowLicence] = useState(false)
@@ -122,6 +132,10 @@ export default function Modules() {
       // Whether updates arrive on their own. Its own call because the store
       // being unreachable must not take the toggle down with it.
       api.moduleUpdates().then((u) => { if (!dead) setUpd(u) }).catch(() => {})
+      api.moduleInstance().then((i) => {
+        instanceId = i.instance_id || ''
+        if (!dead) setInst(i)
+      }).catch(() => {})
       if (dead || (!bought && !fromUrl && view?.has_licence)) return
 
       const d = await claim(false)
@@ -245,6 +259,40 @@ export default function Modules() {
                 <> {upd.blocked} update{upd.blocked === 1 ? '' : 's'} held back — the subscription lapsed.</>
               )}
             </span>
+          </div>
+        )}
+
+        {/* What this box is called when it buys something. Shown rather than
+            hidden: the operator has to be able to give it to the store, and a
+            credential nobody can read is a credential nobody can use. Folded
+            away by default because Buy carries it on its own and almost nobody
+            needs to look. */}
+        {inst?.instance_id && (
+          <div className="mod-ident">
+            <button type="button" className="mod-ident-head" onClick={() => setIdShown((v) => !v)}>
+              <Fingerprint size={14} strokeWidth={2} />
+              This installation <em>{inst.short}</em>
+              <span>{idShown ? 'hide' : 'show'}</span>
+            </button>
+            {idShown && (
+              <div className="mod-ident-body">
+                <code className="mod-ident-id">{inst.instance_id}</code>
+                <button className="btn btn--sm"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(inst.instance_id)
+                          setNote('Instance id copied.')
+                        }}>
+                  <Copy size={13} strokeWidth={2} /> Copy
+                </button>
+                <p className="mod-ident-note">
+                  Purchases bind to this, not to the address in your browser —
+                  so a licence works on <code>localhost</code>, behind NAT, and
+                  after you move the box to a real domain. Buy carries it for
+                  you; you only need it if you are paying from another machine.
+                  Treat it like a password.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

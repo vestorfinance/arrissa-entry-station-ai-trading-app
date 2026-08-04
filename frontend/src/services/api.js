@@ -267,6 +267,7 @@ export const disableModule = (id) => req(`/modules/${id}/disable`, { method: 'PO
 export const removeModule = (id) => req(`/modules/${id}`, { method: 'DELETE' })
 export const updateModule = (id) => req(`/modules/${id}/update`, { method: 'POST' })
 export const moduleUpdates = () => req('/modules/updates')
+export const moduleInstance = () => req('/modules/instance')
 export const updateAll = () => req('/modules/update-all', { method: 'POST' })
 export const setAutoUpdate = (on) => req('/modules/auto-update', { method: 'POST', body: { on } })
 

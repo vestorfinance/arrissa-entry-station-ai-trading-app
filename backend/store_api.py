@@ -127,9 +127,22 @@ def store_claim_start(instance: str = Query(..., description="the host claiming 
     inst = _store.normalise_instance(instance)
     if not inst:
         raise HTTPException(400, "Send your instance domain or id.")
-    if "." not in inst or inst.startswith("es-") or inst.startswith("localhost"):
-        raise HTTPException(400, f"{inst} is not a routable host, so there is nowhere to check "
-                                 f"the claim from here. Enter the licence key by hand instead.")
+    # A generated id proves itself by being known. There is nothing to call back
+    # to on a laptop behind NAT, and demanding a routable host there sent every
+    # localhost install to type a key by hand — which is the same secret, moved
+    # by human hands, for no gain. The id carries 256 bits and is never
+    # published, so presenting it is the proof.
+    if inst.startswith("es-"):
+        _sweep_claims()
+        token = _secrets.token_urlsafe(24)
+        _CLAIMS[token] = {"instance": inst, "challenge": "", "at": _time.time(),
+                          "by_id": True}
+        return {"claim_token": token, "challenge": "", "instance": inst,
+                "by_id": True, "expires_in": CLAIM_TTL_S}
+    if "." not in inst or inst.startswith("localhost"):
+        raise HTTPException(400, f"{inst} is not a routable host and is not an instance id, so "
+                                 f"there is nowhere to check the claim from here. Update this "
+                                 f"instance so it generates an id, or enter the licence key by hand.")
     _sweep_claims()
     token = _secrets.token_urlsafe(24)
     _CLAIMS[token] = {"instance": inst, "challenge": _secrets.token_urlsafe(18),
@@ -146,6 +159,16 @@ def store_claim_finish(claim_token: str = Query(...)):
     if not claim:
         raise HTTPException(404, "That claim has expired or was never started. Begin again.")
     host = claim["instance"]
+    # Claimed by id: the proof was presenting it, and there is no host to ask.
+    if claim.get("by_id"):
+        _CLAIMS.pop(claim_token, None)
+        lic = _store.licence_for_instance(host)
+        if not lic:
+            return {"instance": host, "found": False, "modules": [], "licence_key": None,
+                    "reason": "Nothing has been bought for this instance yet."}
+        return {"instance": host, "found": True, "verified": True, "licence_key": lic["key"],
+                "modules": lic["modules"] or [], "email": lic["email"],
+                "expires_at": lic["expires_at"], "expired": lic["expired"]}
     try:
         import requests as _rq
         r = _rq.get(f"https://{host}/api/modules/instance-check", timeout=10)

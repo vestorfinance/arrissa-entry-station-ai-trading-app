@@ -145,6 +145,19 @@ class ClaimBody(BaseModel):
     instance: str = ""          # blank ⇒ the host this request arrived on
 
 
+@router.get("/instance")
+def instance_identity(user=Depends(_current_user)):
+    """This installation's id, for the store page to show and for Buy to carry.
+
+    Shown rather than hidden: the operator has to hand it to the store when they
+    buy, and a credential nobody can read is a credential nobody can use."""
+    import instance as _instance
+    try:
+        return {"instance_id": _instance.ident(), "short": _instance.short()}
+    except Exception as e:
+        return {"instance_id": None, "error": str(e)}
+
+
 @router.post("/claim")
 def claim_entitlements(body: ClaimBody, request: Request, user=Depends(require_admin)):
     """Ask the store what this instance has bought, and apply it.
@@ -153,15 +166,39 @@ def claim_entitlements(body: ClaimBody, request: Request, user=Depends(require_a
     entrystation.com; this box proves it is the box that paid and collects the
     entitlement. Nobody types a key.
 
-    The instance defaults to the host this request came in on rather than
-    anything stored, because that is the name the buyer's browser used and so the
-    name the purchase was made against."""
+    Two names are tried, in this order:
+
+    This installation's own id first. It is unique and it is provable from
+    anywhere, including a laptop on `localhost` behind NAT — which the hostname
+    never was, on either count.
+
+    Then the host the request came in on, because licences bought before there
+    were ids are bound to a domain and must keep working. Falling back rather
+    than migrating: rebinding a live licence to collect it would spend one of
+    the three rebinds a licence gets, on somebody who only opened a page."""
     import catalog
+    import instance as _instance
+
+    tried, out = [], None
+    names = []
+    try:
+        names.append(_instance.ident())
+    except Exception as e:
+        print(f"[claim] no instance id: {e!r}", flush=True)
     host = (body.instance or request.headers.get("host") or "").split(":")[0]
-    out = catalog.claim(host)
+    if host and host not in names:
+        names.append(host)
+
+    for name in names:
+        out = catalog.claim(name)
+        tried.append(name)
+        if out.get("applied"):
+            host = name
+            break
+    out = out or {"applied": False, "reason": "This instance has no name to claim with."}
     if out.get("applied"):
         audit(user["email"], "module.claim", "licence", host,
-              {"modules": out.get("modules", [])})
+              {"modules": out.get("modules", []), "as": host})
     # The page's own `modules` are the catalogue rows, and the claim's are the ids
     # it just unlocked. Merging the two dicts blind let one silently overwrite the
     # other, so what was claimed is named apart from what is on offer.

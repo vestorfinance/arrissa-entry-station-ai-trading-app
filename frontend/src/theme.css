@@ -6432,3 +6432,28 @@ a.dv-card-title:hover { text-decoration: underline; }
 .mod-auto-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 600; font-size: 13px; }
 .mod-auto-toggle input { width: 15px; height: 15px; accent-color: var(--text-primary); cursor: pointer; }
 .mod-auto-note { font-size: 12.5px; color: var(--text-secondary); flex: 1 1 260px; }
+
+/* What this box is called when it buys something. Folded away — Buy carries it
+   on its own, so almost nobody needs to look at it. */
+.mod-ident { margin: 0 0 14px; }
+.mod-ident-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 9px 13px; border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--text-secondary);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.mod-ident-head em {
+  font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-primary);
+}
+.mod-ident-head span { margin-left: auto; font-weight: 500; }
+.mod-ident-body {
+  padding: 11px 13px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.mod-ident-id {
+  flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  padding: 8px 10px; border-radius: var(--radius-sm); background: var(--input-bg);
+}
+.mod-ident-note { flex: 1 1 100%; margin: 2px 0 0; font-size: 12px; color: var(--text-secondary); }
+.mod-ident-note code { font-size: 11.5px; }
