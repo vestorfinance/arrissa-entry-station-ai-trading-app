@@ -87,7 +87,7 @@ export default function Buy() {
         <ul className="buy-gets">
           <li><Check size={14} strokeWidth={2.4} /> Installs on your instance by itself</li>
           <li><Check size={14} strokeWidth={2.4} /> Updates included for the year</li>
-          <li><Check size={14} strokeWidth={2.4} /> Keeps working if it lapses — only new versions stop</li>
+          <li><Check size={14} strokeWidth={2.4} /> Keeps working if it lapses. Only new versions stop</li>
         </ul>
 
         <label className="field">
@@ -108,7 +108,7 @@ export default function Buy() {
           <span className="buy-next-title"><ShieldCheck size={13} strokeWidth={2} /> What happens next</span>
           <ol>
             <li>You come straight back to your own Module Store.</li>
-            <li>{name} installs itself — there is no key to type.</li>
+            <li>{name} installs itself. There is no key to type.</li>
             <li>The receipt and key are emailed to you, in case you move servers.</li>
           </ol>
         </div>
@@ -139,7 +139,7 @@ export default function Buy() {
       <p className="buy-foot">
         {instance
           ? <>Licensed to the installation you came from.</>
-          : <>Start this from the Module Store on your own EntryStation — the Buy button
+          : <>Start this from the Module Store on your own EntryStation. The Buy button
              there knows which installation to licence.</>}
       </p>
     </div>

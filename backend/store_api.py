@@ -515,7 +515,7 @@ def _receipt_page(*, key, product, instance, back, modules, email, expires, refe
     return HTMLResponse(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Payment complete — EntryStation</title>
+<title>Payment complete · EntryStation</title>
 <style>
   :root {{ color-scheme: light dark; }}
   * {{ box-sizing: border-box; }}
