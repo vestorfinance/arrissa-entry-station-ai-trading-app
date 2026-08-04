@@ -245,6 +245,33 @@ def update_module(module_id: str, user=Depends(require_admin)):
     return {**res, "updated_from": before}
 
 
+def _auto_on() -> bool:
+    try:
+        import auto_update, edition
+        return bool(edition.is_community() and auto_update.enabled())
+    except Exception:
+        return False
+
+
+class AutoBody(BaseModel):
+    on: bool
+
+
+@router.post("/auto-update")
+def set_auto_update(body: AutoBody, user=Depends(require_admin)):
+    """Turn automatic updates off, for an operator who wants nothing installing
+    itself. Entitlement is unaffected either way — this decides whether an
+    update they are already owed arrives on its own or waits for the button."""
+    import db
+    with db.connect() as conn:
+        conn.execute("INSERT INTO admin_settings (id, auto_update, updated_at) VALUES (1, %s, now()) "
+                     "ON CONFLICT (id) DO UPDATE SET auto_update = EXCLUDED.auto_update, updated_at = now()",
+                     (body.on,))
+        conn.commit()
+    audit(user["email"], "modules.auto_update", "setting", None, {"on": body.on})
+    return {"ok": True, "auto": _auto_on()}
+
+
 @router.get("/updates")
 def updates(user=Depends(_current_user)):
     """Everything with a newer version waiting, in one answer.
@@ -262,6 +289,10 @@ def updates(user=Depends(_current_user)):
         # "core" and "modules" — they think the app has an update or it does not.
         "count": len(rows) + (1 if core.get("update_available") else 0),
         "blocked": sum(1 for m in rows if not m.get("can_update")),
+        # Whether they will arrive on their own. The page says "update
+        # available" either way; this is the difference between a button
+        # somebody has to find and a fix that lands by itself.
+        "auto": _auto_on(),
         "modules": [{"id": m["id"], "name": m["name"],
                      "from": m.get("installed_version"), "to": m.get("version"),
                      "can_update": m.get("can_update", False),

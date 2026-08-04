@@ -71,6 +71,7 @@ export default function Modules() {
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(null)          // module id, 'install' or 'licence'
   const [note, setNote] = useState(null)
+  const [upd, setUpd] = useState(null)     // the updates summary, incl. whether they self-install
   const [dragging, setDragging] = useState(false)
   const [licence, setLicence] = useState('')
   const [showLicence, setShowLicence] = useState(false)
@@ -118,6 +119,9 @@ export default function Modules() {
       let view = null
       try { view = await api.moduleCatalog(); if (!dead) { setData(view); setErr(null) } }
       catch (e) { if (!dead) setErr(e.message) }
+      // Whether updates arrive on their own. Its own call because the store
+      // being unreachable must not take the toggle down with it.
+      api.moduleUpdates().then((u) => { if (!dead) setUpd(u) }).catch(() => {})
       if (dead || (!bought && !fromUrl && view?.has_licence)) return
 
       const d = await claim(false)
@@ -194,6 +198,36 @@ export default function Modules() {
 
         <input ref={fileRef} type="file" accept=".zip" hidden
                onChange={(e) => { upload(e.target.files?.[0]); e.target.value = '' }} />
+
+        {/* Whether an entitled update arrives on its own. The cards say
+            "v1.0.2 available" either way; this is the difference between a
+            button somebody has to come here and find, and a fix that lands
+            while nobody is looking. Self-hosted only — the hosted service is
+            deployed, not updated from its own store. */}
+        {upd && (
+          <div className="mod-auto">
+            <label className="mod-auto-toggle">
+              <input type="checkbox" checked={!!upd.auto}
+                     onChange={(e) => {
+                       const on = e.target.checked
+                       setUpd((u) => ({ ...u, auto: on }))       // answer the click at once
+                       api.setAutoUpdate(on)
+                         .then((r) => setUpd((u) => ({ ...u, auto: r.auto })))
+                         .catch(() => setUpd((u) => ({ ...u, auto: !on })))
+                     }} />
+              <span>Install updates automatically</span>
+            </label>
+            <span className="mod-auto-note">
+              {upd.auto
+                ? 'Checked every six hours. Only modules your subscription still covers, '
+                  + 'and only while the instance is idle.'
+                : 'Updates wait for you to press the button on each module.'}
+              {upd.blocked > 0 && (
+                <> {upd.blocked} update{upd.blocked === 1 ? '' : 's'} held back — the subscription lapsed.</>
+              )}
+            </span>
+          </div>
+        )}
 
         {err && <div className="alert alert--danger">{err}</div>}
         {note && <div className="alert alert--ok"><Check size={14} strokeWidth={2} /> {note}</div>}

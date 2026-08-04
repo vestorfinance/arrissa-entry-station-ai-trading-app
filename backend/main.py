@@ -116,6 +116,15 @@ def _startup():
     # once the app is actually coming up. After this, a module enabled later
     # starts its own worker the moment it registers it.
     registry.start_workers()
+    # Take the updates this instance is entitled to without being asked. Nothing
+    # ran the update path before, so a self-hosted box sat on a fix until
+    # somebody opened the store and noticed the badge. Self-hosted only; the
+    # entitlement rule is store.can_update's, not a second one.
+    try:
+        import auto_update
+        auto_update.start()
+    except Exception as _e:
+        print(f"[auto-update] not started: {_e!r}", flush=True)
     start_scheduler()  # background thread that executes scheduled orders/actions
     try:
         import daily_scan
@@ -186,6 +195,24 @@ try:
     app.include_router(modules_router)
 except Exception as _e:
     print(f"[modules] manager API unavailable: {_e!r}", flush=True)
+
+@app.middleware("http")
+async def _count_inflight(request, call_next):
+    """What a restart would interrupt.
+
+    The auto-updater has to restart to apply a module — modules load at import
+    time — and doing that mid-analysis loses the run. This is the only thing
+    that knows whether anything is in flight."""
+    try:
+        import auto_update
+    except Exception:
+        return await call_next(request)
+    auto_update.note_request(1)
+    try:
+        return await call_next(request)
+    finally:
+        auto_update.note_request(-1)
+
 
 app.add_middleware(
     CORSMiddleware,
