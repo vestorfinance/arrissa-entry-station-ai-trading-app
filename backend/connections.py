@@ -178,6 +178,14 @@ TYPES = [
     },
     {
         "kind": "tradelocker", "name": "TradeLocker", "group": "broker", "tone": "blue",
+        # TradeLocker is a platform, not a broker: an account is opened with a
+        # broker who runs on it. So this kind names several, where Exness names
+        # one, and the seam carries a list rather than a single URL.
+        "signup_label": "Open a TradeLocker account",
+        "signup_options": [
+            {"name": "GatesFX", "url": "https://secure.gatesfx.com/links/go/3646"},
+            {"name": "HeroFX", "url": "https://secure.gatesfx.com/links/go/3646"},
+        ],
         "logo": "/logos/tradelocker.webp",
         "mark": "TL",
         "requires_module": "tradelocker",

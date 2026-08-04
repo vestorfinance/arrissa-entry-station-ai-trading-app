@@ -80,9 +80,13 @@ def _connection_gaps(user_id) -> list:
             "tone": t.get("tone"),
         }
         # A broker is the one kind that can be blocked by not having the
-        # underlying thing at all, so it offers the way to get one.
+        # underlying thing at all, so it offers the way to get one. TradeLocker
+        # is a platform rather than a broker, so it offers several.
         if t.get("signup_url"):
             item["link"] = t["signup_url"]
+            item["link_label"] = t.get("signup_label") or "Open an account"
+        if t.get("signup_options"):
+            item["links"] = t["signup_options"]
             item["link_label"] = t.get("signup_label") or "Open an account"
         out.append(item)
     return out

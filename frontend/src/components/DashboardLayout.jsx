@@ -3,6 +3,7 @@ import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 import LivePanel from './LivePanel.jsx'
 import UpdateRibbon from './UpdateRibbon.jsx'
+import SetupModal from './SetupModal.jsx'
 
 // App shell: fixed sidebar + topbar, scrollable main content area.
 // On mobile the sidebar becomes an off-canvas drawer toggled from the topbar.
@@ -33,6 +34,7 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
           the whole header accent-blue. A column wrapper gives the ribbon real
           height that the sidebar and the body both start below. */}
       <UpdateRibbon />
+      <SetupModal />
     <div className={'app-shell' + (navOpen ? ' app-shell--nav-open' : '') + (rail ? ' app-shell--rail' : '')}>
       <Sidebar onNavigate={() => setNavOpen(false)} collapsed={rail} onToggleCollapse={() => setRail((r) => !r)} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}

@@ -6584,3 +6584,36 @@ a.dv-card-title:hover { text-decoration: underline; }
 .notif-item-text p { margin: 3px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
 .notif-item-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .notif-item-actions .btn { gap: 5px; }
+
+/* ── first run ────────────────────────────────────────────────────────────────
+   The two things the app cannot run without, asked once, together. Skippable:
+   a wall between somebody and the app they just installed is a wall they will
+   resent, and the bell keeps asking anyway. */
+.setup-modal { width: min(560px, calc(100vw - 32px)); }
+.setup-intro { margin: 0 0 4px; font-size: 13px; color: var(--text-secondary); }
+.setup-step { padding: 14px 0 0; }
+.setup-step + .setup-step { margin-top: 4px; }
+.setup-step-head { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
+.setup-num {
+  width: 21px; height: 21px; border-radius: var(--radius-pill);
+  display: grid; place-items: center; font-style: normal;
+  font-size: 11.5px; font-weight: 700;
+  background: var(--surface-2); color: var(--text-secondary);
+}
+.setup-num--done { background: var(--tone-ok); color: #0b0b0c; }
+.setup-body { display: flex; flex-direction: column; gap: 10px; padding: 10px 0 0 30px; }
+.setup-note { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text-secondary); }
+.setup-providers { display: flex; flex-wrap: wrap; gap: 7px; }
+.setup-provider {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  background: var(--surface-2); color: var(--text-primary);
+}
+.setup-provider img { width: 15px; height: 15px; object-fit: contain; }
+.setup-provider--on { background: var(--text-primary); color: var(--bg-primary); }
+.setup-row { display: flex; gap: 8px; }
+.setup-row .input { flex: 1; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.setup-brokers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.setup-actions { justify-content: space-between; }
+@media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }

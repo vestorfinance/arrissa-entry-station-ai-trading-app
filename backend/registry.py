@@ -300,7 +300,16 @@ def connection_type(spec: dict, *, module=None):
 
 
 def connection_types() -> list:
-    return [c["spec"] for c in _conn_types if c]
+    """Each spec, stamped with the module that registered it.
+
+    The registry already knows which module a connection belongs to, and was
+    keeping it to itself — so a module-provided kind arrived with no
+    `requires_module` and nothing could tell that Telegram unconnected meant the
+    Telegram module was sitting there doing nothing. Asking every module to
+    repeat what the registration already says is a rule somebody eventually
+    forgets; taking it from the registration is a rule nobody can."""
+    return [{**c["spec"], **({"requires_module": c["module"]} if c.get("module") else {})}
+            for c in _conn_types if c]
 
 
 def system_note(text: str, *, module=None):

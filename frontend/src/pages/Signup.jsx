@@ -69,8 +69,6 @@ export default function Signup({ invite = '' }) {
   const [country, setCountry] = useState(defaultCountry)
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [exnessEmail, setExnessEmail] = useState('')
-  const [exnessPassword, setExnessPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -117,8 +115,13 @@ export default function Signup({ invite = '' }) {
   function continuePassword(e) {
     e.preventDefault(); setError('')
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
-    if (!exnessEmail) setExnessEmail(email.trim())      // default to the signup email
-    setStep('exness')
+    // Straight to the account. Sign-up used to end by asking for an Exness email
+    // and password, which was wrong twice: it asked somebody who may have no
+    // Exness account for credentials to one, and it asked for the single thing
+    // this app is careful never to keep. Setting up what you trade on, and what
+    // you think with, happens once you are inside — where it can offer to open
+    // an account for you rather than assume you have one.
+    complete(e)
   }
 
   // typing a full "+<dial>…" number auto-captures the country
@@ -135,7 +138,6 @@ export default function Signup({ invite = '' }) {
       const res = await api.signupComplete({
         email: email.trim(), first_name: firstName.trim(), last_name: lastName.trim(),
         phone: fullPhone, country: country.code, password,
-        exness_email: (exnessEmail || email).trim(), exness_password: exnessPassword,
         invite,
       })
       session(res)
@@ -157,7 +159,6 @@ export default function Signup({ invite = '' }) {
             {step === 'name' && 'What should we call you?'}
             {step === 'phone' && 'Your phone number.'}
             {step === 'password' && 'Create a password to secure your account.'}
-            {step === 'exness' && 'Connect your Exness account to finish.'}
           </p>
         </div>
 
@@ -228,21 +229,6 @@ export default function Signup({ invite = '' }) {
           </form>
         )}
 
-        {step === 'exness' && (
-          <form className="auth-form" onSubmit={complete}>
-            <input className="auth-input" type="email" autoFocus placeholder="Exness account email"
-                   value={exnessEmail} onChange={(e) => setExnessEmail(e.target.value)} />
-            <input className="auth-input" type="password" placeholder="Your Exness password"
-                   value={exnessPassword} onChange={(e) => setExnessPassword(e.target.value)} />
-            <p className="auth-note">Enter the email on your Exness account (may differ from your login email). Used once to securely connect it — your password is never stored.</p>
-            <button className="auth-continue" type="submit" disabled={loading || !exnessPassword}>
-              {loading ? 'Connecting…' : 'Connect & create account'}
-            </button>
-            <p className="auth-alt">
-              <button type="button" className="auth-link" onClick={() => { setStep('password'); setError('') }}>Back</button>
-            </p>
-          </form>
-        )}
 
         <div className="auth-legal">
           <span>Terms of use</span>
