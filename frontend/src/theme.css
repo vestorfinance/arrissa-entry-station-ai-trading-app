@@ -5625,7 +5625,7 @@ a.dv-card-title:hover { text-decoration: underline; }
 .home-orb-mark {
   position: relative;    /* over the light rather than under it */
   width: 100px; height: 100px;
-  object-fit: contain;
+  object-fit: contain;   /* the app's OWN mark, drawn to sit in space, not a circle */
 }
 
 /* ── safety ── */
@@ -6572,12 +6572,14 @@ a.dv-card-title:hover { text-decoration: underline; }
 .notif-item + .notif-item { margin-top: 2px; }
 .notif-item:hover { background: var(--surface-2); }
 .notif-item-icon {
-  flex: none; width: 30px; height: 30px; border-radius: var(--radius-sm);
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
   display: grid; place-items: center; overflow: hidden;
   background: var(--surface-2); color: var(--text-secondary);
 }
 .notif-item:hover .notif-item-icon { background: var(--bg-tertiary); }
-.notif-item-icon img { width: 20px; height: 20px; object-fit: contain; }
+.notif-item-icon img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
 .notif-item--blocked .notif-item-icon { color: var(--tone-bad); }
 .notif-item-text { flex: 1; min-width: 0; }
 .notif-item-text strong { display: block; font-size: 13px; font-weight: 600; line-height: 1.4; }
@@ -6601,7 +6603,12 @@ a.dv-card-title:hover { text-decoration: underline; }
   background: var(--surface-2); color: var(--text-secondary);
 }
 .setup-num--done { background: var(--tone-ok); color: #0b0b0c; }
-.setup-body { display: flex; flex-direction: column; gap: 10px; padding: 10px 0 0 30px; }
+/* No indent. Lining the content up under the heading TEXT meant the numbers
+   pushed every field to the right, so nothing on the page shared a left edge —
+   which is what makes a column of things read as a column. The number sits in
+   the margin of its own heading and everything else starts where the number
+   starts. */
+.setup-body { display: flex; flex-direction: column; gap: 10px; padding: 10px 0 0; }
 .setup-note { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text-secondary); }
 .setup-providers { display: flex; flex-wrap: wrap; gap: 7px; }
 .setup-provider {
@@ -6609,11 +6616,25 @@ a.dv-card-title:hover { text-decoration: underline; }
   padding: 6px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   background: var(--surface-2); color: var(--text-primary);
 }
-.setup-provider img { width: 15px; height: 15px; object-fit: contain; }
+/* A circle the logo FILLS, not a square shrunk inside one. `contain` leaves a
+   letterbox on any logo that is not perfectly square, which is most of them, so
+   the mark reads as a cropped box floating in a pill. `cover` fills it and the
+   circle is the shape you see. Same rule the Connections page already used. */
+.setup-provider img {
+  width: 18px; height: 18px; flex: none;
+  border-radius: 50%; object-fit: cover; display: block;
+}
 .setup-provider--on { background: var(--text-primary); color: var(--bg-primary); }
 .setup-row { display: flex; gap: 8px; }
 .setup-row .input { flex: 1; }
 .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.setup-brokers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+/* The label and both brokers on one line where there is room, and wrapping as
+   a group rather than dropping one broker onto a line by itself. */
+.setup-brokers {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px; font-size: 12.5px; color: var(--text-secondary);
+}
+.setup-brokers > span { flex: none; }
+.setup-brokers .btn { flex: none; }
 .setup-actions { justify-content: space-between; }
 @media (max-width: 560px) { .setup-grid { grid-template-columns: 1fr; } }
