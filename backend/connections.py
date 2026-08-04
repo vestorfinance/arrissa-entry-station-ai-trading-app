@@ -115,6 +115,7 @@ TYPES = [
     # install breaks.
     {
         "kind": "myfxbook", "name": "Myfxbook", "group": "data", "tone": "blue",
+        "logo": "/logos/myfxbook.webp",
         "mark": "Mf",
         "blurb": "Your Myfxbook login, for Retail Sentiment. The free account is enough — "
                  "it is read-only community positioning, never your own accounts.",
@@ -125,14 +126,80 @@ TYPES = [
             {"key": "password", "label": "Myfxbook password", "secret": True, "required": True},
         ],
     },
+
+    # ── the brokers ───────────────────────────────────────────────────────────
+    #
+    # These are connections in every sense a user cares about, and in no sense
+    # this table understands. A broker login is NOT stored here and must not be:
+    # the password is used once to obtain a session and then thrown away, which
+    # is the promise the whole product rests on. Writing it into `config`
+    # alongside an API key would quietly break that.
+    #
+    # So they are `managed_by` their own module. The page shows them, collects
+    # the fields and posts them to the module's own endpoint, which does the
+    # login and keeps only what it should. Nothing broker-shaped reaches this
+    # table, and `secret: True` never gets to mean "stored, encrypted" for a
+    # password that should not exist a second later.
+    #
+    # `requires_module` keeps them out of sight until the module is installed —
+    # offering to connect a broker the instance cannot talk to is a dead end
+    # dressed as an option.
+    {
+        "kind": "exness", "name": "Exness", "group": "broker", "tone": "amber",
+        "logo": "/logos/exness.png",
+        "mark": "Ex",
+        "requires_module": "exness",
+        "managed_by": {"connect": "/api/exness/connect",
+                       "status": "/api/exness/connection",
+                       "disconnect": "/api/exness/disconnect"},
+        "blurb": "Your own Exness account. The password is used once to obtain a session "
+                 "and never stored.",
+        "docs": "https://my.exness.com/accounts/sign-in",
+        "fields": [
+            {"key": "exness_email", "label": "Exness email", "required": True,
+             "placeholder": "you@example.com"},
+            {"key": "exness_password", "label": "Exness password", "secret": True,
+             "required": True, "transient": True},
+        ],
+    },
+    {
+        "kind": "tradelocker", "name": "TradeLocker", "group": "broker", "tone": "blue",
+        "logo": "/logos/tradelocker.webp",
+        "mark": "TL",
+        "requires_module": "tradelocker",
+        "managed_by": {"connect": "/api/tradelocker/connect",
+                       "status": "/api/tradelocker/connection",
+                       "disconnect": "/api/tradelocker/disconnect"},
+        "blurb": "A TradeLocker login. The password is used once for tokens and never "
+                 "stored. Every account under the login becomes available.",
+        "docs": "https://tradelocker.com",
+        "fields": [
+            {"key": "email", "label": "TradeLocker email", "required": True,
+             "placeholder": "you@example.com"},
+            {"key": "password", "label": "Password", "secret": True, "required": True,
+             "transient": True},
+            {"key": "server", "label": "Server", "required": True,
+             "placeholder": "the server name your broker gave you"},
+            {"key": "environment", "label": "Environment", "required": True,
+             "placeholder": "live or demo"},
+        ],
+    },
 ]
 
 
 
 def types() -> list:
-    """Core's kinds, plus anything an installed module adds."""
+    """Core's kinds, plus anything an installed module adds.
+
+    A kind that names `requires_module` is hidden until that module is actually
+    loaded. Offering to connect a broker this instance has no code for is a dead
+    end dressed as an option — and worse, its connect endpoint would not exist,
+    so the form would fail with a 404 rather than an explanation."""
     import registry
-    return TYPES + registry.connection_types()
+    loaded = set(registry.modules())
+    mine = [t for t in TYPES
+            if not t.get("requires_module") or t["requires_module"] in loaded]
+    return mine + registry.connection_types()
 
 
 def _spec(kind):

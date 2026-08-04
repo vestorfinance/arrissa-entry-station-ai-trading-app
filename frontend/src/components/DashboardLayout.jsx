@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 import LivePanel from './LivePanel.jsx'
-import ConnectExnessGate from './ConnectExnessGate.jsx'
 
 // App shell: fixed sidebar + topbar, scrollable main content area.
 // On mobile the sidebar becomes an off-canvas drawer toggled from the topbar.
@@ -34,7 +33,11 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
         <main className={flush ? 'app-main app-main--flush' : 'app-main'}>{children}</main>
       </div>
       {!hideLive && <LivePanel />}
-      <ConnectExnessGate />
+      {/* The Exness gate used to sit here, blocking the whole app until a
+          broker was connected. A broker is a connection like any other now, made
+          from Settings > Connections when the user wants one — an app that
+          refuses to open until you hand over a broker password is a worse first
+          impression than an app with nothing connected yet. */}
     </div>
   )
 }

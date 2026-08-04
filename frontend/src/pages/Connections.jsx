@@ -58,14 +58,37 @@ export default function Connections() {
   const [loading, setLoading] = useState(null)
   const [query, setQuery] = useState('')
   const [modelQ, setModelQ] = useState({})   // per-kind model filter
+  // Brokers keep their state in their own module rather than in the connections
+  // table, because their password is used once and never stored. So whether one
+  // is connected has to be ASKED, per kind, from the endpoint it named.
+  const [managedState, setManagedState] = useState({})
 
   const load = useCallback(() => {
-    api.listConnections().then(setD).catch((e) => setErr(e.message))
+    api.listConnections().then((data) => {
+      setD(data)
+      for (const t of data?.types || []) {
+        if (!t.managed_by?.status) continue
+        api.get(t.managed_by.status)
+          .then((st) => setManagedState((m) => ({ ...m, [t.kind]: st })))
+          // A module that is installed but not yet migrated has no status
+          // endpoint. Not connected is the honest answer, not an error banner.
+          .catch(() => setManagedState((m) => ({ ...m, [t.kind]: { connected: false } })))
+      }
+    }).catch((e) => setErr(e.message))
     // Asked always, not only where the EDITION is byok: a cloud instance may
     // allow its own keys too, and the server is the one that knows.
     api.aiConfig().then(setAiCfg).catch(() => {})
   }, [caps?.byok])
   useEffect(() => { load() }, [load])
+
+  async function disconnectManaged(t) {
+    setErr(null); setMsg(null)
+    try {
+      await api.post(t.managed_by.disconnect, {})
+      setMsg(`${t.name} disconnected.`)
+      load()
+    } catch (e) { setErr(e.message) }
+  }
 
   const allTypes = d?.types || []
   const conns = d?.connections || []
@@ -177,6 +200,10 @@ export default function Connections() {
         <div className="conn-grid">
           {types.map((t) => {
             const mine = byKind(t.kind)
+            // A broker keeps its state in its own module, not in this table, so
+            // "connected" has to be asked for rather than counted here.
+            const managed = t.managed_by ? (managedState[t.kind] || null) : null
+            const isOn = t.managed_by ? !!managed?.connected : mine.length > 0
             return (
               <div className="conn-card" key={t.kind}>
                 <div className="conn-card-head">
@@ -184,7 +211,10 @@ export default function Connections() {
                   <div className="conn-card-title">
                     <span className="conn-card-name">{t.name}</span>
                     <span className="conn-card-count">
-                      {mine.length ? `${mine.length} connected` : 'Not connected'}
+                      {t.managed_by
+                        ? (isOn ? (managed?.exness_email || managed?.connections?.[0]?.email
+                                   || 'Connected') : 'Not connected')
+                        : (mine.length ? `${mine.length} connected` : 'Not connected')}
                     </span>
                   </div>
                 </div>
@@ -195,9 +225,15 @@ export default function Connections() {
                       {t.docs_label || 'Get a key'} <ExternalLink size={12} />
                     </a>
                   )}
+                  {t.managed_by && isOn && (
+                    <button className="btn btn--danger btn--sm"
+                            onClick={() => disconnectManaged(t)}>
+                      Disconnect
+                    </button>
+                  )}
                   <button className="btn btn--primary btn--sm"
                           onClick={() => setEditing({ type: t, conn: null })}>
-                    <Plus size={14} strokeWidth={2} /> Connect
+                    <Plus size={14} strokeWidth={2} /> {isOn ? 'Reconnect' : 'Connect'}
                   </button>
                 </div>
               </div>
@@ -343,6 +379,16 @@ function ConnectionForm({ type, conn, onClose, onSaved, onError }) {
   async function submit(e) {
     e.preventDefault(); setBusy(true); onError(null)
     try {
+      // A broker is managed by its own module, and the difference is not
+      // cosmetic: its password is used once to obtain a session and must never
+      // be written down. Storing these fields the ordinary way would encrypt
+      // and keep them, which is the one thing the product promises not to do.
+      // So they go straight to the module's endpoint and nothing lands here.
+      if (type.managed_by?.connect) {
+        await api.post(type.managed_by.connect, values)
+        onSaved(null, `${type.name} connected.`)
+        return
+      }
       const data = conn
         ? await api.updateConnection(conn.id, { name, config: values })
         : await api.createConnection({ kind: type.kind, name, config: values })

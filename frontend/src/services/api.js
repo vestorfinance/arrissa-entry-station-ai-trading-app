@@ -360,6 +360,17 @@ export const adminAddAdmin = (email, role = 'admin') =>
 export const adminRemoveAdmin = (email) =>
   req(`/admin/admins/${encodeURIComponent(email)}`, { method: 'DELETE' })
 // public branding config
+// A module's own endpoint, named by its connection type rather than known here.
+//
+// `req` prefixes BASE ('/api'), and a managed_by URL arrives already absolute
+// ('/api/exness/connect') because that is what the module registered and what
+// its docs say — so the prefix is stripped rather than the URL being written
+// twice in two shapes.
+export const post = (url, body) =>
+  req(url.replace(/^\/api/, ''), { method: 'POST', body: JSON.stringify(body || {}) })
+
+export const get = (url) => req(url.replace(/^\/api/, ''))
+
 export const appConfig = () => req('/app-config')
 
 // AI models — the branded models the operator has enabled (arrissa-chat / arrissa-pro).
