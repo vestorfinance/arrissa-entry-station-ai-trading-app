@@ -56,8 +56,44 @@ function paint(text) {
   return out
 }
 
+// Work out what a native drop inserted, and whether it needs an `&` welding it
+// to what was already there.
+//
+// Dropping `impact=high` at the end of `symbol=XAUUSD` gives you
+// `symbol=XAUUSDimpact=high` — one broken key — because the browser inserts
+// exactly the string it was given and knows nothing about query strings. The
+// separator cannot be baked into the dragged text either: at the START of the
+// field it would need to trail rather than lead, and the drag has no idea where
+// it will land.
+//
+// So it is fixed afterwards, from the only evidence available once the browser
+// has already done it: the difference between the old value and the new one.
+// The common prefix and suffix bracket the insertion, and the characters on
+// either side of it say which separators are missing.
+export function stitch(prev, next) {
+  let a = 0
+  while (a < prev.length && a < next.length && prev[a] === next[a]) a += 1
+  let b = 0
+  while (b < prev.length - a && b < next.length - a
+         && prev[prev.length - 1 - b] === next[next.length - 1 - b]) b += 1
+  const ins = next.slice(a, next.length - b)
+  // A bare variable goes INSIDE a value — `symbol={{symbol}}` — so it must not
+  // be separated from what it lands next to. Only a whole pair needs welding.
+  if (!ins || !ins.includes('=')) return next
+  const before = next.slice(0, a)
+  const after = next.slice(next.length - b)
+  // A separator is missing only when NEITHER side supplies one. The dropped
+  // text can carry its own — dragging out of the middle of a call brings the
+  // `&` with it — and adding a second gives `a=1&&b=2`, which is an empty pair.
+  const sepEnd = (t) => /[&?;\n]$/.test(t)
+  const sepStart = (t) => /^[&?;\n]/.test(t)
+  const lead = (!before || sepEnd(before) || sepStart(ins)) ? '' : '&'
+  const trail = (!after || sepStart(after) || after[0] === '=' || sepEnd(ins)) ? '' : '&'
+  return before + lead + ins + trail + after
+}
+
 export default function ParamsField({ value = '', onChange, placeholder, big = false,
-                                      inputRef, onDrop, autoFocus, onKeyDown,
+                                      inputRef, autoFocus, onKeyDown,
                                       className = '' }) {
   const ownRef = useRef(null)
   const ref = inputRef || ownRef
@@ -85,7 +121,20 @@ export default function ParamsField({ value = '', onChange, placeholder, big = f
           preRef.current.scrollTop = e.currentTarget.scrollTop
           preRef.current.scrollLeft = e.currentTarget.scrollLeft
         }}
-        onDrop={onDrop}
+        /* The browser places a dropped string exactly where it was dropped —
+           it is the only thing that knows the character offset under the
+           pointer, so the drop itself is left alone. Two things still have to
+           happen afterwards: a controlled textarea must be told its DOM value
+           changed or the next keystroke reverts it, and a dropped key=value
+           pair may need an `&` welding it to its neighbour. */
+        onDrop={(e) => {
+          const el = e.currentTarget
+          const prev = value
+          requestAnimationFrame(() => {
+            if (!el || el.value === prev) return
+            onChange(stitch(prev, el.value))
+          })
+        }}
       />
     </div>
   )

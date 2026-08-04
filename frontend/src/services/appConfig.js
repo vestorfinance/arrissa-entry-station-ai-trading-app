@@ -4,6 +4,35 @@ import { useState, useEffect } from 'react'
 import * as api from './api.js'
 
 let _name = null
+// The whole payload, fetched once. Three separate places want something out of
+// it (the name, the edition, whether this is a fresh install) and each fetching
+// it for itself meant the same public request three times on first paint.
+let _cfg = null
+let _inflight = null
+
+export function loadAppConfig() {
+  if (_cfg) return Promise.resolve(_cfg)
+  if (!_inflight) {
+    _inflight = api.appConfig()
+      .then((c) => { _cfg = c || {}; setAppNameCache(_cfg.app_name); return _cfg })
+      .catch(() => {
+        // Not cached: an unreachable server now should not decide what this
+        // instance is for the rest of the session. Cloud is the safe guess —
+        // it shows the marketing page rather than a set-up flow.
+        _inflight = null
+        return { edition: 'cloud', setup: false }
+      })
+  }
+  return _inflight
+}
+
+// null until it is known. Callers that route on it should render nothing while
+// it is null rather than guess, or the page paints once and is snatched away.
+export function useAppConfig() {
+  const [cfg, setCfg] = useState(_cfg)
+  useEffect(() => { if (!_cfg) loadAppConfig().then(setCfg) }, [])
+  return cfg
+}
 
 export function getAppName() { return _name || 'EntryStation' }
 
@@ -17,7 +46,7 @@ export function useAppName() {
   const [n, setN] = useState(getAppName())
   useEffect(() => {
     const sync = () => setN(getAppName())
-    if (_name == null) api.appConfig().then((c) => setAppNameCache(c.app_name)).catch(() => {})
+    if (_name == null) loadAppConfig().catch(() => {})
     window.addEventListener('appname-change', sync)
     return () => window.removeEventListener('appname-change', sync)
   }, [])

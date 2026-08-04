@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
-import { useAppName } from '../services/appConfig.js'
+import { useAppName, useAppConfig } from '../services/appConfig.js'
 
 function GoogleIcon() {
   return (
@@ -19,6 +19,7 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const appName = useAppName()
+  const cfg = useAppConfig()
   const [step, setStep] = useState('email')     // email → password
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,6 +27,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   if (isAuthed) return <Navigate to="/dashboard" replace />
+  // Render nothing rather than guess: painting a login form and pulling it away
+  // a moment later is worse than a blank instant.
+  if (cfg === null) return null
+  // A fresh Community install has no account to log in to. The form would ask
+  // for a password nobody has set and hide the way forward in small print at
+  // the bottom, so the first page is the one that makes the account.
+  if (cfg.setup) return <Navigate to="/signup" replace />
+  // Google sign-in is a hosted-service arrangement — it needs an OAuth client
+  // registered against a known domain. A self-hosted box has no such client and
+  // never will, so offering the button there is offering something that cannot
+  // work.
+  const community = cfg.edition === 'community'
   const from = location.state?.from?.pathname || '/dashboard'
 
   function continueEmail(e) {
@@ -67,11 +80,14 @@ export default function Login() {
 
         {step === 'email' ? (
           <form className="auth-form" onSubmit={continueEmail}>
-            <button type="button" className="auth-oauth" onClick={google}>
-              <GoogleIcon /> Continue with Google
-            </button>
-
-            <div className="auth-or"><span>OR</span></div>
+            {!community && (
+              <>
+                <button type="button" className="auth-oauth" onClick={google}>
+                  <GoogleIcon /> Continue with Google
+                </button>
+                <div className="auth-or"><span>OR</span></div>
+              </>
+            )}
 
             <input
               className="auth-input"
@@ -83,9 +99,14 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
             />
             <button className="auth-continue" type="submit">Continue</button>
-            <p className="auth-alt">New here?{' '}
-              <button type="button" className="auth-link" onClick={() => navigate('/signup')}>Create an account</button>
-            </p>
+            {/* Community is single-user: registration closes for good once the
+                one account exists, so this link could only ever land on a
+                refusal. It is the right link on the hosted service. */}
+            {!community && (
+              <p className="auth-alt">New here?{' '}
+                <button type="button" className="auth-link" onClick={() => navigate('/signup')}>Create an account</button>
+              </p>
+            )}
           </form>
         ) : (
           <form className="auth-form" onSubmit={signIn}>

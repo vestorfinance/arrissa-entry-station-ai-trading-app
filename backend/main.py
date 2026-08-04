@@ -348,7 +348,16 @@ def app_config():
     their own server, and a tier list there would be an advert for a product the
     operator has already declined."""
     import mailer
-    out = {"app_name": mailer.app_name(), "edition": edition.NAME}
+    out = {"app_name": mailer.app_name(), "edition": edition.NAME,
+           # Nobody has an account yet. On a Community box that means this is a
+           # fresh install, and the first thing anyone needs is to CREATE the
+           # account — not sign in to one that does not exist. Sending them to a
+           # login form first asks for a password nobody has set, and the way
+           # out of it is a link at the bottom of the page.
+           #
+           # Cloud never reports this: entrystation.com has accounts, and one
+           # deleted database should not turn the front door into a sign-up.
+           "setup": edition.is_community() and not _has_any_user()}
 
     # What can be connected, for the homepage's logo strip. Taken from the same
     # TYPES the Connections page renders, so the two can never disagree about

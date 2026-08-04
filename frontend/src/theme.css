@@ -6415,3 +6415,9 @@ a.dv-card-title:hover { text-decoration: underline; }
 .api-rule .pf { min-height: 34px; }
 .api-rule .pf-paint,
 .api-rule .pf-input { padding: 7px 10px; font-size: 12px; line-height: 1.5; }
+
+/* Everything in the documentation is draggable into the field above it, so it
+   has to look like it: a pill you can only click reads the same as one you can
+   also pick up unless the cursor says otherwise. */
+.api-doc-val, .api-doc-key { cursor: grab; }
+.api-doc-val:active, .api-doc-key:active { cursor: grabbing; }

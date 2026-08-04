@@ -7,6 +7,7 @@ import Buy from './pages/Buy.jsx'
 import Home from './pages/Home.jsx'
 import Install from './pages/Install.jsx'
 import * as api from './services/api.js'
+import { useAppConfig } from './services/appConfig.js'
 import { useAuth } from './context/AuthContext.jsx'
 
 // /signup shows the form only when the SERVER says registration is reachable —
@@ -56,16 +57,12 @@ import { useCapabilities } from './services/capabilities.js'
 // cache exists to stop elsewhere in this file.
 function HomeOrApp() {
   const { isAuthed } = useAuth()
-  const [edition, setEdition] = useState(null)
-  useEffect(() => {
-    if (isAuthed) return
-    api.appConfig()
-      .then((c) => setEdition(c.edition || 'cloud'))
-      .catch(() => setEdition('cloud'))     // unreachable server ⇒ still show the page
-  }, [isAuthed])
+  const cfg = useAppConfig()
   if (isAuthed) return <Navigate to="/dashboard" replace />
-  if (edition === null) return null
-  return edition === 'community' ? <Navigate to="/login" replace /> : <Home />
+  if (cfg === null) return null
+  // Nobody has an account on this box yet, so the front door is the sign-up.
+  if (cfg.setup) return <Navigate to="/signup" replace />
+  return cfg.edition === 'community' ? <Navigate to="/login" replace /> : <Home />
 }
 
 // Plans and credits exist on the hosted service. On a Community instance nobody

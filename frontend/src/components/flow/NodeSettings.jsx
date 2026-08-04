@@ -276,6 +276,14 @@ export default function NodeSettings({ node, variables = [], models = [], agents
   // Put `{{name}}` where the caret is, not at the end. Somebody adding a
   // variable is usually mid-line — `symbol=` with the cursor after the equals —
   // and appending would put it in the wrong place every time.
+  // text/plain is what the textarea inserts, and what a drop anywhere else
+  // pastes. Nothing else is needed: the field works out for itself whether what
+  // arrived needs an `&` in front of it.
+  function drag(e, text) {
+    e.dataTransfer.setData('text/plain', text)
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+
   function insertVar(name) {
     const token = `{{${name}}}`
     const el = paramsRef.current
@@ -577,17 +585,6 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 placeholder="symbol=XAUUSD&count=15&timeframe=M15"
                 onChange={(v) => set(big, v)}
                 onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
-                /* The browser places a dropped string exactly where it was
-                   dropped — it is the only thing that knows the character
-                   offset under the pointer. So the drop is left alone; the
-                   drag carries `{{name}}` as its text/plain payload. React
-                   still has to be told, or the next keystroke reverts it. */
-                onDrop={(e) => {
-                  const el = e.currentTarget
-                  requestAnimationFrame(() => {
-                    if (el && el.value !== (values.api_params || '')) set('api_params', el.value)
-                  })
-                }}
               />
             ) : (
               <textarea
@@ -616,12 +613,7 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 {variables.map((v) => (
                   <button type="button" className="pill var-chip" key={v.key}
                           draggable
-                          onDragStart={(e) => {
-                            // text/plain is what the textarea will insert, and
-                            // what a drop anywhere else pastes.
-                            e.dataTransfer.setData('text/plain', `{{${v.key}}}`)
-                            e.dataTransfer.effectAllowed = 'copy'
-                          }}
+                          onDragStart={(e) => drag(e, `{{${v.key}}}`)}
                           title={`Drag into the field, or click to insert {{${v.key}}}`}
                           onClick={() => insertVar(v.key)}>
                     {'{{'}{v.key}{'}}'}
@@ -705,11 +697,17 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 <span className="api-doc-title">Everything this node accepts</span>
                 {apiDoc.map((d) => (
                   <div className="api-doc-row" key={d.key}>
-                    <code className="api-doc-key">{d.key}</code>
+                    {/* The key alone, for when the value you want is not one of
+                        the listed ones. */}
+                    <code className="api-doc-key" draggable
+                          onDragStart={(e) => drag(e, `${d.key}=`)}
+                          title={`Drag ${d.key}= into the field`}>{d.key}</code>
                     <div className="api-doc-vals">
                       {(d.values || []).map((v) => (
                         <button type="button" className="pill api-doc-val" key={v}
-                                title={`Add ${d.key}=${v}`}
+                                draggable
+                                onDragStart={(e) => drag(e, `${d.key}=${v}`)}
+                                title={`Drag in, or click to add ${d.key}=${v}`}
                                 onClick={() => addParam(d.key, v)}>{v}</button>
                       ))}
                       {d.note && <span className="api-doc-note">{d.note}</span>}
