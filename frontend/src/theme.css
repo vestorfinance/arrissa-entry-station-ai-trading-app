@@ -3225,6 +3225,10 @@ a.dv-card-title:hover { text-decoration: underline; }
   line-height: 1.5;
 }
 .node-settings-text {
+  /* A textarea with no width falls back to its `cols` attribute — about 20
+     characters — whatever the panel around it is doing. That is why these sat
+     squashed in the middle of a 300px card instead of filling it. */
+  width: 100%;
   min-height: 160px;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
@@ -3233,9 +3237,16 @@ a.dv-card-title:hover { text-decoration: underline; }
   font: inherit;
   font-size: 13px;
   line-height: 1.55;
+  /* Vertical only, so dragging the corner can never make a field wider than the
+     panel it lives in. The grab handle sits at the bottom-right on its own. */
   resize: vertical;
   outline: none;
 }
+/* Every other control in the panel fills it too — a dropdown or a one-line input
+   that stops short of the edge reads as broken next to a field that does not. */
+.node-settings .input,
+.node-settings-body .input { width: 100%; }
+.node-settings-body .field { min-width: 0; }
 .node-settings-text::placeholder { color: #6b6b6b; }
 
 /* connectors */
