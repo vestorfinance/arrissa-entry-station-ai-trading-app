@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
+import { marked } from 'marked'
 import * as api from '../services/appConfig.js'
 
 // Terms, Privacy and the software licence.
@@ -387,7 +388,7 @@ export default function Legal() {
         </div>
       </header>
 
-      <div className="home-wrap ins-body">
+      <div className="home-wrap ins-body ins-body--solo">
         <main className="ins-main legal-main">
           {isPrivacy ? <Privacy /> : <Terms />}
           <p className="legal-note legal-foot">
@@ -445,7 +446,7 @@ export function Licence() {
         </div>
       </header>
 
-      <div className="home-wrap ins-body">
+      <div className="home-wrap ins-body ins-body--solo">
         <main className="ins-main legal-main">
           <h1 className="ins-title">Software Licence</h1>
           <p className="ins-lede">
@@ -457,7 +458,15 @@ export function Licence() {
             service is not.
           </p>
           {err && <p className="ins-warn"><AlertTriangle size={15} /><span>{err}</span></p>}
-          <pre className="legal-licence">{text || 'Loading…'}</pre>
+          {/* Rendered, not printed. LICENSE.md is markdown, and showing its
+              source asks somebody to read ## and ** as punctuation while
+              agreeing to what it says. `marked` is already how the app renders
+              the assistant's replies. The source is ours — it is the file we
+              ship — so there is nothing here to sanitise against. */}
+          {text
+            ? <div className="legal-licence"
+                   dangerouslySetInnerHTML={{ __html: marked.parse(text) }} />
+            : <p className="legal-note">Loading…</p>}
         </main>
       </div>
 
