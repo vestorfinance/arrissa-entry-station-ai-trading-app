@@ -6522,3 +6522,75 @@ a.dv-card-title:hover { text-decoration: underline; }
 [data-theme="light"] .buy-mark--ondark { display: none; }
 
 .buy-foot { margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center; max-width: 420px; }
+
+/* ── what is waiting on you ───────────────────────────────────────────────────
+   A half-configured install makes no noise: a module with no connection behind
+   it returns nothing and says nothing, which reads as a quiet market rather
+   than as a thing nobody finished. This is where that becomes visible. */
+.notif { position: relative; display: flex; }
+.notif-bell {
+  position: relative;
+  width: 38px; height: 38px; border-radius: var(--radius-pill);
+  display: grid; place-items: center;
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.notif-bell:hover { background: var(--surface-2); color: var(--text-primary); }
+/* Only what is BLOCKED gets a badge. A bell that lights up for an available
+   update is a bell people stop reading, and the one that mattered goes unread
+   with it. */
+.notif-dot {
+  position: absolute; top: 4px; right: 3px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: var(--radius-pill);
+  display: grid; place-items: center;
+  /* A solid fill carrying white text, so it wants a saturated red — not
+     --tone-bad, which is the pale one used for text ON a dark ground and
+     would leave white on pink. */
+  background: #dc2626; color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 1;
+}
+.notif-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  width: min(380px, calc(100vw - 32px));
+  border-radius: var(--radius-card);
+  background: var(--card-bg);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .38);
+  overflow: hidden;
+}
+[data-theme="light"] .notif-panel { box-shadow: 0 18px 48px rgba(0, 0, 0, .14); }
+.notif-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 13px 16px; font-size: 12.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--text-secondary);
+}
+.notif-head em {
+  font-style: normal; margin-left: auto; font-size: 11px;
+  padding: 1px 8px; border-radius: var(--radius-pill); background: var(--surface-2);
+}
+.notif-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 26px 20px 30px; text-align: center;
+}
+.notif-empty svg { color: var(--tone-ok); }
+.notif-empty span { font-size: 14px; font-weight: 600; }
+.notif-empty p { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+.notif-list { list-style: none; margin: 0; padding: 0 8px 8px; max-height: 62vh; overflow-y: auto; }
+.notif-item {
+  display: flex; gap: 11px; padding: 12px 12px 13px;
+  border-radius: var(--radius-sm);
+}
+.notif-item + .notif-item { margin-top: 2px; }
+.notif-item:hover { background: var(--surface-2); }
+.notif-item-icon {
+  flex: none; width: 30px; height: 30px; border-radius: var(--radius-sm);
+  display: grid; place-items: center; overflow: hidden;
+  background: var(--surface-2); color: var(--text-secondary);
+}
+.notif-item:hover .notif-item-icon { background: var(--bg-tertiary); }
+.notif-item-icon img { width: 20px; height: 20px; object-fit: contain; }
+.notif-item--blocked .notif-item-icon { color: var(--tone-bad); }
+.notif-item-text { flex: 1; min-width: 0; }
+.notif-item-text strong { display: block; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.notif-item-text p { margin: 3px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.notif-item-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.notif-item-actions .btn { gap: 5px; }

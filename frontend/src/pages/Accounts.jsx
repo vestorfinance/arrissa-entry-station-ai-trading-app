@@ -1,11 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Wallet, Plug, Plus, Trash2, ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Wallet, Plug, Plus, Trash2, ShieldCheck, AlertTriangle, CheckCircle2, ExternalLink} from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
 import { backdrop } from '../services/backdrop.js'
 import BrokerLogo, { useBrokers } from '../components/BrokerLogo.jsx'
+
+// Where somebody with no Exness account goes to open one. Named here rather
+// than inline so the two places that offer it cannot drift apart.
+const EXNESS_SIGNUP = 'https://one.exnessonelink.com/a/l5kqp6wwav'
 
 const DEMO_ALLOWED = new Set(['davidrichchild@gmail.com', 'egracemedia@gmail.com'])
 
@@ -233,7 +237,15 @@ function ExnessSection({ data, allowDemo, isActive, onActive, onChange, setMsg }
                 <button className="btn btn--danger btn--sm" onClick={() => setShowDisconnect(true)}>Disconnect</button>
               </>
             ) : (
-              <button className="btn btn--primary btn--sm" onClick={openConnect}>Connect Exness</button>
+              <>
+                <button className="btn btn--primary btn--sm" onClick={openConnect}>Connect Exness</button>
+                {/* Connecting needs an account to connect TO. Offered only while
+                    they are not connected, because afterwards it is an advert. */}
+                <a className="btn btn--ghost btn--sm" href={EXNESS_SIGNUP}
+                   target="_blank" rel="noreferrer">
+                  Open an Exness account <ExternalLink size={12} />
+                </a>
+              </>
             )}
           </span>
         </div>

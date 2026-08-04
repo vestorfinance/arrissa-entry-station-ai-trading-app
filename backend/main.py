@@ -361,6 +361,32 @@ def check_invite(code: str = ""):
     return {"valid": _signup_allowed(code), "open": _registrations_open()}
 
 
+@app.get("/api/notifications")
+def notifications(user=Depends(current_user)):
+    """Everything outstanding, so nothing has to be discovered.
+
+    A half-configured install is silent: Sentiment with no Myfxbook connection
+    returns nothing and says nothing, and the Exness module with no account
+    behind it looks exactly like one that works until a trade is attempted."""
+    import notifications as _notes
+    # Who may act on an update. On Community the operator and the user are the
+    # same person; on the hosted service it is an admin. `current_user` carries
+    # no admin flag, so it is asked rather than assumed.
+    operator = False
+    try:
+        import edition
+        from admin_api import _is_admin
+        operator = edition.is_community() or _is_admin(user.get("email"))
+    except Exception:
+        pass
+    try:
+        return _notes.for_user(user["id"], is_operator=operator)
+    except Exception as e:
+        # A bell that breaks the page it hangs on is worse than an empty bell.
+        print(f"[notifications] {e!r}", flush=True)
+        return {"items": [], "count": 0, "blocked": 0}
+
+
 @app.get("/api/app-config")
 def app_config():
     """Public config for the frontend: branding, edition, and what we sell.

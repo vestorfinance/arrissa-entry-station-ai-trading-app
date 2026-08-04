@@ -117,9 +117,15 @@ TYPES = [
         "kind": "myfxbook", "name": "Myfxbook", "group": "data", "tone": "blue",
         "logo": "/logos/myfxbook.webp",
         "mark": "Mf",
+        # It exists FOR Retail Sentiment and does nothing without it, so it is
+        # hidden until that module is installed — and, once installed, an
+        # unconnected Myfxbook is a module that returns nothing and says
+        # nothing. Naming the module it serves is what lets that be noticed.
+        "requires_module": "sentiment",
         "blurb": "Your Myfxbook login, for Retail Sentiment. The free account is enough — "
                  "it is read-only community positioning, never your own accounts.",
         "docs": "https://www.myfxbook.com/login",
+        "docs_label": "Create a free Myfxbook account",
         "fields": [
             {"key": "email", "label": "Myfxbook email", "required": True,
              "placeholder": "you@example.com"},
@@ -155,6 +161,14 @@ TYPES = [
         "blurb": "Your own Exness account. The password is used once to obtain a session "
                  "and never stored.",
         "docs": "https://my.exness.com/accounts/sign-in",
+        "docs_label": "Sign in to Exness",
+        # Where somebody with NO account goes. A broker connection is the one
+        # kind that can be blocked by not having the underlying thing at all,
+        # and "Get a key" pointing at a sign-in form is no use to a person who
+        # has nothing to sign in with. Declared per kind so any broker can name
+        # its own, and core never learns what an Exness is.
+        "signup_url": "https://one.exnessonelink.com/a/l5kqp6wwav",
+        "signup_label": "Open an Exness account",
         "fields": [
             {"key": "exness_email", "label": "Exness email", "required": True,
              "placeholder": "you@example.com"},

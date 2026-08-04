@@ -225,6 +225,16 @@ export default function Connections() {
                       {t.docs_label || 'Get a key'} <ExternalLink size={12} />
                     </a>
                   )}
+                  {/* For somebody who does not have the account yet. "Get a key"
+                      pointing at a sign-in form is no help to a person with
+                      nothing to sign in with — and only while they are not
+                      connected, since afterwards it is an advert. */}
+                  {t.signup_url && !isOn && (
+                    <a className="btn btn--ghost btn--sm" href={t.signup_url}
+                       target="_blank" rel="noreferrer">
+                      {t.signup_label || 'Open an account'} <ExternalLink size={12} />
+                    </a>
+                  )}
                   {t.managed_by && isOn && (
                     <button className="btn btn--danger btn--sm"
                             onClick={() => disconnectManaged(t)}>
