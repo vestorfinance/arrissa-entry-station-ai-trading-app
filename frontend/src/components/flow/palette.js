@@ -15,6 +15,20 @@ import {
 //
 // `args` are values the node needs; `configurable` args are filled in by the
 // user in the node settings, the rest arrive at runtime.
+// The field that lets a node STATE its API call instead of paying a model to
+// guess it. `_params` on the server short-circuits on it for every data node —
+// core and module alike — so the field belongs to all of them, and adding it
+// here rather than in eleven module manifests means a module published tomorrow
+// gets it without knowing it exists.
+export const API_PARAMS_ARG = {
+  name: 'api_params',
+  type: 'text',
+  label: 'API parameters (optional)',
+  placeholder: 'symbol=XAUUSD&count=15&timeframe=M15',
+  hint: 'State the call and the model is not asked to work it out — the node just '
+      + 'fetches. Leave it empty and it reads your instruction as before.',
+}
+
 export const PALETTE = [
   {
     key: 'trigger-agent-call',
@@ -51,7 +65,7 @@ export const PALETTE = [
     label: 'Artificial Sentiment',
     sub: 'Positioning read from the candles',
     args: [{ name: 'text', type: 'text', required: true },
-      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+      API_PARAMS_ARG,
     ],
     configurable: true,
     model: true,
@@ -86,7 +100,7 @@ export const PALETTE = [
     label: 'Market Data',
     sub: 'Read live prices and candles',
     args: [{ name: 'text', type: 'text', required: true },
-      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+      API_PARAMS_ARG,
     ],
     configurable: true,
     model: true,
@@ -99,7 +113,7 @@ export const PALETTE = [
     label: 'Risk Management',
     sub: 'Smart SL/TP + position sizing',
     args: [{ name: 'text', type: 'text', required: true },
-      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+      API_PARAMS_ARG,
     ],
     configurable: true,
     model: true,
@@ -112,7 +126,7 @@ export const PALETTE = [
     label: 'Time & Session',
     sub: 'Current time + open trading sessions',
     args: [{ name: 'text', type: 'text', required: false },
-      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+      API_PARAMS_ARG,
     ],
     configurable: true,
     tone: 'time',
@@ -198,6 +212,13 @@ export function setModulePalette(entries) {
     ...e,
     Icon: Icons[e.icon] || Puzzle,
     configurable: e.configurable !== false,
+    // Every module data node reaches the same `_params` on the server, so every
+    // one of them can be told its call outright. The field is added here rather
+    // than asked of each module, so News, Bond Yields, Fed Watch, Sentiment, the
+    // calendar and anything published later all get it at once.
+    args: (e.args || []).some((a) => (a.name || a) === 'api_params')
+      ? e.args
+      : [...(e.args || []), API_PARAMS_ARG],
   }))
 }
 
