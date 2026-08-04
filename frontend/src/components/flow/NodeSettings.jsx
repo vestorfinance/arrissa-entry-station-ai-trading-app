@@ -563,13 +563,22 @@ export default function NodeSettings({ node, variables = [], models = [], agents
               className={'node-text-modal-area'
                 + (big === 'api_params' ? ' node-text-modal-area--short' : '')}
               autoFocus
-              onDragOver={(e) => { if (big === 'api_params') e.preventDefault() }}
+              /* The browser places a dropped string exactly where it was
+                 dropped — it is the only thing that knows the character offset
+                 under the pointer. Intercepting the drop and inserting at
+                 `selectionStart` put it wherever the caret happened to be
+                 LAST, which for a field nobody had clicked in is position 0.
+                 So the drop is left alone and the drag carries `{{name}}` as
+                 its text/plain payload.
+                 The one thing still needed is telling React: a native drop
+                 changes the DOM value, and a controlled textarea has to be
+                 told or the next keystroke reverts it. */
               onDrop={(e) => {
                 if (big !== 'api_params') return
-                const name = e.dataTransfer.getData('text/variable')
-                if (!name) return          // a plain text drop: let the browser do it
-                e.preventDefault()
-                insertVar(name)
+                const el = e.currentTarget
+                requestAnimationFrame(() => {
+                  if (el && el.value !== (values.api_params || '')) set('api_params', el.value)
+                })
               }}
               value={values[big] || ''}
               placeholder={big === 'api_params'
@@ -596,7 +605,8 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                   <button type="button" className="pill var-chip" key={v.key}
                           draggable
                           onDragStart={(e) => {
-                            e.dataTransfer.setData('text/variable', v.key)
+                            // text/plain is what the textarea will insert, and
+                            // what a drop anywhere else pastes.
                             e.dataTransfer.setData('text/plain', `{{${v.key}}}`)
                             e.dataTransfer.effectAllowed = 'copy'
                           }}
