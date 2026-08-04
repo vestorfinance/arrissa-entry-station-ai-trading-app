@@ -1778,6 +1778,23 @@ def _build_catalog() -> str:
 _OPINION_KINDS = {"market-data", "artificial-sentiment"}
 
 _BUILD_CATALOG = (
+    # Two capabilities the builder could not use because nothing told it they
+    # exist. Both save real money on every run, so they belong at the top.
+    "HOW A FLOW GETS ITS INPUTS. The trigger can DECLARE the values the agent "
+    "needs — values.vars is a list of {key, required} (e.g. [{'key':'symbol',"
+    "'required':true},{'key':'trade_type','required':false}]). A required one that "
+    "is not supplied REFUSES the run rather than letting a node guess. Declare a "
+    "variable whenever the brief names a thing the agent is 'given' or 'told'.\n"
+    "USING THEM. Every node downstream can write {{symbol}} inside values.api_params, "
+    "and can branch on them: values.api_rules is an ORDERED list of "
+    "{when, params} — e.g. [{'when':'trade_type=scalper','params':'symbol={{symbol}}"
+    "&timeframe=M1'},{'when':'','params':'symbol={{symbol}}&timeframe=H1'}]. First "
+    "match wins; '&' is AND; an empty `when` is the default and goes last.\n"
+    "STATING THE CALL SAVES A MODEL CALL. Any data node accepts values.api_params "
+    "(a query string, e.g. 'symbol=XAUUSD&timeframe=M15&count=100'). When it is set "
+    "the node fetches directly and NO model is consulted for that node — prefer it "
+    "whenever the brief fixes the values, and leave it empty only when the call "
+    "genuinely has to be worked out from the request.\n"
     "trigger-agent-call — the entry point; values.requirement describes what the agent expects "
     "(e.g. 'an instrument to analyse'). Exactly ONE, always first.\n"
     "trigger-interval — a SECOND entry point that runs the agent on a clock instead of waiting to "

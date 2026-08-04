@@ -142,6 +142,10 @@ export default function AnalysisAgentFlow() {
   const [agents, setAgents] = useState([])            // the user's OTHER agents (for the call-agent node)
   const [testOpen, setTestOpen] = useState(false)
   const [testReq, setTestReq] = useState('')
+  // Values for whatever the Trigger declares. Without these a test of an agent
+  // that requires a symbol is refused before it reaches a node — a correct
+  // refusal and a useless way to try a flow out.
+  const [testVars, setTestVars] = useState({})
   const [testBusy, setTestBusy] = useState(false)
   const [testSecs, setTestSecs] = useState(0)
   const [testRes, setTestRes] = useState(null)
@@ -164,7 +168,7 @@ export default function AnalysisAgentFlow() {
       // Each event either opens a new line or completes the one it belongs to,
       // so the panel reads as a list of things done rather than a scroll of
       // noise — and the line still running is the one without a duration.
-      setTestRes(await api.testRunAnalysisAgentStream(agent.id, { request: testReq }, (ev) => {
+      setTestRes(await api.testRunAnalysisAgentStream(agent.id, { request: testReq, variables: testVars }, (ev) => {
         if (ev.type !== 'node' && ev.type !== 'tool') return
         setProgress((prev) => {
           if (ev.phase === 'start') {
@@ -186,6 +190,14 @@ export default function AnalysisAgentFlow() {
     } finally {
       clearInterval(tick)
       setTestBusy(false)
+      // Close whatever was still in flight. A run that dies mid-node leaves that
+      // line open, and an open line spins for ever — so the failure looked like
+      // a hang, and the one useful fact, WHICH node it died on, was the thing
+      // being hidden.
+      setProgress((prev) => prev.map((p) => (p.done ? p : {
+        ...p, done: true, failed: true, ms: 0,
+        detail: p.detail || 'stopped here — the run ended before this step finished',
+      })))
     }
   }
 
@@ -399,6 +411,14 @@ export default function AnalysisAgentFlow() {
 
   const selected = nodes.find((n) => n.id === selectedId) || null
 
+  // What the Trigger says this agent needs, read from the canvas rather than
+  // from the server, so it updates the moment a variable is added.
+  const declaredVars = useMemo(() => {
+    const t = nodes.find((n) => ['trigger-agent-call', 'trigger', 'trigger-interval',
+                                'triggerInterval'].includes(n.data?.kind))
+    return ((t?.data?.values || {}).vars || []).filter((v) => (v.key || '').trim())
+  }, [nodes])
+
   const defaultEdgeOptions = useMemo(() => ({
     type: 'connector',
     animated: true,
@@ -586,6 +606,29 @@ export default function AnalysisAgentFlow() {
                 model, so a flow with several of them takes a minute or two — the timer shows it is
                 still going.
               </p>
+              {declaredVars.length > 0 && (
+                <div className="field">
+                  <span className="field-label">
+                    Variables the Trigger declares
+                    <span className="muted"> · a required one must have a value or the run refuses</span>
+                  </span>
+                  {declaredVars.map((v) => (
+                    <div className="test-var" key={v.key}>
+                      <code>{v.key}</code>
+                      <input
+                        className="input"
+                        value={testVars[v.key] || ''}
+                        placeholder={v.required ? 'required' : 'optional'}
+                        onChange={(e) => setTestVars((m) => ({ ...m, [v.key]: e.target.value }))}
+                      />
+                      {v.required && !((testVars[v.key] || '').trim()) && (
+                        <span className="test-var-need">needed</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <label className="field">
                 <span className="field-label">Request (what to analyse)</span>
                 <textarea className="node-settings-text" value={testReq} spellCheck={false}
@@ -611,7 +654,10 @@ export default function AnalysisAgentFlow() {
                         opacity: p.done ? 0.72 : 1,
                       }}>
                         <span style={{ width: 14, flex: 'none', textAlign: 'center' }}>
-                          {!p.done ? '·' : p.failed ? '×' : '✓'}
+                          {/* A spinner on the step in flight. A static dot read
+                              as stuck on a node that legitimately takes ninety
+                              seconds, which is most of them. */}
+                          {!p.done ? <span className="step-spin" /> : p.failed ? '×' : '✓'}
                         </span>
                         <span style={{ fontWeight: p.done ? 400 : 600 }}>
                           {p.name || p.kind}{p.type === 'tool' ? ' (tool)' : ''}

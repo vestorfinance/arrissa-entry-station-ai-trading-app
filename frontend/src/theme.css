@@ -6285,3 +6285,29 @@ a.dv-card-title:hover { text-decoration: underline; }
   .api-rule-params { grid-column: 1 / -1; }
   .api-rules-hint { display: none; }
 }
+
+/* The step actually in flight. A static dot read as "stuck" on a node that
+   legitimately takes ninety seconds, which is most of them. */
+@keyframes step-spin { to { transform: rotate(360deg); } }
+.step-spin {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: step-spin .7s linear infinite;
+  vertical-align: -1px;
+}
+@media (prefers-reduced-motion: reduce) { .step-spin { animation-duration: 2.4s; } }
+
+/* Values for what the Trigger declares, in the test window. */
+.test-var { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; align-items: center; margin-top: 6px; }
+.test-var code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px; font-weight: 700;
+}
+.test-var-need {
+  font-size: 11px; font-weight: 700;
+  color: var(--tone-warn);
+  white-space: nowrap;
+}

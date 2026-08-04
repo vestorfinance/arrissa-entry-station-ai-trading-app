@@ -1682,6 +1682,10 @@ class AgentTestRun(BaseModel):
     request: str = ""
     provider: str = ""
     model: str = ""
+    # What the trigger declares this agent needs. A test that could not supply
+    # them would fail on the required check before reaching a single node, which
+    # is a correct refusal and a useless way to try a flow out.
+    variables: dict = {}
 
 
 def _ser_agent(r, full=False, me=None):
@@ -1946,7 +1950,8 @@ def test_run_analysis_agent(agent_id: str, body: AgentTestRun, user: dict = Depe
     # Bind the user's Exness session + active account so account-dependent nodes
     # (market-data, hmr, risk-management) work in Test exactly as they do in chat.
     with user_session.as_user(user["id"]):
-        res = analysis_agent.run_flow(row["flow"], body.request, ctx, agent_id=agent_id, source="test")
+        res = analysis_agent.run_flow(row["flow"], body.request, ctx, agent_id=agent_id,
+                                      source="test", variables=body.variables)
     # Meter the real token cost of this run (a 5s cache hit already priced at 20%).
     _meter(user["id"], res, "analysis-cache" if res.get("cached") else "analysis", agent_id)
     return _strip_usage(
@@ -2010,6 +2015,7 @@ def test_run_analysis_agent_stream(agent_id: str, body: AgentTestRun,
         try:
             with user_session.as_user(user["id"]):
                 res = analysis_agent.run_flow(row["flow"], body.request, ctx,
+                                              variables=body.variables,
                                               agent_id=agent_id, source="test")
             _meter(user["id"], res, "analysis-cache" if res.get("cached") else "analysis", agent_id)
             events.put({"type": "done", "result": _strip_usage(

@@ -85,9 +85,9 @@ TOOLS = [
      "input_schema": {"type": "object", "properties": {}}},
     {"name": "get_analysis_agent", "description": "Inspect ONE analysis agent's flow — every node's id, kind and its instruction text, plus how they connect. Call this before editing so you know the node ids and current wording.",
      "input_schema": {"type": "object", "properties": {"agent": {"type": "string", "description": "Agent id or name."}}, "required": ["agent"]}},
-    {"name": "edit_analysis_node", "description": "Edit ONE node of an analysis agent — most often its instruction `text` (what that node tells its data source to do). Give the agent (id or name) and node_id (from get_analysis_agent), plus any of: text, name, description, model (\"provider:model\"), requirement (Trigger node only). Keep `text` BRIEF — one or two sentences of concrete direction, concise but complete; tighten wording, never pad or restate context.",
+    {"name": "edit_analysis_node", "description": "Edit ONE node of an analysis agent — most often its instruction `text` (what that node tells its data source to do). Give the agent (id or name) and node_id (from get_analysis_agent), plus any of: text, name, description, model (\"provider:model\"), requirement (Trigger node only), api_params (a query string like \"symbol=XAUUSD&timeframe=M15\" — when set the node fetches directly and consults NO model, which is cheaper and exact), vars (Trigger only: [{key, required}] the agent requires; a required one missing refuses the run). Keep `text` BRIEF — one or two sentences of concrete direction, concise but complete; tighten wording, never pad or restate context.",
      "input_schema": {"type": "object", "properties": {"agent": {"type": "string"}, "node_id": {"type": "string"}, "text": {"type": "string"}, "name": {"type": "string"}, "description": {"type": "string"}, "model": {"type": "string"}, "requirement": {"type": "string"}}, "required": ["agent", "node_id"]}},
-    {"name": "update_analysis_agent", "description": "Update an analysis agent's metadata and/or REPLACE its whole flow — for broad changes ('rebuild it to also read news then decide', rename, activate). Provide any of name, description, status (draft|active|paused), flow. `flow` is a SIMPLIFIED graph: {nodes:[{id, kind, text?, name?, description?, model?, requirement?, x?, y?}], edges:[{source, target, branch?}]} (branch = 'true'|'false' for an If node). Node kinds: trigger-agent-call, trigger-interval, market-data, time-session, artificial-sentiment, risk-management (smart SL/TP + position sizing), if, respond, versatile, call-agent (plus any node an installed module adds — ask for the palette rather than assuming). Always start a flow with one trigger-agent-call and end with a respond. Keep each node's `text` BRIEF — one or two sentences, concise but complete, no filler. Inspect with get_analysis_agent first.",
+    {"name": "update_analysis_agent", "description": "Update an analysis agent's metadata and/or REPLACE its whole flow — for broad changes ('rebuild it to also read news then decide', rename, activate). Provide any of name, description, status (draft|active|paused), flow. `flow` is a SIMPLIFIED graph: {nodes:[{id, kind, text?, name?, description?, model?, requirement?, x?, y?}], edges:[{source, target, branch?}]} (branch = 'true'|'false' for an If node). A node may carry api_params (a query string — the node then fetches directly and uses no model) and api_rules ([{when, params}], first match wins, empty `when` = default), and the Trigger may carry vars ([{key, required}]) whose values every node can use as {{key}}. Node kinds: trigger-agent-call, trigger-interval, market-data, time-session, artificial-sentiment, risk-management (smart SL/TP + position sizing), if, respond, versatile, call-agent (plus any node an installed module adds — ask for the palette rather than assuming). Always start a flow with one trigger-agent-call and end with a respond. Keep each node's `text` BRIEF — one or two sentences, concise but complete, no filler. Inspect with get_analysis_agent first.",
      "input_schema": {"type": "object", "properties": {"agent": {"type": "string"}, "name": {"type": "string"}, "description": {"type": "string"}, "status": {"type": "string", "enum": ["draft", "active", "paused"]}, "flow": {"type": "object"}}, "required": ["agent"]}},
     {"name": "create_analysis_agent", "description": "Create a NEW analysis agent from a simplified flow (same shape as update_analysis_agent's `flow`). Give name, optional description/status, and the flow. Start with a trigger-agent-call and end with a respond node. Keep each node's `text` BRIEF — one or two sentences, concise but complete.",
      "input_schema": {"type": "object", "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "status": {"type": "string", "enum": ["draft", "active", "paused"]}, "flow": {"type": "object"}}, "required": ["name"]}},
@@ -375,6 +375,22 @@ def _trigger_requirement(flow):
     return ""
 
 
+def _trigger_vars(flow):
+    """The variables the Trigger declares: [{key, required}, …]."""
+    for n in (flow or {}).get("nodes", []):
+        data = n.get("data") or {}
+        if data.get("kind") in ("trigger-agent-call", "trigger", "trigger-interval",
+                                "triggerInterval"):
+            out = []
+            for v in ((data.get("values") or {}).get("vars") or []):
+                key = (v.get("key") or "").strip()
+                if key:
+                    out.append({"key": key, "required": bool(v.get("required"))})
+            if out:
+                return out
+    return []
+
+
 def list_agent_tools(user_id):
     """Every ACTIVE analysis agent the user owns, as callable tool defs. Returns
     (tools, {tool_name: agent_id}). Tool names are unique `analysis_<slug>`."""
@@ -406,11 +422,31 @@ def list_agent_tools(user_id):
         if req:
             full += f" Needs: {req}."
         full += " Runs the agent's flow and returns its analysis. Pass `request` describing what to analyse."
+
+        # Whatever the Trigger declares becomes a REAL parameter on this tool.
+        #
+        # Otherwise the values had to be smuggled inside the request sentence and
+        # read back out by a model — paying to re-derive something the caller
+        # already knew, and getting it wrong whenever the sentence was ambiguous.
+        # Declared required here too, so a model is refused by the schema before
+        # the run has to refuse it.
+        props = {"request": {"type": "string",
+                             "description": "What you want this analysis agent to look at."}}
+        required = []
+        tvars = _trigger_vars(r["flow"])
+        for v in tvars:
+            props[v["key"]] = {"type": "string",
+                               "description": f"{v['key']} for this run"
+                                              + (" (required)" if v["required"] else "")}
+            if v["required"]:
+                required.append(v["key"])
+        if tvars:
+            full += (" It needs: "
+                     + ", ".join(v["key"] + ("" if v["required"] else " (optional)") for v in tvars)
+                     + " — pass them as arguments rather than only describing them.")
         tools.append({
             "name": nm, "description": full[:1000],
-            "input_schema": {"type": "object", "properties": {
-                "request": {"type": "string", "description": "What you want this analysis agent to look at."}},
-                "required": []},
+            "input_schema": {"type": "object", "properties": props, "required": required},
         })
         mapping[nm] = str(r["id"])
     return tools, mapping
@@ -436,7 +472,12 @@ def _run_analysis_agent(ctx, name, args):
     # roll its real cost into the TURN meter (charged at the end of the chat turn).
     sub = dict(ctx)
     sub["_usage"] = {"in": 0, "out": 0, "cache_hit": 0, "calls": 0}
-    res = analysis_agent.run_flow(row["flow"], request, sub, agent_id=agent_id, source="chat")
+    # Everything the caller passed that is not the request itself is a declared
+    # variable — the schema only advertised the ones this agent asked for.
+    variables = {k: str(v) for k, v in (args or {}).items()
+                 if k not in ("request", "input") and v not in (None, "")}
+    res = analysis_agent.run_flow(row["flow"], request, sub, agent_id=agent_id,
+                                  source="chat", variables=variables)
     try:
         u = ctx.get("_usage")
         if u is not None:
