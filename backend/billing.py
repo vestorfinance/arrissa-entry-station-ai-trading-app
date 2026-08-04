@@ -470,6 +470,54 @@ def apply_success(user_id, reference, paystack_ids=None):
     return get_state(user_id)
 
 
+def renew_subscription(customer_code=None, subscription_code=None, reference=None):
+    """A Paystack renewal landed. Move the period on and restore the credits.
+
+    Nothing did this. `renews_at` was written once, at the moment of purchase,
+    and never again — so Paystack charged the card every cycle while the app
+    went on believing the plan ended on the original date. The customer pays and
+    is locked out, which is the worst way for this to fail and the last way
+    anybody notices.
+
+    Matched on the subscription first, then the customer: a subscription code is
+    exact, and a customer may hold more than one."""
+    with db.connect() as conn:
+        row = None
+        if subscription_code:
+            row = conn.execute(
+                "SELECT user_id, plan, interval FROM user_billing "
+                "WHERE paystack_subscription_code = %s", (subscription_code,)).fetchone()
+        if not row and customer_code:
+            row = conn.execute(
+                "SELECT user_id, plan, interval FROM user_billing "
+                "WHERE paystack_customer_code = %s", (customer_code,)).fetchone()
+        if not row or not row["plan"]:
+            return None
+
+        user_id, key = row["user_id"], row["plan"]
+        interval = row["interval"] or "monthly"
+        plan = PLANS.get(key)
+        if not plan:
+            return None
+
+        # From NOW, not from the old date. A renewal that lands late — a retry,
+        # a webhook delayed — should still give a full period rather than a
+        # short one measured from a date already passed.
+        renews = _now() + (timedelta(days=365) if interval == "annual" else timedelta(days=30))
+        conn.execute(
+            "UPDATE user_billing SET status = 'active', renews_at = %s, updated_at = now() "
+            "WHERE user_id = %s", (renews, user_id))
+        # Back UP to the plan's allowance, not plus it: a subscription buys a
+        # period's worth, and adding to an unspent balance would compound for
+        # somebody who simply did not use it.
+        cur = balance(user_id, conn)
+        if plan["credits"] > cur:
+            _ledger(conn, user_id, plan["credits"] - cur, "renewal", reference or "renewal")
+        conn.commit()
+    return {"user_id": user_id, "plan": key, "interval": interval, "renews_at": renews,
+            "credits": plan["credits"]}
+
+
 def mark_declined(user_id, reference):
     with db.connect() as conn:
         conn.execute(

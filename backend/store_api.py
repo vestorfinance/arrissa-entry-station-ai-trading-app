@@ -656,6 +656,34 @@ def _safe_return(raw: str) -> str:
     return ""
 
 
+def _renewal_email(to, what, until, amount_kobo=None, kind="module", credits=None):
+    """Tell them it renewed, before the statement does.
+
+    A silent renewal is the one people resent — the charge appears on a card
+    and nothing explains it. This is short on purpose: what renewed, until when,
+    and how to stop it. Never fatal: a licence that has been extended must not
+    be un-extended because a mail server was down."""
+    try:
+        import mailer
+        app = mailer.app_name()
+        rands = f"R{int(amount_kobo) / 100:,.2f}" if amount_kobo else None
+        when = str(until)[:10] if until else ""
+        noun = "module" if kind == "module" else "plan"
+        mailer.send_email(
+            to, f"Your {app} {noun} has renewed",
+            f"<p><strong>{what}</strong> renewed for another year.</p>"
+            + (f"<p>Charged {rands}.</p>" if rands else "")
+            + (f"<p>It runs until <strong>{when}</strong>.</p>" if when else "")
+            + (f"<p>Your credits are topped up to <strong>{credits:,}</strong>.</p>"
+               if credits else "")
+            + ("<p>Nothing to do. Updates and new versions carry on as they were.</p>"
+               if kind == "module" else "")
+            + "<p>To stop it renewing, cancel from your billing page before the next date "
+              "above. What you have keeps working either way.</p>")
+    except Exception as e:
+        print(f"[store] renewal email to {to} failed: {type(e).__name__}: {e}", flush=True)
+
+
 @router.post("/api/store/paystack/webhook")
 async def paystack_webhook(request: Request):
     """Paystack telling us a subscription renewed.
@@ -715,18 +743,47 @@ async def paystack_webhook(request: Request):
         row = conn.execute(
             "SELECT * FROM store_purchases WHERE customer_code=%s AND plan_code=%s "
             "AND status='paid' ORDER BY created_at LIMIT 1", (customer, plan_code)).fetchone()
-    if not row:
-        # A renewal we cannot place. Logged rather than swallowed: it means a
-        # customer is paying for something this store cannot credit them for.
-        print(f"[store] renewal for {plan_code} / {customer} matched no purchase", flush=True)
-        return {"ok": True, "unmatched": True}
 
-    usd, grants = _priced(row["product"])
-    key, lic = _store.grant(row["instance_id"], row["email"], grants,
-                            note=f"renewal {data.get('reference')}", expires_at=_term_end())
-    print(f"[store] renewed {row['product']} for {row['instance_id'][:16]} "
-          f"until {lic.get('expires_at')}", flush=True)
-    return {"ok": True, "renewed": row["product"]}
+    if row:
+        usd, grants = _priced(row["product"])
+        key, lic = _store.grant(row["instance_id"], row["email"], grants,
+                                note=f"renewal {data.get('reference')}", expires_at=_term_end())
+        print(f"[store] renewed {row['product']} for {row['instance_id'][:16]} "
+              f"until {lic.get('expires_at')}", flush=True)
+        _renewal_email(row["email"], row["product"], lic.get("expires_at"),
+                       data.get("amount"), kind="module")
+        return {"ok": True, "renewed": row["product"]}
+
+    # Not a store product, so it is one of the hosted TIERS. They subscribe
+    # through Paystack too and nothing was applying their renewals either: the
+    # period was written once at purchase and never moved, so a paying customer
+    # was locked out on the original date.
+    try:
+        import billing
+        done = billing.renew_subscription(customer_code=customer,
+                                          subscription_code=data.get("subscription_code"),
+                                          reference=data.get("reference"))
+    except Exception as e:
+        print(f"[billing] renewal failed: {e}", flush=True)
+        done = None
+    if done:
+        print(f"[billing] renewed {done['plan']} for {done['user_id']} "
+              f"until {done['renews_at']}", flush=True)
+        try:
+            with db.connect() as conn:
+                u = conn.execute("SELECT email FROM users WHERE id = %s",
+                                 (done["user_id"],)).fetchone()
+            if u:
+                _renewal_email(u["email"], done["plan"], done["renews_at"],
+                               data.get("amount"), kind="plan", credits=done["credits"])
+        except Exception as e:
+            print(f"[billing] renewal email failed: {e}", flush=True)
+        return {"ok": True, "renewed": done["plan"], "kind": "plan"}
+
+    # Logged rather than swallowed: it means somebody is paying for something
+    # this server cannot credit them for.
+    print(f"[store] renewal for {plan_code} / {customer} matched nothing", flush=True)
+    return {"ok": True, "unmatched": True}
 
 
 @router.get("/api/store/checkout")
