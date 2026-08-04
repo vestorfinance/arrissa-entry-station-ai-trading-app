@@ -379,9 +379,41 @@ def _trace_result(v):
     return v
 
 
+def _explicit_params(nv):
+    """The parameters the USER typed on the node, if they typed any.
+
+    `symbol=XAUUSD&count=15&timeframe=M15`, or the same one per line. Query-string
+    shape because that is what the API guides already show, so somebody copying a
+    line out of a guide into a node has it work.
+
+    Values arrive as strings and stay strings: every handler already coerces what
+    it needs (`int(p.get("count"))`), and guessing types here would only differ
+    from what the LLM path produces."""
+    raw = (nv.get("api_params") or "").strip()
+    if not raw:
+        return None
+    from urllib.parse import parse_qsl
+    pairs = parse_qsl(raw.replace("\n", "&").replace(";", "&"), keep_blank_values=False)
+    out = {k.strip(): v.strip() for k, v in pairs if k.strip() and v.strip()}
+    return out or None
+
+
 def _params(ctx, node_values, source_name, fields, text, context, default):
-    """LLM-extract this source's parameters from the node's free text. Falls back
-    to `default` when there's no LLM or the reply doesn't parse."""
+    """This source's parameters — stated by the user, or worked out by the model.
+
+    Stated wins, and skips the model entirely. Asking an LLM which symbol to fetch
+    when the node already says `symbol=XAUUSD` is paying for a guess at something
+    that was not in question — and on a schedule that runs every fifteen minutes
+    it is the same guess, bought again, for ever.
+
+    The defaults still apply underneath, so a node can pin the one field it cares
+    about and leave the rest alone."""
+    stated = _explicit_params(node_values)
+    if stated:
+        merged = dict(default)
+        merged.update(stated)
+        return merged
+
     system = (
         f"You configure a call to the {source_name} API inside a trading-analysis "
         f"flow. {fields} Read the USER'S REQUEST, the node's instruction and the flow "
@@ -645,10 +677,62 @@ def _n_time_session(text, context, ctx, nv):
 
 
 # palette key → data handler (source name used by the Versatile planner too)
+def _n_api_request(text, context, ctx, nv):
+    """Call one of this app's own endpoints, with the parameters the user typed.
+
+    For the sources that have a node of their own the URL is already decided and
+    only the parameters matter — that is `api_params` on those nodes, and it costs
+    no model call. This node is the other case: any endpoint at all, named by the
+    user, for the things no dedicated node covers.
+
+    No API key is asked for and none could be used: keys are stored hashed, so
+    even this process cannot recover the user's. A short-lived token is minted for
+    the user the flow is running as instead, which is the same authority they
+    would have had anyway and expires on its own.
+
+    Nothing here consults a model. If the node also wants an opinion it gets one
+    afterwards, through the same per-node mechanism every other node uses — and
+    if it does not, this node costs nothing but the request."""
+    url = (nv.get("api_url") or text or "").strip()
+    if not url:
+        return {"error": "this node needs an endpoint — put it in the node's URL field, "
+                         "e.g. /api/market/chart"}
+    if "://" in url:
+        # Only this app's own API. A node that could call anywhere would be a way
+        # to make the server fetch arbitrary URLs on somebody's behalf.
+        return {"error": "give a path on this app, not a full URL — e.g. /api/market/chart"}
+    if not url.startswith("/"):
+        url = "/" + url
+    if not url.startswith("/api/"):
+        url = "/api" + url
+
+    params = _explicit_params(nv) or {}
+    try:
+        import auth
+        import db
+        import requests as _rq
+        from urllib.parse import urlencode
+
+        uid = ctx.get("user_id")
+        with db.connect() as conn:
+            row = conn.execute("SELECT email FROM users WHERE id = %s", (uid,)).fetchone()
+        if not row:
+            return {"error": "this flow has no user to run the request as"}
+        token = auth.make_token(uid, row["email"])
+        full = f"http://127.0.0.1:8000{url}" + (f"?{urlencode(params)}" if params else "")
+        r = _rq.get(full, headers={"Authorization": f"Bearer {token}"}, timeout=60)
+        if r.status_code >= 400:
+            return {"error": f"{url} answered {r.status_code}", "body": r.text[:400]}
+        return r.json()
+    except Exception as e:
+        return {"error": f"{url}: {type(e).__name__}: {e}"}
+
+
 _DATA = {
     "market-data": _n_market, "time-session": _n_time_session,
     "risk-management": _n_risk,
     "artificial-sentiment": _n_artificial_sentiment,
+    "api-request": _n_api_request, "apiRequest": _n_api_request,
 }
 _PLANNER_SOURCE = {
     "market": _n_market, "time": _n_time_session, "risk": _n_risk,
@@ -1535,10 +1619,14 @@ _PALETTE = {
     "trigger-agent-call": {"type": "trigger",          "args": ["requirement"]},
     "trigger-interval":   {"type": "triggerInterval",
                            "args": ["mode", "every", "unit", "cron", "cron_brief", "text"]},
-    "artificial-sentiment": {"type": "artificialSentiment", "args": ["text"]},
-    "market-data":        {"type": "marketData",        "args": ["text"]},
-    "risk-management":    {"type": "riskManagement",     "args": ["text"]},
-    "time-session":       {"type": "timeSession",       "args": ["text"]},
+    # `api_params` on a data node states the call instead of having a model guess
+    # it, which skips the model entirely — see _params.
+    "artificial-sentiment": {"type": "artificialSentiment", "args": ["text", "api_params"]},
+    "market-data":        {"type": "marketData",        "args": ["text", "api_params"]},
+    "risk-management":    {"type": "riskManagement",     "args": ["text", "api_params"]},
+    "time-session":       {"type": "timeSession",       "args": ["text", "api_params"]},
+    # Any endpoint this app has, for what no dedicated node covers.
+    "api-request":        {"type": "apiRequest",        "args": ["api_url", "api_params", "text"]},
     "if":                 {"type": "if",                "args": ["text"], "outputs": ["true", "false"]},
     "respond":            {"type": "respond",           "args": ["text"]},
     "versatile":          {"type": "versatile",         "args": ["name", "description", "text"]},

@@ -1,5 +1,6 @@
 import * as Icons from 'lucide-react'
 import {
+  Terminal,
   Zap, GitBranch, CornerUpLeft, CandlestickChart, Wand2, Clock,
   Target, Workflow, Repeat, Radar, Puzzle, Network,
 } from 'lucide-react'
@@ -49,10 +50,34 @@ export const PALETTE = [
     Icon: Radar,
     label: 'Artificial Sentiment',
     sub: 'Positioning read from the candles',
-    args: [{ name: 'text', type: 'text', required: true }],
+    args: [{ name: 'text', type: 'text', required: true },
+      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+    ],
     configurable: true,
     model: true,
     tone: 'artificial',
+  },
+  {
+    // The other half of the same idea. A dedicated node has its endpoint decided
+    // already and only wants parameters; this one wants both, for the endpoints
+    // no node covers. Neither consults a model unless you ask it to.
+    key: 'api-request',
+    type: 'apiRequest',
+    Icon: Terminal,
+    label: 'API request',
+    sub: 'Fetch from any endpoint, no model used',
+    args: [
+      { name: 'api_url', type: 'text', required: true, label: 'Endpoint',
+        placeholder: '/api/market/chart' },
+      { name: 'api_params', type: 'text', label: 'Parameters',
+        placeholder: 'symbol=XAUUSD&count=15&timeframe=M15' },
+      { name: 'text', type: 'text', label: 'Note (optional)',
+        hint: 'Only read if you turn this node’s opinion on. No key is needed — the '
+            + 'request runs as you.' },
+    ],
+    configurable: true,
+    model: true,
+    tone: 'market',
   },
   {
     key: 'market-data',
@@ -60,7 +85,9 @@ export const PALETTE = [
     Icon: CandlestickChart,
     label: 'Market Data',
     sub: 'Read live prices and candles',
-    args: [{ name: 'text', type: 'text', required: true }],
+    args: [{ name: 'text', type: 'text', required: true },
+      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+    ],
     configurable: true,
     model: true,
     tone: 'market',
@@ -71,7 +98,9 @@ export const PALETTE = [
     Icon: Target,
     label: 'Risk Management',
     sub: 'Smart SL/TP + position sizing',
-    args: [{ name: 'text', type: 'text', required: true }],
+    args: [{ name: 'text', type: 'text', required: true },
+      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+    ],
     configurable: true,
     model: true,
     tone: 'risk',
@@ -82,7 +111,9 @@ export const PALETTE = [
     Icon: Clock,
     label: 'Time & Session',
     sub: 'Current time + open trading sessions',
-    args: [{ name: 'text', type: 'text', required: false }],
+    args: [{ name: 'text', type: 'text', required: false },
+      { name: 'api_params', type: 'text', label: 'API parameters (optional)', placeholder: 'symbol=XAUUSD&count=15&timeframe=M15', hint: 'State the call and the model is not asked to guess it — the node just fetches. Leave empty and it works it out from your instruction as before.' },
+    ],
     configurable: true,
     tone: 'time',
   },
