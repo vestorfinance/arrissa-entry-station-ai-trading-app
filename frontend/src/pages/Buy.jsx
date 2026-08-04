@@ -11,7 +11,7 @@ export default function Buy() {
   const [params] = useSearchParams()
   // The instance travels in the URL from their own Module Store. If it did not
   // arrive, they can type it — their Settings page shows it.
-  const [instance, setInstance] = useState(params.get('instance') || '')
+  const instance = params.get('instance') || ''
   const [email, setEmail] = useState(params.get('email') || '')
   // Where to send them when the payment clears. It travels from their own
   // Module Store and has to be handed on to the checkout — this page was
@@ -24,6 +24,13 @@ export default function Buy() {
 
   async function go() {
     setBusy(true); setErr('')
+    if (!instance) {
+      setErr('Open the Module Store on your own EntryStation and press Buy there. '
+             + 'The purchase has to know which installation it is for, and only your '
+             + 'instance can say.')
+      setBusy(false)
+      return
+    }
     try {
       const q = new URLSearchParams({ product: id, instance, email })
       if (returnUrl) q.set('return_url', returnUrl)
@@ -39,25 +46,19 @@ export default function Buy() {
       <div className="auth-card">
         <h1 className="auth-title">Buy {id}</h1>
         <p className="auth-subtitle">
-          {params.get('instance')
+          {instance
             /* It knows which installation this is for, so it says what happens
                next instead of asking a question it already has the answer to. */
             ? <>The licence activates on the installation you came from. You will be taken
                straight back to it.</>
-            : <>The licence is tied to the installation that uses it. Your key is emailed to
-               you and works on the instance below.</>}
+            : <>Start this from the Module Store on your own EntryStation — the Buy button
+               there knows which installation to licence.</>}
         </p>
-        {/* Only when it did not arrive on the link. In the ordinary case the
-            buyer's own Module Store put it there and there is nothing to ask —
-            and an instance id on screen is a licensing primitive in front of
-            somebody who has no decision to make with it. */}
-        {!params.get('instance') && (
-          <label className="field">
-            <span className="field-label">Your instance (domain or id)</span>
-            <input className="input" value={instance} placeholder="trader.example.com"
-                   onChange={(e) => setInstance(e.target.value)} />
-          </label>
-        )}
+        {/* No field for it. The id is not shown anywhere in the app any
+            more, so asking somebody to type it would be asking for something
+            they have no way to find — and a form you cannot fill in is worse
+            than no form. A purchase starts inside the instance being licensed,
+            where the link carries the id by itself. */}
         <label className="field">
           <span className="field-label">Email for the licence key</span>
           <input className="input" type="email" value={email} placeholder="you@example.com"
