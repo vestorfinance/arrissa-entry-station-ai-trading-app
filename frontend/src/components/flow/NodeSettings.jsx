@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Trash2, Sparkles, Check, Plus, Maximize2 } from 'lucide-react'
 import { backdrop } from '../../services/backdrop.js'
 import { paletteItem } from './palette.js'
@@ -259,8 +259,9 @@ function ScheduleSettings({ values, set }) {
 
 // Right-hand settings drawer for the selected node. Configurable args get an
 // editor; runtime args (e.g. the trigger's requirement) are shown read-only.
-export default function NodeSettings({ node, models = [], agents = [], defaultModel = '',
+export default function NodeSettings({ node, variables = [], models = [], agents = [], defaultModel = '',
                                        onChange, onDelete, onClose }) {
+  const paramsRef = useRef(null)
   const [rulesOpen, setRulesOpen] = useState(false)
   const [big, setBig] = useState(null)     // which text arg is open in the big window
 
@@ -271,6 +272,25 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
   // Clicking a value writes `key=value` into the field, REPLACING that key if it
   // is already there — clicking `high` then `low` should change impact, not send
   // both and leave the API to pick.
+  // Put `{{name}}` where the caret is, not at the end. Somebody adding a
+  // variable is usually mid-line — `symbol=` with the cursor after the equals —
+  // and appending would put it in the wrong place every time.
+  function insertVar(name) {
+    const token = `{{${name}}}`
+    const el = paramsRef.current
+    const cur = values.api_params || ''
+    if (!el) { set('api_params', cur + token); return }
+    const a = el.selectionStart ?? cur.length
+    const b = el.selectionEnd ?? cur.length
+    set('api_params', cur.slice(0, a) + token + cur.slice(b))
+    // Put the caret after what was just inserted, so two chips in a row do not
+    // land on top of each other.
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(a + token.length, a + token.length)
+    })
+  }
+
   function addParam(key, value) {
     const cur = (values.api_params || '').trim()
     const kept = cur
@@ -539,9 +559,18 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
               </button>
             </div>
             <textarea
+              ref={big === 'api_params' ? paramsRef : null}
               className={'node-text-modal-area'
                 + (big === 'api_params' ? ' node-text-modal-area--short' : '')}
               autoFocus
+              onDragOver={(e) => { if (big === 'api_params') e.preventDefault() }}
+              onDrop={(e) => {
+                if (big !== 'api_params') return
+                const name = e.dataTransfer.getData('text/variable')
+                if (!name) return          // a plain text drop: let the browser do it
+                e.preventDefault()
+                insertVar(name)
+              }}
               value={values[big] || ''}
               placeholder={big === 'api_params'
                 ? 'symbol=XAUUSD&count=15&timeframe=M15'
@@ -557,6 +586,29 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
                 reading the module's source to find out that News takes
                 `min_score`. Clicking a value writes `key=value` into the field,
                 so the documentation is also the way to fill it in. */}
+            {/* The variables this agent was given. Drag one into the field, or
+                click it — dragging is the gesture people reach for and clicking
+                is the one that always works, so it does both. */}
+            {big === 'api_params' && variables.length > 0 && (
+              <div className="var-bar">
+                <span className="var-bar-label">Variables</span>
+                {variables.map((v) => (
+                  <button type="button" className="pill var-chip" key={v.key}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/variable', v.key)
+                            e.dataTransfer.setData('text/plain', `{{${v.key}}}`)
+                            e.dataTransfer.effectAllowed = 'copy'
+                          }}
+                          title={`Drag into the field, or click to insert {{${v.key}}}`}
+                          onClick={() => insertVar(v.key)}>
+                    {'{{'}{v.key}{'}}'}
+                  </button>
+                ))}
+                <span className="var-bar-hint">drag in, or click</span>
+              </div>
+            )}
+
             {/* One call is the common case and stays a single field above. This is
                 for when it is not: several calls, each with the condition it
                 applies under, tried top to bottom with the first match winning.

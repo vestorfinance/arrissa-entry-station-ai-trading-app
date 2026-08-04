@@ -583,6 +583,9 @@ export default function AnalysisAgentFlow() {
 
           {selected && (
             <NodeSettings node={selected} models={models} agents={agents} defaultModel={defaultModel} onChange={setValues}
+                          /* Declared on the TRIGGER, needed by every other node — so it is
+                             passed down rather than each node hunting the canvas for it. */
+                          variables={declaredVars}
                           onDelete={setConfirmId} onClose={() => setSelectedId(null)} />
           )}
         </div>
