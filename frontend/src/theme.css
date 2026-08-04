@@ -6803,3 +6803,41 @@ a.dv-card-title:hover { text-decoration: underline; }
   .palette-item { padding: 10px; gap: 9px; }
   .palette-item-sub { -webkit-line-clamp: 2; }
 }
+
+/* ── the parameters window, once a test has an answer ─────────────────────────
+   It grew past the bottom of the screen when the result was appended under the
+   thing that produced it. The two are read TOGETHER — does this call return
+   what I expected — so stacking them puts the call out of sight at exactly the
+   moment you want to compare it with the answer.
+
+   The whole window is bounded and each column scrolls on its own, so neither
+   the documentation nor a two-hundred-row payload can push the Done button off
+   the screen. */
+.node-text-modal { max-height: 88vh; display: flex; flex-direction: column; }
+.node-text-modal--split { max-width: min(1180px, 96vw); }
+
+.ptm-cols { display: flex; gap: 18px; min-height: 0; flex: 1; }
+.ptm-left {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+}
+.ptm-right {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  overflow: hidden;
+}
+.ptm-right-label {
+  font-size: 11.5px; font-weight: 700; color: var(--text-secondary);
+}
+/* The payload owns the rest of its column and scrolls inside it, rather than
+   carrying its own height cap and leaving a gap under it. */
+.ptm-right .try-out { margin: 0; flex: 1; max-height: none; }
+
+/* On a narrow screen there is no second column to give it, so it goes back to
+   one and the window scrolls as a whole. */
+@media (max-width: 900px) {
+  .ptm-cols { flex-direction: column; }
+  .ptm-left, .ptm-right { overflow: visible; }
+  .ptm-right .try-out { max-height: 40vh; }
+}

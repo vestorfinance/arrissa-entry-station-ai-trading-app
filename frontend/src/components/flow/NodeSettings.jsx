@@ -718,7 +718,9 @@ export default function NodeSettings({ node, variables = [], models = [], agents
           to discard. */}
       {big && (
         <div className="modal-overlay" {...backdrop(() => setBig(null))}>
-          <div className="modal node-text-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={'modal node-text-modal'
+                          + (tryOut && (tryOut.result || tryOut.error) ? ' node-text-modal--split' : '')}
+               onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span className="modal-title">{big}</span>
               <button className="node-text-grow" style={{ position: 'static', marginLeft: 'auto', opacity: 1 }}
@@ -726,6 +728,14 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 <X size={14} strokeWidth={2} />
               </button>
             </div>
+
+            {/* Two columns once there is an answer, not before. The window grew
+                past the screen when a result was appended underneath what
+                produced it — and the two are read together, so stacking them
+                puts the call out of sight exactly when you want to compare it
+                with what came back. Each column scrolls on its own. */}
+            <div className="ptm-cols">
+              <div className="ptm-left">
             {big === 'api_params' ? (
               <ParamsField
                 big
@@ -782,15 +792,6 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 {tryOut && <button type="button" className="var-del" title="Clear"
                                    onClick={() => setTryOut(null)}><X size={13} /></button>}
               </div>
-            )}
-
-            {tryOut?.error && (
-              <p className="ins-warn try-err"><AlertTriangle size={14} /><span>{tryOut.error}</span></p>
-            )}
-            {tryOut?.result && (
-              <pre className="try-out">{tryOut.result}
-                {tryOut.truncated ? '\n\n… trimmed. The point here is the shape, not every row.' : ''}
-              </pre>
             )}
 
             {/* The variables this agent was given. Drag one into the field, or
@@ -905,6 +906,20 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 ))}
               </div>
             )}
+
+              </div>
+
+              {(tryOut?.result || tryOut?.error) && (
+                <div className="ptm-right">
+                  <span className="ptm-right-label">What came back</span>
+                  {tryOut.error
+                    ? <p className="ins-warn try-err"><AlertTriangle size={14} /><span>{tryOut.error}</span></p>
+                    : <pre className="try-out">{tryOut.result}
+                        {tryOut.truncated ? '\n\n… trimmed. The point here is the shape, not every row.' : ''}
+                      </pre>}
+                </div>
+              )}
+            </div>
 
             <div className="modal-actions">
               <button className="btn btn--primary" onClick={() => setBig(null)}>Done</button>
