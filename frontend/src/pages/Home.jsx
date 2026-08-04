@@ -206,7 +206,11 @@ export default function Home() {
           </p>
           <div className="home-cta">
             <a className="btn btn--primary" href="#how">See how it works <ArrowRight size={15} /></a>
-            <a className="btn btn--ghost" href="#editions">Run it on your own server</a>
+            {/* Straight to the instructions. This scrolled to the editions
+                section, which DESCRIBES self-hosting — and somebody who has
+                just pressed "run it on your own server" has decided, and is
+                asking how. */}
+            <Link className="btn btn--ghost" to="/install">Run it on your own server</Link>
           </div>
         </div>
       </section>
@@ -597,7 +601,7 @@ export default function Home() {
           <h2 className="home-h1 home-h1--sm">Simple enough to ask.<br /><em>Strict enough to trust.</em></h2>
           <div className="home-cta">
             <Link className="btn btn--primary" to="/login">Sign in</Link>
-            <a className="btn btn--ghost" href="#editions">Run it yourself</a>
+            <Link className="btn btn--ghost" to="/install">Run it yourself</Link>
           </div>
         </div>
       </section>
