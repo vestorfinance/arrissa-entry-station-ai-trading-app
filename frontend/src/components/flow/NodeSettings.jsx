@@ -262,6 +262,22 @@ function ScheduleSettings({ values, set }) {
 export default function NodeSettings({ node, models = [], agents = [], defaultModel = '',
                                        onChange, onDelete, onClose }) {
   const [big, setBig] = useState(null)     // which text arg is open in the big window
+
+  // What this node's API accepts. Core nodes spell it apiDoc; module nodes send
+  // api_doc through the palette. Same thing, two naming conventions meeting.
+  const apiDoc = node.data.apiDoc || node.data.api_doc || []
+
+  // Clicking a value writes `key=value` into the field, REPLACING that key if it
+  // is already there — clicking `high` then `low` should change impact, not send
+  // both and leave the API to pick.
+  function addParam(key, value) {
+    const cur = (values.api_params || '').trim()
+    const kept = cur
+      .replace(/\n/g, '&').split('&')
+      .map((s2) => s2.trim())
+      .filter((s2) => s2 && s2.split('=')[0].trim() !== key)
+    set('api_params', [...kept, `${key}=${value}`].join('&'))
+  }
   const item = paletteItem(node.data.kind)
   const configurable = item?.configurable
   const values = node.data.values || {}
@@ -471,14 +487,43 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
               </button>
             </div>
             <textarea
-              className="node-text-modal-area"
+              className={'node-text-modal-area'
+                + (big === 'api_params' ? ' node-text-modal-area--short' : '')}
               autoFocus
               value={values[big] || ''}
-              placeholder="What should this node do?"
+              placeholder={big === 'api_params'
+                ? 'symbol=XAUUSD&count=15&timeframe=M15'
+                : 'What should this node do?'}
               spellCheck={false}
               onChange={(e) => set(big, e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
             />
+
+            {/* Every key this node's API reads, with the values each one takes.
+                Not one example: an example shows that a thing is possible and
+                leaves you guessing at the rest, which is how somebody ends up
+                reading the module's source to find out that News takes
+                `min_score`. Clicking a value writes `key=value` into the field,
+                so the documentation is also the way to fill it in. */}
+            {big === 'api_params' && apiDoc.length > 0 && (
+              <div className="api-doc">
+                <span className="api-doc-title">Everything this node accepts</span>
+                {apiDoc.map((d) => (
+                  <div className="api-doc-row" key={d.key}>
+                    <code className="api-doc-key">{d.key}</code>
+                    <div className="api-doc-vals">
+                      {(d.values || []).map((v) => (
+                        <button type="button" className="pill api-doc-val" key={v}
+                                title={`Add ${d.key}=${v}`}
+                                onClick={() => addParam(d.key, v)}>{v}</button>
+                      ))}
+                      {d.note && <span className="api-doc-note">{d.note}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="modal-actions">
               <button className="btn btn--primary" onClick={() => setBig(null)}>Done</button>
             </div>

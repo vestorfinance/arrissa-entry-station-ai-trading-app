@@ -6175,3 +6175,46 @@ a.dv-card-title:hover { text-decoration: underline; }
   color: var(--text-primary);
   word-break: break-all;
 }
+
+/* The API a node speaks, inside its big window.
+   Three lines for the field, because a query string is one line and the rest of
+   the window is better spent on what you can put in it. */
+.node-text-modal-area--short { min-height: 76px; flex: none; }
+
+.api-doc {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;      /* the field stays put; only the reference scrolls */
+  min-height: 0;
+}
+.api-doc-title {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.api-doc-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: baseline; }
+.api-doc-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px; font-weight: 700;
+  color: var(--text-primary);
+}
+.api-doc-vals { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+/* A value is a button, not a label. Reading the documentation and filling the
+   field are the same act, so they are the same click. */
+.api-doc-val {
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+.api-doc-val:hover { background: var(--bg-tertiary); }
+.api-doc-note { font-size: 11.5px; color: var(--text-secondary); }
+@media (max-width: 600px) {
+  .api-doc-row { grid-template-columns: 1fr; gap: 5px; }
+}

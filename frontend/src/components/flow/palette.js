@@ -60,6 +60,12 @@ export const PALETTE = [
   },
   {
     key: 'artificial-sentiment',
+    apiDoc: [
+      { key: 'symbol', values: ['XAUUSD', 'EURUSD'], note: 'required' },
+      { key: 'timeframe', values: ['M15', 'H1', 'H4', 'D1'] },
+      { key: 'count', values: ['200', '500', '1000'], note: 'candles, 40-1000' },
+      { key: 'compare', values: ['true'] },
+    ],
     apiKeys: 'symbol (required) · timeframe · count (40-1000) · compare',
     apiExample: 'symbol=XAUUSD&timeframe=H1&count=200',
     type: 'artificialSentiment',
@@ -97,6 +103,12 @@ export const PALETTE = [
   },
   {
     key: 'market-data',
+    apiDoc: [
+      { key: 'symbol', values: ['XAUUSD', 'gold', 'XAUUSD,GBPUSD'], note: 'required — one, or a comma list' },
+      { key: 'kind', values: ['candles', 'quote'] },
+      { key: 'timeframe', values: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'H4,H1,M15'], note: 'a list reads several at once' },
+      { key: 'count', values: ['50', '100', '500'] },
+    ],
     apiKeys: 'symbol (required) · kind (quote|candles) · timeframe (M1|M5|M15|M30|H1|H4|D1) · count',
     apiExample: 'symbol=XAUUSD&timeframe=M15&count=100',
     type: 'marketData',
@@ -112,6 +124,11 @@ export const PALETTE = [
   },
   {
     key: 'risk-management',
+    apiDoc: [
+      { key: 'symbol', values: ['XAUUSD', 'EURUSD'], note: 'required' },
+      { key: 'side', values: ['buy', 'sell'] },
+      { key: 'style', values: ['scalp', 'intraday', 'swing'] },
+    ],
     apiKeys: 'symbol (required) · side (buy|sell) · style (scalp|intraday|swing)',
     apiExample: 'symbol=XAUUSD&side=buy&style=intraday',
     type: 'riskManagement',

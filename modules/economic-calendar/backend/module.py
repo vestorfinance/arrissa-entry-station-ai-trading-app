@@ -129,7 +129,8 @@ def register(registry, module_id):
                  "icon": "CalendarClock", "tone": "calendar", "model": True,
                  "args": [{"name": "text", "type": "text", "required": True}],
                            "api_keys": "symbol · currency (USD,EUR) · impact (high|moderate|low) · range (today|tomorrow|this_week) · hours · days · limit",
-                           "api_example": "currency=USD&impact=high&range=today"},
+                           "api_example": "currency=USD&impact=high&range=today",
+                           "api_doc": [{"key": "symbol", "values": ["XAUUSD", "EURUSD"]}, {"key": "currency", "values": ["USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
         opinion=True, catalog=CATALOG, values=("text",), module=module_id)
 
     registry.worker("economic-calendar-fetcher", econ.start_worker,
