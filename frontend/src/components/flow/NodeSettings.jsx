@@ -4,6 +4,7 @@ import { backdrop } from '../../services/backdrop.js'
 import { paletteItem } from './palette.js'
 import { UNITS, floorNote } from './schedule.js'
 import Dropdown from '../Dropdown.jsx'
+import ParamsField from './ParamsField.jsx'
 import * as store from '../../services/agents.js'
 import { billingChanged } from '../../services/billing.js'
 
@@ -447,14 +448,22 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 {/* The instruction is prose and wants room; a query string is one
                     short line and does not. Giving both the same 160px box made
                     the parameters field look like somewhere to write an essay. */}
-                <textarea
-                  className={'node-settings-text'
-                    + (a.name === 'api_params' ? ' node-settings-text--short' : '')}
-                  value={values[a.name] || ''}
-                  placeholder={a.placeholder || 'What should this node send?'}
-                  onChange={(e) => set(a.name, e.target.value)}
-                  spellCheck={false}
-                />
+                {a.name === 'api_params' ? (
+                  <ParamsField
+                    className="node-settings-text node-settings-text--short"
+                    value={values[a.name] || ''}
+                    placeholder={a.placeholder || 'symbol=XAUUSD&count=15'}
+                    onChange={(v) => set(a.name, v)}
+                  />
+                ) : (
+                  <textarea
+                    className="node-settings-text"
+                    value={values[a.name] || ''}
+                    placeholder={a.placeholder || 'What should this node send?'}
+                    onChange={(e) => set(a.name, e.target.value)}
+                    spellCheck={false}
+                  />
+                )}
                 {/* The drawer is narrow by design, and a node's instruction is
                     prose. This opens the same value in a window big enough to
                     read it back. */}
@@ -558,36 +567,39 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 <X size={14} strokeWidth={2} />
               </button>
             </div>
-            <textarea
-              ref={big === 'api_params' ? paramsRef : null}
-              className={'node-text-modal-area'
-                + (big === 'api_params' ? ' node-text-modal-area--short' : '')}
-              autoFocus
-              /* The browser places a dropped string exactly where it was
-                 dropped — it is the only thing that knows the character offset
-                 under the pointer. Intercepting the drop and inserting at
-                 `selectionStart` put it wherever the caret happened to be
-                 LAST, which for a field nobody had clicked in is position 0.
-                 So the drop is left alone and the drag carries `{{name}}` as
-                 its text/plain payload.
-                 The one thing still needed is telling React: a native drop
-                 changes the DOM value, and a controlled textarea has to be
-                 told or the next keystroke reverts it. */
-              onDrop={(e) => {
-                if (big !== 'api_params') return
-                const el = e.currentTarget
-                requestAnimationFrame(() => {
-                  if (el && el.value !== (values.api_params || '')) set('api_params', el.value)
-                })
-              }}
-              value={values[big] || ''}
-              placeholder={big === 'api_params'
-                ? 'symbol=XAUUSD&count=15&timeframe=M15'
-                : 'What should this node do?'}
-              spellCheck={false}
-              onChange={(e) => set(big, e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
-            />
+            {big === 'api_params' ? (
+              <ParamsField
+                big
+                className="node-text-modal-area node-text-modal-area--short"
+                inputRef={paramsRef}
+                autoFocus
+                value={values[big] || ''}
+                placeholder="symbol=XAUUSD&count=15&timeframe=M15"
+                onChange={(v) => set(big, v)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
+                /* The browser places a dropped string exactly where it was
+                   dropped — it is the only thing that knows the character
+                   offset under the pointer. So the drop is left alone; the
+                   drag carries `{{name}}` as its text/plain payload. React
+                   still has to be told, or the next keystroke reverts it. */
+                onDrop={(e) => {
+                  const el = e.currentTarget
+                  requestAnimationFrame(() => {
+                    if (el && el.value !== (values.api_params || '')) set('api_params', el.value)
+                  })
+                }}
+              />
+            ) : (
+              <textarea
+                className="node-text-modal-area"
+                autoFocus
+                value={values[big] || ''}
+                placeholder="What should this node do?"
+                spellCheck={false}
+                onChange={(e) => set(big, e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
+              />
+            )}
 
             {/* Every key this node's API reads, with the values each one takes.
                 Not one example: an example shows that a thing is possible and
@@ -649,12 +661,12 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                           onChange={(e) => setRules(rules.map((x, j) =>
                             (j === i ? { ...x, when: e.target.value } : x)))}
                         />
-                        <input
-                          className="input api-rule-params"
+                        <ParamsField
+                          className="api-rule-params"
                           value={r.params || ''}
                           placeholder="symbol={{symbol}}&timeframe=M1"
-                          onChange={(e) => setRules(rules.map((x, j) =>
-                            (j === i ? { ...x, params: e.target.value } : x)))}
+                          onChange={(v) => setRules(rules.map((x, j) =>
+                            (j === i ? { ...x, params: v } : x)))}
                         />
                         <button type="button" className="var-del" title="Remove"
                                 onClick={() => setRules(rules.filter((_, j) => j !== i))}>

@@ -6336,3 +6336,82 @@ a.dv-card-title:hover { text-decoration: underline; }
 .var-chip:hover { background: var(--accent); color: #fff; }
 .var-chip:active { cursor: grabbing; }
 .var-bar-hint { font-size: 11px; color: var(--text-secondary); margin-left: auto; }
+
+/* ── a query string, coloured like code ──────────────────────────────────────
+   A textarea holds plain text and cannot hold coloured spans, so the colour is
+   a <pre> sitting exactly behind a transparent one. You type into the real
+   control; what you read is the layer underneath.
+
+   Every shared property below is load-bearing. Font, size, line-height,
+   padding and wrapping must be identical on both layers or the colour drifts a
+   fraction per line until the caret no longer sits on the letter beside it —
+   which is why they are declared once, for both, rather than twice and kept in
+   step by hand. Padding is on the layers and not on the box, because both of
+   them scroll and text sliding under a padded container reads as a fault.
+
+   Colours are the ones the homepage and the install guide already use for code,
+   so a call looks the same wherever it is written down. */
+.pf {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  overflow: hidden;
+  padding: 0;
+}
+.pf-paint,
+.pf-input {
+  margin: 0;
+  border: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.pf-paint {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--text-primary);
+}
+.pf-input {
+  position: relative;
+  display: block;
+  min-height: inherit;
+  background: transparent;
+  /* The text is invisible and the layer behind it is what you see. The caret is
+     not — it has to be painted back or the field looks dead while you type. */
+  color: transparent;
+  caret-color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  overflow: auto;
+}
+.pf-input::placeholder { color: #6b6b6b; }
+[data-theme="light"] .pf-input::placeholder { color: #8a8a8a; }
+/* Selected transparent text would otherwise be an empty block. */
+.pf-input::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.pf:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.pf-key { color: var(--tone-sky); }
+.pf-val { color: var(--tone-amber); }
+.pf-sep { color: var(--tone-muted); }
+/* The one token that has to match something declared on the trigger, and the
+   one people mistype. Given its own weight so a wrong name stands out. */
+.pf-var { color: var(--tone-ok); font-weight: 700; }
+
+.pf--big .pf-paint,
+.pf--big .pf-input { padding: 13px 15px; font-size: 13px; }
+
+/* Inside a conditional rule it sits in a row beside a one-line input, so it
+   matches that height rather than the panel's. */
+.api-rule .pf { min-height: 34px; }
+.api-rule .pf-paint,
+.api-rule .pf-input { padding: 7px 10px; font-size: 12px; line-height: 1.5; }
