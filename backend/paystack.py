@@ -102,17 +102,28 @@ def create_plan(name, amount_zar, interval, mode):
     return data["data"]["plan_code"]
 
 
-def initialize(email, amount_zar, reference, callback_url, metadata=None, mode=None):
+def initialize(email, amount_zar, reference, callback_url, metadata=None, mode=None,
+               plan=None):
     """Start a transaction and return the URL to send the buyer to.
 
     ZAR minor units, like the rest of Paystack: Rands x 100. `metadata` rides
     with the transaction and comes back on verify, which is how the instance
-    that is buying survives a round trip through a payment page."""
-    r = requests.post(f"{BASE}/transaction/initialize", headers=_headers(mode), timeout=30, json={
+    that is buying survives a round trip through a payment page.
+
+    With `plan`, Paystack creates a SUBSCRIPTION rather than taking a single
+    payment, and charges again each period without anyone being asked. The
+    amount then comes from the plan, not from here — sending both and having
+    them disagree is how a customer is charged one number and shown another."""
+    body = {
         "email": email, "amount": int(round(float(amount_zar) * 100)),
         "reference": reference, "callback_url": callback_url,
         "currency": "ZAR", "metadata": metadata or {},
-    })
+    }
+    if plan:
+        body["plan"] = plan
+        body.pop("amount", None)
+    r = requests.post(f"{BASE}/transaction/initialize", headers=_headers(mode), timeout=30,
+                      json=body)
     data = r.json()
     if not data.get("status"):
         raise RuntimeError(data.get("message") or "Paystack initialize failed")
@@ -171,6 +182,76 @@ def list_plan_codes(mode=None):
         else:
             rows = conn.execute("SELECT * FROM paystack_plans ORDER BY mode, plan_key, interval").fetchall()
     return [dict(r) for r in rows]
+
+
+def sync_store_plans(mode):
+    """Yearly plans for every paid module and bundle, so a purchase RENEWS.
+
+    A module sold as a one-off charge lapses in silence: the buyer keeps what
+    they installed, stops getting new versions, and finds out months later when
+    something they wanted was published and never arrived. A subscription tells
+    them, and charges them, at the moment it matters.
+
+    Paystack cannot delete a plan, so an existing one is updated rather than
+    replaced — its plan_code is what any live subscription is attached to, and
+    minting a new code would strand every subscriber on the old price.
+    """
+    import store
+    made = []
+    products = [(m["id"], m["name"], m.get("price_usd")) for m in store.catalog()]
+    products += [(b["id"], b["name"], b.get("price_usd")) for b in store.bundles()]
+
+    for pid, name, usd in products:
+        if not usd:                      # free, or bundled and not sold alone
+            continue
+        import store_api
+        cents = round(float(usd) * store_api.USD_ZAR * 100)
+        title = f"EntryStation {name} (yearly)"
+        existing = plan_code(mode, f"module:{pid}", "annual")
+        if existing:
+            # The amount can move — a bundle derives its price from what it
+            # contains, so publishing a module changes it. Push it to Paystack
+            # rather than letting the plan quote last year's number.
+            try:
+                update_plan(existing, title, cents, mode)
+            except Exception as e:
+                print(f"[paystack] could not update {pid} plan: {e}", flush=True)
+            save_plan_code(mode, f"module:{pid}", "annual", existing, cents // 100, title)
+            made.append({"product": pid, "plan_code": existing, "amount_zar": cents / 100,
+                         "created": False})
+            continue
+        code = create_plan_cents(title, cents, "annually", mode)
+        save_plan_code(mode, f"module:{pid}", "annual", code, cents // 100, title)
+        made.append({"product": pid, "plan_code": code, "amount_zar": cents / 100,
+                     "created": True})
+    return made
+
+
+def create_plan_cents(name, amount_cents, interval, mode):
+    """Like create_plan, but in cents.
+
+    `create_plan` takes Rands and multiplies by 100, which truncates: $29 is
+    R536.50 and would be charged as R536. A module priced in dollars almost
+    never lands on a whole Rand, so the store side works in cents throughout."""
+    r = requests.post(f"{BASE}/plan", headers=_headers(mode), timeout=30, json={
+        "name": name, "amount": int(amount_cents), "interval": interval, "currency": "ZAR",
+    })
+    data = r.json()
+    if not data.get("status"):
+        raise RuntimeError(data.get("message") or "Paystack refused the plan")
+    return data["data"]["plan_code"]
+
+
+def update_plan(code, name, amount_cents, mode):
+    """Change an existing plan's price. Paystack has no delete, and the code is
+    what live subscriptions hang off, so this is the only safe way to reprice."""
+    r = requests.put(f"{BASE}/plan/{code}", headers=_headers(mode), timeout=30, json={
+        "name": name, "amount": int(amount_cents),
+    })
+    data = r.json()
+    if not data.get("status"):
+        raise RuntimeError(data.get("message") or "Paystack refused the update")
+    return True
 
 
 def sync_plans(mode):

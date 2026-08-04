@@ -1550,7 +1550,15 @@ def sync_admin_paystack_plans(body: PaystackMode, user: dict = Depends(current_u
         made = paystack.sync_plans(body.mode)
     except Exception as e:
         raise HTTPException(400, f"Plan sync failed: {e}")
-    return {"ok": True, "mode": body.mode, "plans": made}
+    # The store's products too, in the same action. Two buttons for "make the
+    # plans" is one button somebody forgets, and the failure is silent: the
+    # store falls back to a single charge and nothing renews.
+    store_made = []
+    try:
+        store_made = paystack.sync_store_plans(body.mode)
+    except Exception as e:
+        print(f"[paystack] store plan sync failed: {e}", flush=True)
+    return {"ok": True, "mode": body.mode, "plans": made, "store_plans": store_made}
 
 
 # ── admin: private invite link (registration bypass) ────────────────────────────

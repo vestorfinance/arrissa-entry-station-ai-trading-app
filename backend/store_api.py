@@ -14,7 +14,7 @@ from __future__ import annotations
 import json as _json
 import re as _re
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -388,6 +388,15 @@ def _purchases_table():
         # different questions, and answering only the first is why a localhost
         # buyer was left staring at raw JSON.
         conn.execute("ALTER TABLE store_purchases ADD COLUMN IF NOT EXISTS return_url TEXT")
+        # What a RENEWAL will arrive against. Paystack sends a fresh reference
+        # every cycle, so the original purchase cannot be found by it; the
+        # customer and the plan are what stay the same, and together they say
+        # which licence to extend.
+        conn.execute("ALTER TABLE store_purchases ADD COLUMN IF NOT EXISTS customer_code TEXT")
+        conn.execute("ALTER TABLE store_purchases ADD COLUMN IF NOT EXISTS subscription_code TEXT")
+        conn.execute("ALTER TABLE store_purchases ADD COLUMN IF NOT EXISTS plan_code TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_purchase_renewal "
+                     "ON store_purchases (customer_code, plan_code)")
         conn.commit()
 
 
@@ -647,6 +656,79 @@ def _safe_return(raw: str) -> str:
     return ""
 
 
+@router.post("/api/store/paystack/webhook")
+async def paystack_webhook(request: Request):
+    """Paystack telling us a subscription renewed.
+
+    Without this, a renewal takes the money and extends nothing: the card is
+    charged every year and the licence expires anyway, which is the worst
+    possible version of a subscription and the one a customer notices last.
+
+    The signature is checked before the body is trusted at all. This endpoint is
+    public by necessity — Paystack cannot log in — so an unsigned POST here
+    would otherwise be a way to extend anybody's licence for free.
+    """
+    import hashlib
+    import hmac
+    import json as _json
+
+    raw = await request.body()
+    sig = request.headers.get("x-paystack-signature") or ""
+
+    # Which mode signed it is not stated, so both are tried. A test key must
+    # never be able to extend a live licence, so the mode that verified is the
+    # mode the rest of this runs in.
+    mode = None
+    for m in ("live", "test"):
+        secret = paystack.secret_key(m)
+        if not secret:
+            continue
+        want = hmac.new(secret.encode(), raw, hashlib.sha512).hexdigest()
+        if hmac.compare_digest(want, sig):
+            mode = m
+            break
+    if not mode:
+        raise HTTPException(401, "bad signature")
+
+    try:
+        body = _json.loads(raw)
+    except Exception:
+        return {"ok": True}                      # nothing to do, and nothing to retry
+
+    event = body.get("event") or ""
+    data = body.get("data") or {}
+    if event != "charge.success":
+        # subscription.create arrives with the first payment, which the callback
+        # already handled; disable/not_renew are the customer's business and
+        # take effect by the licence simply not being extended.
+        return {"ok": True, "ignored": event}
+
+    plan = data.get("plan") or {}
+    plan_code = plan.get("plan_code") if isinstance(plan, dict) else plan
+    customer = (data.get("customer") or {}).get("customer_code")
+    if not plan_code or not customer:
+        return {"ok": True, "ignored": "not a subscription charge"}
+
+    import db
+    _purchases_table()
+    with db.connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM store_purchases WHERE customer_code=%s AND plan_code=%s "
+            "AND status='paid' ORDER BY created_at LIMIT 1", (customer, plan_code)).fetchone()
+    if not row:
+        # A renewal we cannot place. Logged rather than swallowed: it means a
+        # customer is paying for something this store cannot credit them for.
+        print(f"[store] renewal for {plan_code} / {customer} matched no purchase", flush=True)
+        return {"ok": True, "unmatched": True}
+
+    usd, grants = _priced(row["product"])
+    key, lic = _store.grant(row["instance_id"], row["email"], grants,
+                            note=f"renewal {data.get('reference')}", expires_at=_term_end())
+    print(f"[store] renewed {row['product']} for {row['instance_id'][:16]} "
+          f"until {lic.get('expires_at')}", flush=True)
+    return {"ok": True, "renewed": row["product"]}
+
+
 @router.get("/api/store/checkout")
 def store_checkout(product: str = Query(..., description="module or bundle id"),
                    instance: str = Query(..., description="the buying instance's domain or id"),
@@ -680,9 +762,19 @@ def store_checkout(product: str = Query(..., description="module or bundle id"),
                       _safe_return(return_url)))
         conn.commit()
 
+    # A PLAN, so it renews. Sold as a one-off charge a licence lapses in
+    # silence: the buyer keeps what they installed, stops receiving new
+    # versions, and finds out months later when something they wanted was
+    # published and never arrived.
+    #
+    # Falls back to a single charge when no plan exists yet, because a store
+    # that cannot sell is worse than one that sells without renewing — and the
+    # plans are created by an admin action that may not have been run.
+    plan = paystack.plan_code(mode, f"module:{product}", "annual")
     out = paystack.initialize(
         email=email.lower().strip(), amount_zar=zar, reference=ref,
         callback_url=f"{SITE}/api/store/checkout/verify",
+        plan=plan or None,
         metadata={"product": product, "instance_id": inst, "grants": grants}, mode=mode)
     return {"authorization_url": out.get("authorization_url"), "reference": ref,
             "product": product, "instance_id": inst, "price_usd": usd, "amount_zar": zar,
@@ -734,8 +826,14 @@ def store_checkout_verify(reference: str = Query(...)):
     bound = {"ok": True}
 
     with db.connect() as conn:
-        conn.execute("UPDATE store_purchases SET status='paid', licence_key=%s, paid_at=now() "
-                     "WHERE reference=%s", (key, reference))
+        conn.execute("UPDATE store_purchases SET status='paid', licence_key=%s, paid_at=now(), "
+                     "customer_code=%s, subscription_code=%s, plan_code=%s WHERE reference=%s",
+                     (key,
+                      ((data.get("customer") or {}).get("customer_code")),
+                      data.get("subscription_code"),
+                      ((data.get("plan") or {}) if isinstance(data.get("plan"), dict) else {})
+                      .get("plan_code") or (data.get("plan") if isinstance(data.get("plan"), str) else None),
+                      reference))
         conn.commit()
     try:
         import mailer
