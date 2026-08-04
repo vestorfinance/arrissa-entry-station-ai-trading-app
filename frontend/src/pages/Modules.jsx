@@ -503,11 +503,19 @@ function ModuleCard({ m, busy, act, nameOf, billing }) {
           )}
           {m.update_available && (
             m.can_update ? (
-              <button className="btn btn--primary btn--sm" disabled={busy}
-                      title={`Update to v${m.version}`}
-                      onClick={() => act(m.id, () => api.updateModule(m.id))}>
+              /* One press: ask the store for the current catalogue, take the
+                 build, and repaint. The server refuses to decide this from its
+                 five-minute cache, so pressing Update means now rather than
+                 "as of some point in the last few minutes". */
+              <button className="btn btn--primary btn--sm" disabled={busy === m.id}
+                      title={`Fetch v${m.version} from the store and install it`}
+                      onClick={() => act(m.id, async () => {
+                        const r = await api.updateModule(m.id)
+                        return { note: `${m.name} updated to v${r.version || m.version}. `
+                                     + 'It runs after the app restarts.' }
+                      })}>
                 <ArrowUpCircle size={14} strokeWidth={2} />
-                {busy ? 'Updating…' : `Update to v${m.version}`}
+                {busy === m.id ? 'Updating…' : `Update to v${m.version}`}
               </button>
             ) : (
               /* Say why BEFORE it is pressed. A button that answers 402 when

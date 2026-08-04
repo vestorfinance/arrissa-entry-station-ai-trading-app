@@ -119,7 +119,7 @@ def install_owned(log=print) -> list:
 
     got = []
     try:
-        view = catalog.view()
+        view = catalog.view(max_age=0)
     except Exception as e:
         log(f"[auto-update] could not read the catalogue: {e}")
         return got
@@ -153,7 +153,9 @@ def run_once(log=print) -> dict:
 
     took, refused, failed = [], [], []
     try:
-        view = catalog.view()
+        # Fresh: this either runs on a schedule, where a stale read costs six
+        # hours, or from a button, where it costs the user's patience.
+        view = catalog.view(max_age=0)
     except Exception as e:
         log(f"[auto-update] could not read the catalogue: {e}")
         return {"took": [], "refused": [], "failed": [], "error": str(e)}

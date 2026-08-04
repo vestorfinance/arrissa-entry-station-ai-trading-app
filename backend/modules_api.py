@@ -269,7 +269,11 @@ def update_module(module_id: str, user=Depends(require_admin)):
     a release that ships new tables applies them on the way in, once."""
     import catalog, store, versions
 
-    row = next((m for m in catalog.view()["modules"] if m["id"] == module_id), None)
+    # A FRESH look, not the five-minute cache. Pressing Update is somebody
+    # saying "now", and deciding from a cached catalogue is how the button
+    # answers "already at 1.0.2" about a store that has been offering 1.0.3 for
+    # four minutes.
+    row = next((m for m in catalog.view(max_age=0)["modules"] if m["id"] == module_id), None)
     if not row:
         raise HTTPException(404, f"{module_id} is not in the store")
     if not row.get("installed"):
