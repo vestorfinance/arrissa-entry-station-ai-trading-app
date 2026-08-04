@@ -6856,3 +6856,24 @@ a.dv-card-title:hover { text-decoration: underline; }
   font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre-wrap; overflow-wrap: break-word;
 }
+
+/* Setup that happens on the user's own machine: a client to configure, a key to
+   paste. Numbered, because the order matters, and every command copyable
+   because the whole purpose is putting it somewhere else. */
+.guide-steps { margin: 14px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 18px; }
+.guide-steps li { line-height: 1.6; }
+.guide-steps strong { font-size: 14px; }
+.guide-steps p { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+.guide-code { position: relative; margin-top: 10px; }
+.guide-code pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  border-radius: var(--radius-sm); background: var(--input-bg);
+  font: 12.5px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.guide-code-copy {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: var(--radius-pill);
+  background: var(--bg-tertiary); color: var(--text-secondary);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.guide-code-copy:hover { color: var(--text-primary); }

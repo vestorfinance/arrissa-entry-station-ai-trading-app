@@ -160,7 +160,12 @@ def start_workers() -> int:
 # "status" is for an endpoint that answers with ONE object rather than a list —
 # a health check, a connection's state, the result of an action. Without it a
 # module had to invent a one-row array to say a single thing.
-GUIDE_SECTION_TYPES = {"table", "list", "status"}
+# `steps` is the odd one out and deliberately so: the other three are windows
+# onto an endpoint, and this one is static setup instructions with commands to
+# copy. A module whose hardest part happens on the USER'S machine — a client to
+# configure, a key to paste — has nowhere to put that otherwise, and telling
+# somebody to read a README that is not in the app is telling them to leave it.
+GUIDE_SECTION_TYPES = {"table", "list", "status", "steps"}
 GUIDE_FORMATS = {"text", "code", "number", "signed", "percent", "list", "time", "badge"}
 GUIDE_GROUPS = {"trade", "analysis", "modules"}
 
@@ -219,8 +224,15 @@ def validate_guide(g: dict) -> dict:
         typ = sec.get("type", "table")
         if typ not in GUIDE_SECTION_TYPES:
             bad(f"{where} type {typ!r} is not one of {sorted(GUIDE_SECTION_TYPES)}")
-        if not sec.get("endpoint"):
+        if typ != "steps" and not sec.get("endpoint"):
             bad(f"{where} needs an `endpoint` to call")
+        if typ == "steps":
+            items = sec.get("steps") or []
+            if not items:
+                bad(f"{where} is a steps section and needs `steps`")
+            for j, st in enumerate(items):
+                if not st.get("title"):
+                    bad(f"{where}.steps[{j}] needs a `title`")
         if not sec.get("title"):
             bad(f"{where} needs a `title`")
         if typ == "table":

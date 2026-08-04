@@ -90,7 +90,45 @@ export function GuideAction({ action }) {
 
 
 // ── the section ───────────────────────────────────────────────────────────────
+function GuideCode({ children }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <div className="guide-code">
+      <button className="guide-code-copy"
+              onClick={() => { navigator.clipboard?.writeText(children).then(() => setCopied(true)); setTimeout(() => setCopied(false), 1600) }}>
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      <pre>{children}</pre>
+    </div>
+  )
+}
+
 export default function GuideSection({ section, apiKey, base }) {
+  // Static setup, with commands to copy. The other section types are windows
+  // onto an endpoint; this one is the instructions for the part that happens on
+  // the user's own machine, where this app cannot see or do anything.
+  if (section.type === 'steps') {
+    return (
+      <section className="guide-sec">
+        <div className="guide-sec-head">
+          <div>
+            <h2 className="guide-sec-title">{section.title}</h2>
+            {section.sub && <p className="guide-sec-sub">{section.sub}</p>}
+          </div>
+        </div>
+        <ol className="guide-steps">
+          {(section.steps || []).map((st, i) => (
+            <li key={i}>
+              <strong>{st.title}</strong>
+              {st.body && <p>{st.body}</p>}
+              {st.code && <GuideCode>{st.code}</GuideCode>}
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+
   const inputs = useMemo(() => section.inputs || [], [section.inputs])
   const manual = !!section.submit || inputs.length > 0
 
