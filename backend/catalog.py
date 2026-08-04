@@ -276,7 +276,11 @@ def remote(force=False, max_age=None) -> tuple[list, str | None]:
                            "billing": body.get("billing", "yearly"),
                            "bundles": body.get("bundles", []),
                            "store_core": (body.get("core") or {}).get("version"),
-                           "store_build": body.get("core") or {}}
+                           "store_build": body.get("core") or {},
+                           # What the STORE says this key covers and until when.
+                           # The instance cannot work it out: its own
+                           # store_licences table is empty by definition.
+                           "licence": body.get("licence") or {}}
         _cache.update(at=now, data=mods, error=None)
         return mods, None
     except Exception as e:
@@ -313,9 +317,33 @@ def _update_gate(module_id: str, offered: bool, row: dict = None) -> dict:
         return {"can_update": False, "update_blocked": ""}
     if (row or {}).get("price_usd") == 0:
         return {"can_update": True, "update_blocked": ""}
-    import store
-    ok, why = store.can_update(licence_key(), module_id)
-    return {"can_update": ok, "update_blocked": "" if ok else why}
+
+    # OWNERSHIP is the store's answer, not ours.
+    #
+    # This asked `store.can_update`, which reads the store_licences table — and
+    # on an instance that table is the INSTANCE'S OWN and permanently empty. So
+    # every paid module was refused on every self-hosted box, whatever the
+    # licence covered, with "not covered by this licence" about a licence the
+    # store had already confirmed. The row in hand carries `owned`, computed by
+    # the machine that issued the key.
+    if row is not None and "owned" in row:
+        if not row.get("owned"):
+            return {"can_update": False,
+                    "update_blocked": f"{module_id} is not on this installation's licence."}
+        # Owned, but the year may be up. The store sends the licence's validity
+        # alongside; what lapses is the right to NEW versions, never the module.
+        lic = (_cache["terms"] or {}).get("licence") or {}
+        if lic and lic.get("expired"):
+            until = str(lic.get("expires_at") or "")[:10]
+            return {"can_update": False,
+                    "update_blocked": (f"Your subscription ended{f' on {until}' if until else ''}. "
+                                       "What is installed keeps working — renew for new versions.")}
+        return {"can_update": True, "update_blocked": ""}
+
+    # No opinion from the store (an old store, or a module it does not list).
+    # Falling back to the local table is wrong on an instance, so the honest
+    # answer is to allow the attempt and let the download refuse it.
+    return {"can_update": True, "update_blocked": ""}
 
 
 def view(max_age=None) -> dict:

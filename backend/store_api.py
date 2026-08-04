@@ -53,8 +53,14 @@ def store_catalog(key: str = Query("", description="Licence key, if the caller h
             # somebody has to remember to change and a stamp is not.
             "core": {**_core_build(), "version": module_system.CORE_VERSION},
             "bundles": store.bundles(),
+            # Expiry rides along. An instance cannot work this out — its own
+            # store_licences table is empty by definition — so without it the
+            # box can only say "blocked" and never "your year is up on the 4th".
             "licence": {"valid": bool(lic), "email": lic["email"] if lic else None,
-                        "modules": (lic["modules"] if lic else [])} if key else None,
+                        "modules": (lic["modules"] if lic else []),
+                        "expires_at": (str(lic["expires_at"]) if lic and lic.get("expires_at")
+                                       else None),
+                        "expired": bool(lic and lic.get("expired"))} if key else None,
             "modules": out}
 
 
