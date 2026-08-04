@@ -111,9 +111,13 @@ def initialize(email, amount_zar, reference, callback_url, metadata=None, mode=N
     that is buying survives a round trip through a payment page.
 
     With `plan`, Paystack creates a SUBSCRIPTION rather than taking a single
-    payment, and charges again each period without anyone being asked. The
-    amount then comes from the plan, not from here — sending both and having
-    them disagree is how a customer is charged one number and shown another."""
+    payment, and charges again each period without anyone being asked.
+
+    The amount is still sent. Dropping it — on the reasoning that the plan
+    already carries one — is refused outright with "Invalid Amount Sent": the
+    field is required whether or not a plan is attached, and Paystack takes the
+    plan's amount for the subscription regardless. The two agree here because
+    both are derived from the same price."""
     body = {
         "email": email, "amount": int(round(float(amount_zar) * 100)),
         "reference": reference, "callback_url": callback_url,
@@ -121,7 +125,6 @@ def initialize(email, amount_zar, reference, callback_url, metadata=None, mode=N
     }
     if plan:
         body["plan"] = plan
-        body.pop("amount", None)
     r = requests.post(f"{BASE}/transaction/initialize", headers=_headers(mode), timeout=30,
                       json=body)
     data = r.json()
