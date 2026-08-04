@@ -119,6 +119,19 @@ def _impact_tool(args, **_kw):
                        compare=args.get("compare", True))
 
 
+def _latest(rows, key):
+    """The newest story, and everything else published at the same instant.
+
+    A release that moves three instruments arrives as three stories on one
+    timestamp. Taking only one of them would hand the flow a third of what
+    happened, so this returns the whole group."""
+    stamped = [r for r in rows if r.get(key)]
+    if not stamped:
+        return []
+    newest = max(str(r[key]) for r in stamped)
+    return [r for r in stamped if str(r[key]) == newest]
+
+
 def _node(text, context, ctx, nv):
     import analysis_agent as eng
     p = eng._params(ctx, nv, "market news",
@@ -126,8 +139,26 @@ def _node(text, context, ctx, nv):
                     "hours (int); days (int); range (today|yesterday|this_week); q (text search); "
                     "limit. ALSO: measure (true when the ask is about how HEAVY or BUSY the news "
                     "is, or a comparison with an earlier period — 'more news than yesterday', "
-                    "'is today quiet' — rather than for the headlines themselves).",
+                    "'is today quiet' — rather than for the headlines themselves). ALSO: latest "
+                    "(true for ONLY the most recent story, and anything published at the same "
+                    "moment; combine with symbol for the latest story about that instrument).",
                     text, context, {"hours": 12})
+
+    if str(p.get("latest") or "").lower() in ("1", "true", "yes"):
+        # The window is about "what has come in today"; "the latest" is a
+        # different question and must not answer "nothing" on a quiet morning.
+        q = dict(p)
+        q.pop("latest", None)
+        q.pop("measure", None)
+        q["hours"] = 0
+        q["days"] = int(p.get("days") or 7)
+        q["limit"] = 200
+        res = _tool(q)
+        if not isinstance(res, dict) or res.get("error"):
+            return res
+        arts = _latest(res.get("articles") or [], "time")
+        return {**res, "articles": arts, "count": len(arts), "latest": True,
+                "at": arts[0]["time"] if arts else None}
     # One node, two questions. Asking for the headlines and asking how heavy the
     # day is are the same source and the same filters; splitting them into two
     # nodes would make a flow author choose between them before they knew which
@@ -164,7 +195,9 @@ def register(registry, module_id):
                            "args": [{"name": "text", "type": "text", "required": True}],
                            "api_keys": "symbol · impact (high|medium|low) · min_score (0-100) · hours · days · range (today|yesterday|this_week) · q · limit",
                            "api_example": "symbol=XAUUSD&impact=high&hours=24&limit=20",
-                           "api_doc": [{"key": "symbol", "values": ["XAUUSD", "EURUSD", "US30"], "note": "instrument to filter to"}, {"key": "impact", "values": ["high", "medium", "low"]}, {"key": "min_score", "values": ["50", "70", "90"], "note": "0-100"}, {"key": "hours", "values": ["6", "12", "24"]}, {"key": "days", "values": ["1", "3", "7"]}, {"key": "range", "values": ["today", "yesterday", "this_week"]}, {"key": "q", "values": ["tariff", "rate cut"], "note": "free text search"}, {"key": "limit", "values": ["10", "20", "50"]}, {"key": "measure", "values": ["true"], "note": "how heavy the news is, not the headlines"}]},
+                           "api_doc": [{"key": "latest", "values": ["true"],
+                                        "note": "only the most recent story, plus any published at the same moment; add symbol to scope it"},
+                                       {"key": "symbol", "values": ["XAUUSD", "EURUSD", "US30"], "note": "instrument to filter to"}, {"key": "impact", "values": ["high", "medium", "low"]}, {"key": "min_score", "values": ["50", "70", "90"], "note": "0-100"}, {"key": "hours", "values": ["6", "12", "24"]}, {"key": "days", "values": ["1", "3", "7"]}, {"key": "range", "values": ["today", "yesterday", "this_week"]}, {"key": "q", "values": ["tariff", "rate cut"], "note": "free text search"}, {"key": "limit", "values": ["10", "20", "50"]}, {"key": "measure", "values": ["true"], "note": "how heavy the news is, not the headlines"}]},
                   opinion=True, catalog=CATALOG, values=("text",), module=module_id)
     registry.worker("news-fetcher", news.start_fetcher,
                     stop=news.stop_fetcher, module=module_id)

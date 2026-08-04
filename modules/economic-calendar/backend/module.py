@@ -92,6 +92,37 @@ def _tool(args, **_kw):
 
 
 # ── flow node ──────────────────────────────────────────────────────────────────
+def _latest_release(p) -> dict:
+    """The most recent release, and everything printed alongside it.
+
+    Releases come in batches: at 08:30 a single print can carry the headline
+    number, the core number and two revisions, all on one timestamp. Returning
+    the newest ROW would hand the flow one of four and call it the news, so this
+    returns whatever shares the newest timestamp.
+
+    Backwards, and released-only. `hours`/`days` on this source look FORWARD, so
+    they cannot be used to find something that has already happened; since/until
+    are the explicit pair, and `released=True` is the module's own test for "the
+    actual is in"."""
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Widen until something is found: a quiet weekend is not an empty calendar.
+    for back in (1, 3, 10, 30):
+        res = econ.query(symbol=p.get("symbol"), currency=p.get("currency"),
+                         impact=p.get("impact"), released=True, limit=300, order="desc",
+                         since=iso(now - timedelta(days=back)), until=iso(now))
+        rows = (res or {}).get("events") or []
+        if rows:
+            newest = max(str(r.get("time") or "") for r in rows)
+            group = [r for r in rows if str(r.get("time") or "") == newest]
+            return {**res, "events": group, "count": len(group),
+                    "latest": True, "at": newest}
+    return {"count": 0, "events": [], "latest": True, "at": None,
+            "note": "no released event found in the last 30 days for those filters"}
+
+
 def _node(text, context, ctx, nv):
     """The node reads the same query the tool does; an LLM turns the node's free
     text into its parameters, exactly as core's data nodes do."""
@@ -99,8 +130,14 @@ def _node(text, context, ctx, nv):
     p = eng._params(ctx, nv, "economic calendar",
                     "Fields: symbol (optional); currency (e.g. USD,EUR); impact "
                     "(high|moderate|low); range (today|tomorrow|this_week); hours (int); "
-                    "days (int); limit (int).",
+                    "days (int); limit (int). ALSO: latest (true for ONLY the most recent "
+                    "RELEASE — the newest event whose actual is in — and every other event "
+                    "released at the same moment; combine with symbol or currency to scope it).",
                     text, context, {"range": "today"})
+
+    if str(p.get("latest") or "").lower() in ("1", "true", "yes"):
+        return _latest_release(p)
+
     return econ.query(symbol=p.get("symbol"), currency=p.get("currency"),
                       impact=p.get("impact"), range=p.get("range"),
                       hours=int(p.get("hours") or 0), days=int(p.get("days") or 0),
@@ -130,7 +167,9 @@ def register(registry, module_id):
                  "args": [{"name": "text", "type": "text", "required": True}],
                            "api_keys": "symbol · currency (USD,EUR) · impact (high|moderate|low) · range (today|tomorrow|this_week) · hours · days · limit",
                            "api_example": "currency=USD&impact=high&range=today",
-                           "api_doc": [{"key": "symbol", "values": ["XAUUSD", "EURUSD"]}, {"key": "currency", "values": ["USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
+                           "api_doc": [{"key": "latest", "values": ["true"],
+                                        "note": "only the most recent release, plus everything printed at the same moment"},
+                                       {"key": "symbol", "values": ["XAUUSD", "EURUSD"]}, {"key": "currency", "values": ["USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
         opinion=True, catalog=CATALOG, values=("text",), module=module_id)
 
     registry.worker("economic-calendar-fetcher", econ.start_worker,
