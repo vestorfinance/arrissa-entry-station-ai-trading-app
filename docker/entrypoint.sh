@@ -1,25 +1,52 @@
 #!/bin/sh
 set -e
 
-# Seed the volume from the image, once.
+# Seed the volume from the image, and keep it current.
 #
-# The free modules ship inside the image at /app/modules, but installs have to go
-# somewhere writable that survives the container, so MODULES_DIR points at a
-# volume. On a first run that volume is empty — so the bundled modules are copied
-# across, and only where nothing is already there.
+# The bundled modules ship inside the image at /app/modules, but installs have to
+# go somewhere writable that survives the container, so MODULES_DIR points at a
+# volume. On a first run that volume is empty and they are copied across.
 #
-# `install_free` would fetch them from the store instead, but that needs the
-# network and the store to be up at the exact moment somebody first starts this.
-# Copying what is already on disk means a first boot works offline.
+# The version comparison is the part that is easy to leave out and then miss for
+# months. Copying only when the directory is ABSENT means an updated image never
+# reaches a volume that already has the old copy — `git pull && compose up
+# --build` would bring new core and a new frontend while every bundled module sat
+# frozen at whatever version first seeded, with nothing saying so.
+#
+# `versions.newer` is the app's own comparison, so the entrypoint and the update
+# button cannot disagree about which build is newer. A module the operator
+# installed from the store is left alone unless the image genuinely carries a
+# newer one.
 mkdir -p "$ENTRYSTATION_MODULES_DIR"
-for src in /app/modules/*/; do
-    [ -d "$src" ] || continue
-    id=$(basename "$src")
-    if [ ! -d "$ENTRYSTATION_MODULES_DIR/$id" ]; then
-        cp -a "$src" "$ENTRYSTATION_MODULES_DIR/$id"
-        echo "[entrypoint] seeded module: $id"
-    fi
-done
+python3 - <<'PYEOF'
+import json, os, shutil, sys
+from pathlib import Path
+
+sys.path.insert(0, "/app/backend")
+import versions
+
+dst_root = Path(os.environ["ENTRYSTATION_MODULES_DIR"])
+src_root = Path("/app/modules")
+
+
+def ver(path):
+    try:
+        return json.loads((path / "module.json").read_text()).get("version")
+    except Exception:
+        return None
+
+
+for src in sorted(p for p in src_root.iterdir() if p.is_dir()):
+    dst = dst_root / src.name
+    have, offered = ver(dst), ver(src)
+    if not dst.exists():
+        shutil.copytree(src, dst)
+        print(f"[entrypoint] seeded module: {src.name} {offered or ''}".rstrip())
+    elif offered and have and versions.newer(offered, have):
+        shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        print(f"[entrypoint] updated module: {src.name} {have} -> {offered}")
+PYEOF
 
 # Hand the built frontend to Caddy. It is baked into this image and Caddy runs
 # in another container, so the shared volume is the only way across. Copied every
