@@ -11,6 +11,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name  TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone      TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS country    TEXT;   -- ISO-2 country code
+-- When they accepted the terms, and which version. A tick that leaves no trace
+-- is not consent: nothing afterwards can say whether it happened, and the whole
+-- point of asking is to be able to show that it was asked.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version     TEXT;
 
 
 -- Email-verified signups in progress (before the user record is created).

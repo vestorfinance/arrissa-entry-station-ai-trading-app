@@ -632,6 +632,12 @@ export default function Home() {
               <h4>Account</h4>
               <Link to="/login">Sign in</Link>
             </div>
+            <div>
+              <h4>Legal</h4>
+              <Link to="/terms">Terms of use</Link>
+              <Link to="/privacy">Privacy policy</Link>
+              <Link to="/licence">Software licence</Link>
+            </div>
           </div>
           {/* Trading is regulated and this audience is retail. Nothing above
               promises a return, and this says plainly why. */}

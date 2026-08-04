@@ -300,6 +300,10 @@ class SignupComplete(BaseModel):
     exness_email: str = ""         # the Exness account email (may differ from the signup email)
     exness_password: str = ""      # used once to connect the Exness account, never stored
     invite: str = ""
+    # Refused server-side, not merely unchecked in the browser. A gate that only
+    # exists in the page is a gate that is not there at all.
+    accept_terms: bool = False
+    terms_version: str = ""
 
 
 # Invite-only for now — the signup flow is kept but rejected server-side. Set to True
@@ -385,6 +389,21 @@ def notifications(user=Depends(current_user)):
         # A bell that breaks the page it hangs on is worse than an empty bell.
         print(f"[notifications] {e!r}", flush=True)
         return {"items": [], "count": 0, "blocked": 0}
+
+
+@app.get("/api/licence")
+def licence_text():
+    """The software licence, from the file that actually governs the software.
+
+    Read from LICENSE.md rather than copied into the page, because a licence
+    that exists in two places is a licence that will eventually say two things,
+    and the one somebody agreed to would be whichever they happened to read."""
+    from pathlib import Path
+    p = Path(__file__).parent.parent / "LICENSE.md"
+    try:
+        return {"text": p.read_text(encoding="utf-8")}
+    except Exception as e:
+        return {"text": "", "error": str(e)}
 
 
 @app.get("/api/app-config")
@@ -533,6 +552,11 @@ def signup_verify(body: SignupVerify):
 def signup_complete(body: SignupComplete):
     if not _signup_allowed(body.invite):
         raise HTTPException(403, _signup_refusal())
+    # Checked here and not only in the browser. A gate that exists only in the
+    # page is not a gate: anything can post this endpoint directly, and the
+    # record of consent has to be the thing that created the account.
+    if not body.accept_terms:
+        raise HTTPException(400, "Please accept the Terms of Use and Privacy Policy to continue.")
     email = body.email.lower()
     with db.connect() as conn:
         s = conn.execute("SELECT verified FROM signups WHERE email = %s", (email,)).fetchone()
@@ -554,10 +578,12 @@ def signup_complete(body: SignupComplete):
 
     with db.connect() as conn:
         row = conn.execute(
-            """INSERT INTO users (email, password_hash, first_name, last_name, phone, country)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, email""",
+            """INSERT INTO users (email, password_hash, first_name, last_name, phone, country,
+                                  terms_accepted_at, terms_version)
+               VALUES (%s, %s, %s, %s, %s, %s, now(), %s) RETURNING id, email""",
             (email, auth.hash_password(body.password), body.first_name.strip(),
-             body.last_name.strip(), body.phone.strip(), body.country.strip().upper()),
+             body.last_name.strip(), body.phone.strip(), body.country.strip().upper(),
+             (body.terms_version or "").strip() or None),
         ).fetchone()
         for _bid, p, blob in connects:
             p.signup_attach(conn, row["id"], blob)

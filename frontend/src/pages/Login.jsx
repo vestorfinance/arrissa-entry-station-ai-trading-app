@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { useNavigate, useLocation, Navigate, Link} from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useAppName, useAppConfig } from '../services/appConfig.js'
 
@@ -128,10 +128,14 @@ export default function Login() {
           </form>
         )}
 
+        {/* They were words, not links. Somebody deciding whether to hand over
+            an email should be able to read what they are agreeing to. */}
         <div className="auth-legal">
-          <span>Terms of use</span>
+          <Link to="/terms">Terms of use</Link>
           <span className="auth-legal-sep">|</span>
-          <span>Privacy policy</span>
+          <Link to="/privacy">Privacy policy</Link>
+          <span className="auth-legal-sep">|</span>
+          <Link to="/licence">Licence</Link>
         </div>
       </div>
     </div>

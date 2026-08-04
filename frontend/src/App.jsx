@@ -5,6 +5,7 @@ import Signup from './pages/Signup.jsx'
 import InviteOnly from './pages/InviteOnly.jsx'
 import Buy from './pages/Buy.jsx'
 import Home from './pages/Home.jsx'
+import Legal, { Licence } from './pages/Legal.jsx'
 import Install from './pages/Install.jsx'
 import * as api from './services/api.js'
 import { useAppConfig } from './services/appConfig.js'
@@ -114,6 +115,12 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignupGate />} />
+      {/* Public, and reachable without an account: somebody deciding whether to
+          create one has to be able to read what they would be agreeing to. */}
+      <Route path="/terms" element={<Legal />} />
+      <Route path="/privacy" element={<Legal />} />
+      <Route path="/licence" element={<Licence />} />
+      <Route path="/license" element={<Navigate to="/licence" replace />} />
       {/* Public: the buyer has no account here and is not being asked to make one. */}
       {/* The Community install guide: public, like everything else somebody
           reads before they have an account. */}

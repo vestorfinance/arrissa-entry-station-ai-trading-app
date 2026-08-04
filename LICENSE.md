@@ -1,6 +1,6 @@
 # Sustainable Use License
 
-Version 1.0, 2 August 2026
+Version 1.1, 4 August 2026
 
 Copyright © 2026 Arrissa (Pty) Ltd. All rights reserved.
 
@@ -70,12 +70,41 @@ reinstated retroactively. However, if you violate these terms after such
 reinstatement, any additional violation of these terms will cause your licenses
 to terminate automatically and permanently.
 
+## Trading Risk
+
+**This software places real orders against real money.**
+
+Leveraged trading in foreign exchange, indices, commodities and similar
+instruments carries a high risk of loss and can lose you more than you deposit.
+Most retail accounts lose money.
+
+The software is a tool. It is not a broker, holds no funds, and gives no
+financial, investment, tax or legal advice. Nothing it outputs is a
+recommendation, a prediction, or a solicitation to trade. Past results,
+backtests and examples are illustrative and say nothing about future outcomes.
+
+Every order it places is one you configured, whether you pressed a button
+yourself or built an automation that presses it for you. **An automated action
+you set up is your action.** You are responsible for what your instance does,
+for your eligibility to trade where you live, and for reviewing any automation
+before it runs against a live account.
+
+The software calls large language models, third-party market data and third-party
+brokers. All of them can be wrong, delayed or unavailable, and none of them are
+under the licensor's control.
+
 ## No Liability
 
 *As far as the law allows, the software comes as is, without any warranty or
 condition, and the licensor will not be liable to you for any damages arising
 out of these terms or the use or nature of the software, under any kind of
 legal claim.*
+
+**For the avoidance of doubt, this includes trading losses of every kind** —
+orders executed, orders not executed, orders executed late, slippage, incorrect
+or delayed data, an automation behaving other than as expected, an output of a
+language model acted upon, a broker or network failure, or the software being
+unavailable at a moment that mattered.
 
 ## Definitions
 

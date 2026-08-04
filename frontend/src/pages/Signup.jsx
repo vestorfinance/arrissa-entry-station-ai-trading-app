@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link} from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
 import { COUNTRIES, flagUrl, countryByDial } from '../data/countries.js'
@@ -56,6 +56,10 @@ function CountrySelect({ value, onChange }) {
   )
 }
 
+// What they agreed to, stored with the acceptance. "They accepted the terms"
+// is not a useful record without saying which terms.
+const TERMS_VERSION = '2026-08-04'
+
 export default function Signup({ invite = '' }) {
   const { isAuthed, session } = useAuth()
   const appName = useAppName()
@@ -69,6 +73,9 @@ export default function Signup({ invite = '' }) {
   const [country, setCountry] = useState(defaultCountry)
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  // The one thing on this page that has to be a deliberate act, so it starts
+  // unticked and the button stays dead until it is not.
+  const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -115,6 +122,7 @@ export default function Signup({ invite = '' }) {
   function continuePassword(e) {
     e.preventDefault(); setError('')
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!agreed) { setError('Please accept the Terms of Use and Privacy Policy to continue.'); return }
     // Straight to the account. Sign-up used to end by asking for an Exness email
     // and password, which was wrong twice: it asked somebody who may have no
     // Exness account for credentials to one, and it asked for the single thing
@@ -138,6 +146,7 @@ export default function Signup({ invite = '' }) {
       const res = await api.signupComplete({
         email: email.trim(), first_name: firstName.trim(), last_name: lastName.trim(),
         phone: fullPhone, country: country.code, password,
+        accept_terms: agreed, terms_version: TERMS_VERSION,
         invite,
       })
       session(res)
@@ -222,7 +231,27 @@ export default function Signup({ invite = '' }) {
           <form className="auth-form" onSubmit={continuePassword}>
             <input className="auth-input" type="password" autoFocus placeholder="Create a password (min 8 characters)"
                    value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="auth-continue" type="submit" disabled={password.length < 8}>Continue</button>
+            {/* Unticked to begin with, and the button is dead until it is not.
+                A box already ticked is not consent, it is a default somebody
+                failed to notice. The links open in a new tab so reading them
+                does not throw away the form. */}
+            <label className="signup-agree">
+              <input type="checkbox" checked={agreed}
+                     onChange={(e) => { setAgreed(e.target.checked); setError('') }} />
+              <span>
+                I have read and accept the{' '}
+                <a href="/terms" target="_blank" rel="noreferrer">Terms of Use</a>, the{' '}
+                <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a> and the{' '}
+                <a href="/licence" target="_blank" rel="noreferrer">Software Licence</a>.
+                I understand that trading carries a high risk of loss, that this software gives no
+                financial advice, and that I am responsible for every trade placed through my
+                accounts.
+              </span>
+            </label>
+            <button className="auth-continue" type="submit"
+                    disabled={loading || password.length < 8 || !agreed}>
+              {loading ? 'Creating your account…' : 'Create account'}
+            </button>
             <p className="auth-alt">
               <button type="button" className="auth-link" onClick={() => { setStep('phone'); setError('') }}>Back</button>
             </p>
@@ -230,10 +259,14 @@ export default function Signup({ invite = '' }) {
         )}
 
 
+        {/* They were words, not links. Somebody deciding whether to hand over
+            an email should be able to read what they are agreeing to. */}
         <div className="auth-legal">
-          <span>Terms of use</span>
+          <Link to="/terms">Terms of use</Link>
           <span className="auth-legal-sep">|</span>
-          <span>Privacy policy</span>
+          <Link to="/privacy">Privacy policy</Link>
+          <span className="auth-legal-sep">|</span>
+          <Link to="/licence">Licence</Link>
         </div>
       </div>
     </div>

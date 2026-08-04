@@ -376,6 +376,7 @@ export const post = (url, body) =>
 export const get = (url) => req(url.replace(/^\/api/, ''))
 
 export const appConfig = () => req('/app-config')
+export const licenceText = () => req('/licence')
 
 // AI models — the branded models the operator has enabled (arrissa-chat / arrissa-pro).
 // No bring-your-own-key: users can't set provider keys or pick raw models.
