@@ -25,4 +25,6 @@ beautifulsoup4==4.14.3
 #  wheel for Python 3.14 and building it needs extra system headers.)
 
 python-multipart==0.0.29
+# Must match ARG PW_VERSION in the Dockerfile — the base image ships the
+# browser builds for exactly this version. The build asserts it.
 playwright==1.60.0
