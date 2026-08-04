@@ -103,6 +103,28 @@ TYPES = [
              "placeholder": "sk-or-…"},
         ],
     },
+    # Not a model provider — a data source, and the only connection here that
+    # takes a login rather than a key. Retail Sentiment reads Myfxbook's
+    # community outlook, and the richer of its two sources (volumes, positions,
+    # the full symbol list) requires an account.
+    #
+    # It lived in MYFXBOOK_EMAIL / MYFXBOOK_PASSWORD, which meant shell access, a
+    # file edit and a restart to change a password — and a plaintext secret
+    # sitting beside the code. Here it is encrypted like every other credential
+    # and changed from a form. The env vars still work, so nobody's existing
+    # install breaks.
+    {
+        "kind": "myfxbook", "name": "Myfxbook", "group": "data", "tone": "blue",
+        "mark": "Mf",
+        "blurb": "Your Myfxbook login, for Retail Sentiment. The free account is enough — "
+                 "it is read-only community positioning, never your own accounts.",
+        "docs": "https://www.myfxbook.com/login",
+        "fields": [
+            {"key": "email", "label": "Myfxbook email", "required": True,
+             "placeholder": "you@example.com"},
+            {"key": "password", "label": "Myfxbook password", "secret": True, "required": True},
+        ],
+    },
 ]
 
 
@@ -261,6 +283,26 @@ def secret_of(user_id, cid, field="api_key") -> str | None:
         return auth.decrypt(v)
     except Exception:
         return None
+
+
+def value(user_id, kind, field) -> str | None:
+    """A NON-secret field, as stored.
+
+    `secret()` decrypts, which is right for a key and wrong for a username: a
+    field the spec did not mark secret was never encrypted, so decrypting it
+    throws and the caller sees None — a credential pair silently becoming half a
+    pair. Same lookup rule as `secret()`: first enabled connection of that kind,
+    oldest first."""
+    _ensure_table()
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT config FROM connections WHERE user_id = %s AND kind = %s AND enabled "
+            "ORDER BY created_at", (user_id, kind)).fetchall()
+    for r in rows:
+        v = (r["config"] or {}).get(field)
+        if v:
+            return v
+    return None
 
 
 def secret(user_id, kind, field="api_key") -> str | None:

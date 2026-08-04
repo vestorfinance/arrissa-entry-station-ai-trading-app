@@ -19,5 +19,14 @@
         "label": "Which releases to keep"
       }
     ]
+  },
+  "backfill": {
+    "tables": [
+      {
+        "table": "calendar_events",
+        "since": "event_time"
+      }
+    ],
+    "days": 365
   }
 }

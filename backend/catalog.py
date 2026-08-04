@@ -150,6 +150,14 @@ def install_free(log=print) -> list:
             done.append(res)
             added.append(mid)
             log(f"[seed] {mid} {res.get('version')} installed — free with this instance")
+            # And its history, so a first boot has something to show rather than
+            # an empty chart and a week of waiting.
+            try:
+                got = backfill(mid, log=log)
+                if got.get("rows"):
+                    log(f"[seed] {mid}: {got['rows']} historical row(s) from the store")
+            except Exception as e:
+                log(f"[seed] {mid}: history could not be fetched: {e}")
         except Exception as e:
             # Named, not swallowed. A free module that cannot install is a broken
             # promise the owner should hear about, and the app still starts.
@@ -337,6 +345,71 @@ def view() -> dict:
                                 r["name"]))
     return {"store_url": STORE_URL, "has_licence": bool(licence_key()),
             **_cache["terms"], "error": error, "modules": out}
+
+
+# ── history that came before this instance existed ────────────────────────────
+#
+# A module installed today starts with an empty table, and none of what these
+# modules collect can be collected retrospectively: Fed Watch is a running
+# series, news is what was published while something was watching. So a fresh
+# instance has the capability and nothing to point it at, and looks broken for
+# weeks through no fault of its own.
+#
+# The store has been gathering it the whole time. This asks for it.
+def backfill(module_id: str, log=print) -> dict:
+    """Fill a newly installed module's tables from the store. Never raises."""
+    import edition
+
+    # The cloud instance IS the store. Asking itself for its own rows would be a
+    # round trip to insert what it already has.
+    if not edition.is_community():
+        return {"skipped": "this instance is the store"}
+
+    try:
+        from curl_cffi import requests as creq
+        r = creq.get(f"{STORE_URL}/api/store/backfill/{module_id}",
+                     params={"key": licence_key()} if licence_key() else None,
+                     impersonate="chrome", timeout=120)
+        if r.status_code == 402:
+            return {"skipped": "not licensed for this module"}
+        r.raise_for_status()
+        body = r.json() or {}
+    except Exception as e:
+        log(f"[backfill] {module_id}: the store could not be reached: {e}")
+        return {"error": str(e)}
+
+    tables = body.get("tables") or {}
+    if not tables:
+        return {"rows": 0, "note": body.get("note") or "the store had nothing to send"}
+
+    import re
+    ok = re.compile(r"^[a-z_][a-z0-9_]*$")
+    written = 0
+    with db.connect() as conn:
+        for name, rows in tables.items():
+            if not ok.match(name) or not rows:
+                continue
+            cols = list(rows[0].keys())
+            if not all(ok.match(c) for c in cols):
+                continue
+            collist = ", ".join(cols)
+            marks = ", ".join(["%s"] * len(cols))
+            # ON CONFLICT DO NOTHING is what makes this safe to run twice, and
+            # what stops it overwriting anything this instance gathered itself:
+            # the local row always wins.
+            sql = (f"INSERT INTO {name} ({collist}) VALUES ({marks}) "
+                   f"ON CONFLICT DO NOTHING")
+            for row in rows:
+                try:
+                    conn.execute(sql, tuple(row.get(c) for c in cols))
+                    written += 1
+                except Exception:
+                    # One malformed row must not cost the other 19,999.
+                    conn.rollback()
+                    continue
+        conn.commit()
+    log(f"[backfill] {module_id}: {written} row(s) from the store")
+    return {"rows": written}
 
 
 def download(module_id: str, dest_dir) -> Path:

@@ -28,3 +28,13 @@ python-multipart==0.0.29
 # Must match ARG PW_VERSION in the Dockerfile — the base image ships the
 # browser builds for exactly this version. The build asserts it.
 playwright==1.60.0
+
+# The IANA timezone database, as a package.
+#
+# zoneinfo reads the SYSTEM database, and a slim container has none — so
+# ZoneInfo("America/Chicago") raises ZoneInfoNotFoundError and Fed Watch, which
+# works in CME's own timezone, dies on import. Installing it with pip fixes it
+# everywhere rather than only in the image: zoneinfo falls back to this package
+# when the system has no database, so a bare venv on a minimal host is covered
+# by the same line.
+tzdata

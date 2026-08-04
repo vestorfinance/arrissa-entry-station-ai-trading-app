@@ -11,6 +11,9 @@ issued after someone pays.
 """
 from __future__ import annotations
 
+import json as _json
+import re as _re
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -176,6 +179,100 @@ def store_entitlements(instance: str = Query(..., description="the asking instan
                 "reason": "Nothing has been bought for this instance yet."}
     return {"instance": inst, "found": True, "modules": lic["modules"] or [],
             "expires_at": lic["expires_at"], "expired": lic["expired"]}
+
+
+# ── history, handed to a new instance ─────────────────────────────────────────
+#
+# A module installed today starts with an empty table, and the things these
+# modules collect cannot be collected retrospectively: Fed Watch is a running
+# series, news is what was published while something was watching. So a fresh
+# instance would have the capability and nothing to point it at, and would look
+# broken for weeks through no fault of its own.
+#
+# The store has been gathering all of it anyway. This hands over what it has.
+#
+# Entitlement is the SAME rule as the download: free modules are open, a paid one
+# needs a licence covering it. Data is worth more than the code that fetches it,
+# so the two cannot have different answers.
+#
+# The shape comes from the module's own manifest — `backfill` names the tables
+# and the column that says when a row happened — so a module decides what of its
+# history is shareable, and core never learns what a fedwatch_snapshot is.
+BACKFILL_MAX_ROWS = 20000
+_TABLE_OK = _re.compile(r"^[a-z_][a-z0-9_]*$")
+
+
+@router.get("/api/store/backfill/{module_id}")
+def store_backfill(module_id: str, key: str = Query(""), since_days: int = Query(0)):
+    """The history this store holds for one module."""
+    if not store.owns(key, module_id):
+        raise HTTPException(402, f"No licence for {module_id}.")
+
+    import modules as module_system
+    path = module_system.MODULES_DIR / module_id
+    try:
+        spec = (module_system.read_manifest(path).get("backfill") or {})
+    except Exception:
+        spec = {}
+    tables = spec.get("tables") or []
+    if not tables:
+        return {"module": module_id, "tables": {}, "note": "this module publishes no history"}
+
+    window = since_days or int(spec.get("days") or 0)
+    return _collect(tables, window, module_id)
+
+
+def _collect(tables, window, module_id):
+    import db
+    out, total = {}, 0
+    with db.connect() as conn:
+        for t in tables:
+            name, since = t.get("table"), t.get("since")
+            # The manifest is signed, but a table name reaches SQL as an
+            # identifier and cannot be parameterised — so it is checked rather
+            # than trusted.
+            if not name or not _TABLE_OK.match(name):
+                continue
+            if since and not _TABLE_OK.match(since):
+                continue
+            room = max(BACKFILL_MAX_ROWS - total, 0)
+            if room == 0:
+                break
+            if since and window:
+                sql = (f"SELECT * FROM {name} WHERE {since} > now() - interval '%s days' "
+                       f"ORDER BY {since} DESC LIMIT %s")
+                args = (window, room)
+            else:
+                sql = f"SELECT * FROM {name} LIMIT %s"
+                args = (room,)
+            try:
+                rows = conn.execute(sql, args).fetchall()
+            except Exception as e:
+                print(f"[store] backfill {module_id}.{name}: {e}", flush=True)
+                continue
+            # Everything leaves as a STRING. A timestamp, a numeric and a JSONB
+            # column each come back as a different Python type, and the receiving
+            # instance would have to know which was which to insert them again.
+            # Postgres coerces text to the target column type on the way in, so
+            # sending text means neither end needs a type map.
+            packed = []
+            for r in rows:
+                packed.append({k: _as_text(v) for k, v in dict(r).items()})
+            out[name] = packed
+            total += len(packed)
+    return {"module": module_id, "rows": total, "tables": out}
+
+
+def _as_text(v):
+    if v is None:
+        return None
+    if isinstance(v, (dict, list)):
+        return _json.dumps(v)
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if hasattr(v, "isoformat"):
+        return v.isoformat()
+    return str(v)
 
 
 # ── issuing licences (owner only) ──────────────────────────────────────────────

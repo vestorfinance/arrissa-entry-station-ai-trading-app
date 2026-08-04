@@ -4,6 +4,21 @@
   "version": "1.0.0",
   "edition": "paid",
   "description": "Impact-scored market news from TradingView and FXStreet, filtered to the instruments this app trades.",
-  "requires": { "core": ">=1.0" },
-  "provides": { "setup": "backend.module:register", "guide": "frontend/guide.json", "schema": "schema.sql" }
+  "requires": {
+    "core": ">=1.0"
+  },
+  "provides": {
+    "setup": "backend.module:register",
+    "guide": "frontend/guide.json",
+    "schema": "schema.sql"
+  },
+  "backfill": {
+    "tables": [
+      {
+        "table": "news_articles",
+        "since": "published_at"
+      }
+    ],
+    "days": 90
+  }
 }

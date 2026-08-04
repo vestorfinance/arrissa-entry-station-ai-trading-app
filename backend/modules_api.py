@@ -191,6 +191,13 @@ def install_remote(module_id: str, force: bool = False, user=Depends(require_adm
             raise HTTPException(400, str(e))
     audit(user["email"], "module.install_remote", "module", module_id,
           {"version": res.get("version")})
+    # The history that existed before this instance did. A module installed today
+    # starts with an empty table and cannot collect the past, so it would look
+    # broken for weeks; the store has been gathering it the whole time.
+    try:
+        res["backfill"] = catalog.backfill(module_id)
+    except Exception as e:
+        res["backfill"] = {"error": str(e)}
     return res
 
 
