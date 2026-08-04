@@ -296,6 +296,20 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_analysis_runs ON analysis_runs (agent_id, created_at DESC);
+-- What a data trigger has already fired on. Firing twice on one post is the
+-- failure that would make the feature unusable, so "new" is decided by the
+-- database rather than by comparing timestamps: INSERT and see whether it
+-- landed. Two workers, a restart mid-tick or a clock that steps backwards
+-- cannot produce a second run for one item.
+CREATE TABLE IF NOT EXISTS agent_trigger_seen (
+    agent_id  UUID NOT NULL REFERENCES analysis_agents(id) ON DELETE CASCADE,
+    item_key  TEXT NOT NULL,
+    at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (agent_id, item_key)
+);
+CREATE INDEX IF NOT EXISTS idx_trigger_seen_at ON agent_trigger_seen (at);
+-- When this agent last ran from a data trigger, for the cooldown.
+ALTER TABLE analysis_agents ADD COLUMN IF NOT EXISTS last_data_fire TIMESTAMPTZ;
 -- LLM token usage + estimated cost per run.
 ALTER TABLE analysis_runs ADD COLUMN IF NOT EXISTS tokens_in        INTEGER;
 ALTER TABLE analysis_runs ADD COLUMN IF NOT EXISTS tokens_out       INTEGER;

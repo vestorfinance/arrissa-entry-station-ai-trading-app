@@ -2,8 +2,7 @@ import * as Icons from 'lucide-react'
 import {
   Terminal,
   Zap, GitBranch, CornerUpLeft, CandlestickChart, Wand2, Clock,
-  Target, Workflow, Repeat, Radar, Puzzle, Network,
-} from 'lucide-react'
+  Target, Workflow, Repeat, Radar, Puzzle, Network, Radio} from 'lucide-react'
 
 // Nodes the user can drop onto an agent's canvas.
 //
@@ -54,6 +53,23 @@ export const PALETTE = [
     //   every + unit   seconds | minutes | hours | days
     //   cron + cron_brief   the expression, and the sentence it was written from
     //   text   what to analyse when the clock fires (the run's request)
+    args: [],
+    configurable: true,
+    tone: 'schedule',
+  },
+  {
+    // A third way in. The clock trigger asks "has fifteen minutes passed"; this
+    // one asks "has anything arrived worth waking up for" — which is the
+    // difference between meeting an 08:30 print and meeting it thirteen minutes
+    // late.
+    key: 'trigger-data',
+    type: 'trigger',
+    Icon: Radio,
+    label: 'When data arrives',
+    sub: 'Run on a post, a story, or a release',
+    // `conditions` and `combine` are edited by their own control, not by a
+    // generic field: a list of rows whose shape changes per row is not a
+    // textarea.
     args: [],
     configurable: true,
     tone: 'schedule',

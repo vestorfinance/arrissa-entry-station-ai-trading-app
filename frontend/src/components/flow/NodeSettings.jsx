@@ -258,6 +258,135 @@ function ScheduleSettings({ values, set }) {
   )
 }
 
+// What has to happen for the agent to wake up.
+//
+// A list of conditions and how they combine. Each row's shape depends on what
+// it watches — a symbol list for news about instruments, an amount and a unit
+// for anything timed against a release — so this is its own control rather than
+// a generic field: a textarea cannot ask "how long before".
+//
+// Conditions whose module is not installed are shown, disabled, with the reason.
+// Hiding them would leave somebody wondering why the guide mentions something
+// they cannot find; offering them silently would let a flow be built that never
+// fires.
+// Its own list: schedule.js exports UNITS as bare strings for the clock
+// trigger, and this control needs {value,label} pairs. Named apart rather than
+// reshaped in place, so neither one changes under the other.
+const DT_UNITS = [
+  { value: 'seconds', label: 'seconds' },
+  { value: 'minutes', label: 'minutes' },
+  { value: 'hours', label: 'hours' },
+]
+// Each source's own words. The calendar says "moderate" where the news says
+// "medium", so one shared list would have offered a calendar condition a value
+// no event ever has — filtering everything out and looking like a quiet week.
+// The server sends what each kind accepts; this is only the fallback.
+const IMPACT_LABEL = {
+  any: 'Any impact', high: 'High only', medium: 'Medium only',
+  moderate: 'Moderate only', low: 'Low only',
+}
+
+function DataTriggerSettings({ values, set }) {
+  const [kinds, setKinds] = useState([])
+  const conditions = values.conditions || []
+  const combine = values.combine || 'or'
+
+  useEffect(() => {
+    store.triggerSources().then((r) => setKinds(r.kinds || [])).catch(() => {})
+  }, [])
+
+  const setC = (i, patch) => set('conditions',
+    conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)))
+  const add = () => set('conditions', [...conditions, { kind: 'truth', impact: 'any' }])
+  const del = (i) => set('conditions', conditions.filter((_, j) => j !== i))
+
+  const timed = (k) => k === 'before_event' || k === 'after_event'
+  const info = (k) => kinds.find((x) => x.kind === k)
+
+  return (
+    <div className="field dt">
+      <span className="field-label">Run when</span>
+
+      {conditions.length === 0 && (
+        <p className="node-settings-note">
+          Nothing yet, so this agent will not run on its own. Add a condition.
+        </p>
+      )}
+
+      {conditions.map((c, i) => (
+        <div className="dt-row" key={i}>
+          <div className="dt-head">
+            <span className="dt-n">{i + 1}</span>
+            <Dropdown
+              value={c.kind}
+              onChange={(v) => setC(i, { kind: v })}
+              options={kinds.map((k) => ({
+                value: k.kind,
+                label: k.available ? k.label : `${k.label} — needs its module`,
+                disabled: !k.available,
+              }))}
+            />
+            <button type="button" className="var-del" title="Remove" onClick={() => del(i)}>
+              <X size={13} />
+            </button>
+          </div>
+
+          {info(c.kind) && !info(c.kind).available && (
+            <p className="node-settings-note dt-warn">
+              The module this reads is not installed, so this condition can never fire.
+            </p>
+          )}
+
+          {c.kind === 'news_symbols' && (
+            <input className="input" value={c.symbols || ''}
+                   placeholder="XAUUSD, US30, EURUSD"
+                   onChange={(e) => setC(i, { symbols: e.target.value })} />
+          )}
+
+          {timed(c.kind) && (
+            <div className="dt-when">
+              <input className="input dt-amount" type="number" min="0"
+                     value={c.amount ?? 15}
+                     onChange={(e) => setC(i, { amount: e.target.value })} />
+              <Dropdown value={c.unit || 'minutes'} onChange={(v) => setC(i, { unit: v })}
+                        options={DT_UNITS} />
+              <span className="dt-when-tail">
+                {c.kind === 'before_event' ? 'before it lands' : 'after it prints'}
+              </span>
+            </div>
+          )}
+
+          {(c.kind !== 'news_symbols') && (
+            <Dropdown value={c.impact || 'any'} onChange={(v) => setC(i, { impact: v })}
+                      options={(info(c.kind)?.impacts || ['any', 'high', 'low'])
+                        .map((v) => ({ value: v, label: IMPACT_LABEL[v] || v }))} />
+          )}
+        </div>
+      ))}
+
+      <button type="button" className="btn btn--sm var-add" onClick={add}>
+        <Plus size={13} strokeWidth={2} /> Add a condition
+      </button>
+
+      {conditions.length > 1 && (
+        <div className="dt-combine">
+          <span className="field-label">Combine them with</span>
+          <Dropdown value={combine} onChange={(v) => set('combine', v)}
+                    options={[
+                      { value: 'or', label: 'OR — any one of them is enough' },
+                      { value: 'and', label: 'AND — all of them, together' },
+                    ]} />
+          <p className="node-settings-note">
+            {combine === 'and'
+              ? 'All of them have to happen within the same half-minute. Use it for "a post AND a story", not for things that arrive hours apart.'
+              : 'Whichever happens first runs the agent.'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Right-hand settings drawer for the selected node. Configurable args get an
 // editor; runtime args (e.g. the trigger's requirement) are shown read-only.
 export default function NodeSettings({ node, variables = [], models = [], agents = [], defaultModel = '',
@@ -328,8 +457,8 @@ export default function NodeSettings({ node, variables = [], models = [], agents
   // the instrument stops being something each node re-derives from the prose.
   const vars = values.vars || []
   const setVars = (v) => set('vars', v)
-  const isTrigger = ['trigger-agent-call', 'trigger', 'trigger-interval', 'triggerInterval']
-    .includes(node.data.kind)
+  const isTrigger = ['trigger-agent-call', 'trigger', 'trigger-interval', 'triggerInterval',
+    'trigger-data'].includes(node.data.kind)
 
   // The conditional calls on a data node. Ordered, first match wins, and a rule
   // with no condition is the default — which is why order is editable.
@@ -385,6 +514,10 @@ export default function NodeSettings({ node, variables = [], models = [], agents
 
         {node.data.kind === 'trigger-interval' && (
           <ScheduleSettings values={values} set={(v) => onChange(node.id, v)} />
+        )}
+
+        {node.data.kind === 'trigger-data' && (
+          <DataTriggerSettings values={values} set={set} />
         )}
 
         {isTrigger && (

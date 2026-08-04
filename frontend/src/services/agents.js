@@ -27,3 +27,7 @@ export const suggestCron = (brief) => api.suggestCron(brief)
 // Portable JSON: export one agent, or import a payload into a new draft agent.
 export const exportAgent = (id) => api.exportAnalysisAgent(id)
 export const importAgent = (payload) => api.importAnalysisAgent(payload)
+
+// Which data conditions this instance can offer. A condition whose module is
+// not installed is shown disabled rather than silently never firing.
+export const triggerSources = () => api.get('/api/trigger-sources')

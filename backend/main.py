@@ -125,6 +125,13 @@ def _startup():
         auto_update.start()
     except Exception as _e:
         print(f"[auto-update] not started: {_e!r}", flush=True)
+    # Agents that wake on an EVENT rather than on a clock: a new post, a story
+    # about an instrument, an economic release about to land or just printed.
+    try:
+        import data_triggers
+        data_triggers.start()
+    except Exception as _e:
+        print(f"[data-trigger] not started: {_e!r}", flush=True)
     start_scheduler()  # background thread that executes scheduled orders/actions
     try:
         import daily_scan
@@ -363,6 +370,16 @@ def check_invite(code: str = ""):
     """Public: is registration reachable (open, or this invite code is valid)?
     The signup page calls this to decide whether to show the form."""
     return {"valid": _signup_allowed(code), "open": _registrations_open()}
+
+
+@app.get("/api/trigger-sources")
+def trigger_sources(user=Depends(current_user)):
+    """Which data conditions this instance can offer.
+
+    A condition whose module is not installed is not offered, rather than
+    offered and silently never firing."""
+    import data_triggers
+    return {"kinds": data_triggers.available()}
 
 
 @app.get("/api/notifications")
