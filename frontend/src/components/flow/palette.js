@@ -60,6 +60,8 @@ export const PALETTE = [
   },
   {
     key: 'artificial-sentiment',
+    apiKeys: 'symbol (required) · timeframe · count (40-1000) · compare',
+    apiExample: 'symbol=XAUUSD&timeframe=H1&count=200',
     type: 'artificialSentiment',
     Icon: Radar,
     label: 'Artificial Sentiment',
@@ -95,6 +97,8 @@ export const PALETTE = [
   },
   {
     key: 'market-data',
+    apiKeys: 'symbol (required) · kind (quote|candles) · timeframe (M1|M5|M15|M30|H1|H4|D1) · count',
+    apiExample: 'symbol=XAUUSD&timeframe=M15&count=100',
     type: 'marketData',
     Icon: CandlestickChart,
     label: 'Market Data',
@@ -108,6 +112,8 @@ export const PALETTE = [
   },
   {
     key: 'risk-management',
+    apiKeys: 'symbol (required) · side (buy|sell) · style (scalp|intraday|swing)',
+    apiExample: 'symbol=XAUUSD&side=buy&style=intraday',
     type: 'riskManagement',
     Icon: Target,
     label: 'Risk Management',
@@ -121,6 +127,7 @@ export const PALETTE = [
   },
   {
     key: 'time-session',
+    apiKeys: 'takes no parameters — it reports the clock and the open sessions',
     type: 'timeSession',
     Icon: Clock,
     label: 'Time & Session',

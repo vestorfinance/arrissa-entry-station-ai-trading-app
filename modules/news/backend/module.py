@@ -161,7 +161,9 @@ def register(registry, module_id):
     registry.node("news", "news", _node,
                   palette={"label": "News", "sub": "Interact with the News API",
                            "icon": "Newspaper", "tone": "news", "model": True,
-                           "args": [{"name": "text", "type": "text", "required": True}]},
+                           "args": [{"name": "text", "type": "text", "required": True}],
+                           "api_keys": "symbol · impact (high|medium|low) · min_score (0-100) · hours · days · range (today|yesterday|this_week) · q · limit",
+                           "api_example": "symbol=XAUUSD&impact=high&hours=24&limit=20"},
                   opinion=True, catalog=CATALOG, values=("text",), module=module_id)
     registry.worker("news-fetcher", news.start_fetcher,
                     stop=news.stop_fetcher, module=module_id)

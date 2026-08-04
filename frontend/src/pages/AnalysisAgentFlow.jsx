@@ -184,7 +184,7 @@ export default function AnalysisAgentFlow() {
       // Re-read label/sub/args from the palette so saved flows pick up copy changes.
       setNodes((a.flow?.nodes || []).map((n) => {
         const item = paletteItem(n.data?.kind)
-        return item ? { ...n, data: { ...n.data, label: item.label, sub: item.sub, args: item.args } } : n
+        return item ? { ...n, data: { ...n.data, label: item.label, sub: item.sub, args: item.args, apiKeys: item.apiKeys || item.api_keys, apiExample: item.apiExample || item.api_example, } } : n
       }))
       setEdges(a.flow?.edges || [])
       setCot(!!a.flow?.cot)
@@ -311,7 +311,7 @@ export default function AnalysisAgentFlow() {
     const built = flow.nodes.map((n) => {
       const item = paletteItem(n.data?.kind)
       return item
-        ? { ...n, data: { ...n.data, label: item.label, sub: item.sub, args: item.args, values: n.data?.values || {} } }
+        ? { ...n, data: { ...n.data, label: item.label, sub: item.sub, args: item.args, apiKeys: item.apiKeys || item.api_keys, apiExample: item.apiExample || item.api_example, values: n.data?.values || {} } }
         : n
     })
     setNodes(built)
@@ -336,7 +336,7 @@ export default function AnalysisAgentFlow() {
       id,
       type: item.type,
       position: { x: 120 + (i % 4) * 40, y: 90 + i * 70 },
-      data: { kind: item.key, label: item.label, sub: item.sub, args: item.args, values: {} },
+      data: { kind: item.key, label: item.label, sub: item.sub, args: item.args, apiKeys: item.apiKeys || item.api_keys, apiExample: item.apiExample || item.api_example, values: {} },
     }))
     if (item.configurable) setSelectedId(id)
   }, [setNodes])

@@ -356,10 +356,14 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
               <MultiSelectArg arg={a} value={values[a.name]} onChange={(v) => set(a.name, v)} />
             ) : a.type === 'text' ? (
               <div className="node-text-wrap">
+                {/* The instruction is prose and wants room; a query string is one
+                    short line and does not. Giving both the same 160px box made
+                    the parameters field look like somewhere to write an essay. */}
                 <textarea
-                  className="node-settings-text"
+                  className={'node-settings-text'
+                    + (a.name === 'api_params' ? ' node-settings-text--short' : '')}
                   value={values[a.name] || ''}
-                  placeholder="What should this node send?"
+                  placeholder={a.placeholder || 'What should this node send?'}
                   onChange={(e) => set(a.name, e.target.value)}
                   spellCheck={false}
                 />
@@ -426,6 +430,25 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
           </>
         )}
       </div>
+
+      {/* What this node's API will actually read. At the bottom, because it is
+          reference rather than a control — you consult it while filling the
+          field above, and it should not push that field down the panel.
+          The list comes from each node's own handler, so it cannot promise a key
+          the node does not accept. */}
+      {(node.data.apiKeys || node.data.api_keys) && (
+        <div className="node-api-help">
+          <span className="node-api-help-title">Parameters this node accepts</span>
+          <p className="node-api-help-keys">{node.data.apiKeys || node.data.api_keys}</p>
+          {(node.data.apiExample || node.data.api_example) && (
+            <button type="button" className="node-api-help-ex"
+                    title="Use this example"
+                    onClick={() => set('api_params', node.data.apiExample || node.data.api_example)}>
+              <code>{node.data.apiExample || node.data.api_example}</code>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="node-settings-foot">
         <button className="btn btn--danger btn--block" onClick={() => onDelete(node.id)}>

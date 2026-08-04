@@ -127,7 +127,9 @@ def register(registry, module_id):
         "economic-calendar", "economicCalendar", _node,
         palette={"label": "Economic Calendar", "sub": "Read scheduled economic events",
                  "icon": "CalendarClock", "tone": "calendar", "model": True,
-                 "args": [{"name": "text", "type": "text", "required": True}]},
+                 "args": [{"name": "text", "type": "text", "required": True}],
+                           "api_keys": "symbol · currency (USD,EUR) · impact (high|moderate|low) · range (today|tomorrow|this_week) · hours · days · limit",
+                           "api_example": "currency=USD&impact=high&range=today"},
         opinion=True, catalog=CATALOG, values=("text",), module=module_id)
 
     registry.worker("economic-calendar-fetcher", econ.start_worker,

@@ -6134,3 +6134,44 @@ a.dv-card-title:hover { text-decoration: underline; }
   .upd-ribbon { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .upd-text { flex: 1 1 100%; }
 }
+
+/* A query string is one short line. The instruction above it is prose and wants
+   the full box; giving both the same 160px made the parameters field look like
+   somewhere to write an essay. Still resizable, if a call really is that long. */
+.node-settings-text--short { min-height: 62px; }
+
+/* What this node's API will read. Reference rather than a control, so it sits at
+   the foot of the panel: you consult it while filling the field above, and it
+   must not push that field further down. */
+.node-api-help {
+  margin-top: auto;
+  padding: 12px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.node-api-help-title {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.node-api-help-keys { font-size: 12px; line-height: 1.55; color: var(--text-primary); }
+/* The example is a button, not a caption — clicking it fills the field, which is
+   what somebody reading an example is about to do by hand anyway. */
+.node-api-help-ex {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  cursor: pointer;
+}
+.node-api-help-ex:hover { background: var(--bg-tertiary); }
+.node-api-help-ex code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  word-break: break-all;
+}
