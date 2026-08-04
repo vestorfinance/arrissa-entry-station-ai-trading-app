@@ -306,10 +306,17 @@ export function Privacy() {
         </p>
       </S>
 
-      <S id="p-where" n="6" title="Where it is, and how long we keep it">
+      <S id="p-where" n="6" title="Where it is, how long we keep it">
         <p>
-          The hosted service runs on servers in the European Union. Some third parties above
-          operate elsewhere, so data may be processed outside your country.
+          The hosted service runs on distributed servers located in South Africa. Some of the
+          third parties above operate elsewhere, so parts of your data may be processed outside
+          South Africa and outside the country you live in.
+        </p>
+        <p>
+          If you are in the United Kingdom or the European Economic Area, that means your data is
+          transferred out of it. South Africa is not currently the subject of a UK or EU adequacy
+          decision, so we rely on appropriate safeguards for those transfers and on your consent
+          where that is the lawful basis. You can ask us what safeguards apply.
         </p>
         <p>
           We keep account data while your account is open. Delete your account and we delete or
