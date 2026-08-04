@@ -6070,7 +6070,9 @@ a.dv-card-title:hover { text-decoration: underline; }
 
 /* the guide's title, now the hero is gone */
 .ins-title { font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; letter-spacing: normal; line-height: 1.12; }
-.ins-lede { margin-top: 14px; max-width: 620px; font-size: 16.5px; line-height: 1.6; }
+/* The chooser sits directly under it, and a paragraph with no space beneath it
+   reads as a caption on the buttons rather than as the page's opening line. */
+.ins-lede { margin: 14px 0 30px; max-width: 620px; font-size: 16.5px; line-height: 1.6; }
 .ins-pre { margin-top: 36px; }
 
 /* Syntax colour in the command blocks. The page is monochrome by design and the

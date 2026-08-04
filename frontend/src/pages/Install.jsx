@@ -285,10 +285,6 @@ export default function Install() {
   const [host, setHost] = useState('')
   const [user, setUser] = useState('root')
   const [domain, setDomain] = useState('')
-  // Does this server already serve something else? It decides whether the app
-  // takes 80 and 443 or gets a port of its own behind an existing proxy, and
-  // that changes four of the steps below.
-  const [shared, setShared] = useState(false)
 
   useEffect(() => { api.appConfig().then(setCfg).catch(() => {}) }, [])
   const name = cfg?.app_name || 'EntryStation'
@@ -304,89 +300,116 @@ export default function Install() {
   // Two shapes of server, and they are not a detail. A box that already serves
   // other sites cannot hand over 80 and 443, and a guide that assumes it can
   // fails at the last step with an error that only mentions a port number.
+  // The Ubuntu path, in full, with nothing assumed.
+  //
+  // Caddy runs ON THE MACHINE and the app runs on a port of its own behind it.
+  // That is not the only arrangement that works — the stack ships a Caddy of its
+  // own and can take 80 and 443 directly — but it is the one to teach, because
+  // it is the one that survives contact with a real server. Adding a second site
+  // later, or arriving at a box that already has one, does not require undoing
+  // anything.
   const VPS = useMemo(() => [
     {
       id: 'v-vps',
       title: 'Get a server',
-      body: 'Any provider will do — Hetzner, DigitalOcean, Vultr, Contabo. Ask for Ubuntu 22.04 '
-          + 'or 24.04, 2 vCPU and 4GB of memory. When it is built you are given an IP address, a '
-          + 'username (usually root) and either a password or an SSH key.',
+      body: 'Any provider will do: Hetzner, DigitalOcean, Vultr, Contabo. Ask for Ubuntu 22.04 or '
+          + '24.04, 2 vCPU and 4GB of memory. When it is built you are given an IP address, a '
+          + 'username (usually root) and a password or an SSH key.',
       note: '4GB is not padding. The app logs into your broker with a real browser, and a browser '
           + 'is the heaviest thing on the box.',
     },
     {
       id: 'v-dns',
       title: 'Point your domain at it',
-      body: `Wherever you bought ${D}, find DNS settings and add one record: type A, name @ (or `
-          + `the subdomain you want), value ${H}. That is all a domain is here — a name that `
-          + 'answers with your server\u2019s address.',
-      code: `# from your own machine, check it took
+      body: `Wherever you bought ${D}, open its DNS settings and add one record. Type A, name @ `
+          + `for the bare domain (or the subdomain you want), value ${H}. That is all a domain is `
+          + 'here: a name that answers with your server’s address.',
+      code: `# run this on your OWN machine, not the server
 dig +short ${D}
-# should print ${H}`,
-      note: 'It can take a few minutes. Do this before starting the app: the HTTPS certificate is '
-          + 'issued by proving you control the domain, and that check happens against DNS the '
-          + 'moment the app first starts.',
-      warn: 'On Cloudflare, set the record to DNS only (grey cloud) for the first start. Orange '
-          + 'cloud proxies the certificate check and it can fail. Turn it on afterwards if you '
-          + 'want it, and set SSL/TLS to Full \u2014 Flexible causes an endless redirect loop.',
+# it should print ${H}`,
+      note: 'Give it a few minutes. Do this before starting anything: the HTTPS certificate is '
+          + 'issued by proving you control the domain, and that check is made against DNS.',
+      warn: `On Cloudflare set the record to DNS only — the grey cloud — until the site `
+          + 'is up. The orange cloud proxies the certificate check and it can fail. Afterwards you '
+          + 'may switch it on, but set SSL/TLS to Full: Flexible makes Cloudflare talk http to a '
+          + 'server that redirects to https, and the two loop forever.',
     },
     {
       id: 'v-ssh',
       title: 'Log in to the server',
-      body: 'On Mac or Linux use Terminal. On Windows use PowerShell, which has ssh built in. '
-          + 'Everything after this runs on the server, not on your own machine.',
+      body: 'Terminal on Mac or Linux, PowerShell on Windows — both have ssh built in. '
+          + 'Everything after this runs on the server.',
       code: `ssh ${U}@${H}`,
-      note: 'The first time it asks whether you trust the host. Type yes.',
+      note: 'The first time, it asks whether you trust the host. Type yes.',
     },
     {
       id: 'v-docker',
       title: 'Install Docker',
-      body: "Docker\u2019s own installer, which is the one their documentation gives. Compose "
-          + 'comes with it. The second and third lines let you run docker without typing sudo '
-          + 'every time.',
+      body: 'Docker’s own installer, the one their documentation gives. Compose comes with '
+          + 'it. The middle lines let you run docker without typing sudo every time.',
       code: `curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker ${U}
+sudo systemctl enable --now docker
 newgrp docker
 
 docker --version
 docker compose version`,
-      note: 'Both version lines should print. If they do not, log out and back in.',
+      note: 'Both version lines must print. If they do not, log out and back in and try again.',
+    },
+    {
+      id: 'v-caddy',
+      title: 'Install Caddy',
+      body: 'Caddy is the web server that sits in front. It answers on 80 and 443, gets a free '
+          + 'certificate for your domain, renews it on its own for as long as it runs, and passes '
+          + 'requests through to the app. It is installed on the machine rather than in the '
+          + 'stack, so the same Caddy can serve this and anything else you put here later.',
+      code: `sudo apt update
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+
+sudo apt update
+sudo apt install -y caddy
+caddy version`,
+      note: 'Already have nginx or Apache on this server? Keep it. Skip this step and write the '
+          + 'equivalent reverse proxy in that instead — step 8 shows what it has to do.',
     },
     {
       id: 'v-ports',
-      title: 'Open the ports',
-      body: 'A firewall that lets in ssh, web traffic, and nothing else. Port 80 is not optional '
-          + 'even though the site ends up on https: it is how the certificate is issued.',
+      title: 'Open the firewall',
+      body: 'Caddy needs 80 and 443. The app itself needs nothing open: it listens only on the '
+          + 'machine’s own address, and Caddy reaches it from inside.',
       code: `sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw --force enable
 sudo ufw status`,
-      warn: shared
-        ? 'Leave whatever is already serving 80 and 443 exactly as it is. The app will take a '
-          + 'port of its own instead, and only answer on it locally.'
-        : 'Nothing else may already be using 80 or 443. If this server runs Apache, nginx or a '
-          + 'Caddy of its own, either stop it \u2014 `sudo systemctl disable --now apache2 '
-          + 'nginx` \u2014 or go back up and say the server is shared.',
+      warn: 'Do not open 8477. If it were reachable from outside, the app would be answering the '
+          + 'internet directly, unencrypted, with the proxy bypassed entirely.',
     },
     {
       id: 'v-code',
       title: 'Get the code',
-      body: 'The same public edition as a local install: core, the free modules, and the store '
-          + 'client that fetches anything you buy.',
+      body: 'The public edition: core, the free modules, and the store client that fetches '
+          + 'anything you buy.',
       code: `git clone ${REPO} ~/entrystation\ncd ~/entrystation`,
     },
     {
       id: 'v-env',
       title: 'Settings and keys',
-      body: 'Your domain goes in here, and the three secrets are generated on the server. Paste '
-          + 'the whole block at once.',
+      body: 'The app takes port 8477 instead of 80, bound to the machine itself so nothing '
+          + 'outside can reach it. DOMAIN=:80 tells the stack’s own Caddy to serve plain '
+          + 'http internally and not to go looking for a certificate — the Caddy you just '
+          + 'installed does that part.',
       code: `cp .env.docker.example .env
 
 cat >> .env <<EOF
-${shared ? `DOMAIN=:80
+DOMAIN=:80
 HTTP_PORT=127.0.0.1:8477
-HTTPS_PORT=127.0.0.1:8443` : `DOMAIN=${D}`}
+HTTPS_PORT=127.0.0.1:8443
 DOCKER_PLATFORM=
 FERNET_KEY=$(python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
@@ -394,51 +417,63 @@ DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
 EOF
 
 cat .env`,
-      note: 'Leave DOCKER_PLATFORM empty on a server. It defaults to amd64, which is what '
-          + 'Microsoft publishes Edge for, and Edge is what the broker login uses.',
+      note: '8477 rather than 3000 or 8080 on purpose: those are the first ports anything else on '
+          + 'the box will already have taken. Leave DOCKER_PLATFORM empty on a server — it '
+          + 'defaults to amd64, which is what Microsoft publishes Edge for, and Edge is what the '
+          + 'broker login uses.',
       warn: 'Copy .env somewhere off the server. Losing FERNET_KEY makes every stored broker '
           + 'session and API key permanently unreadable.',
     },
-    ...(shared ? [{
-      id: 'v-proxy',
-      title: 'Install Caddy on the server',
-      body: 'This server already answers on 80 and 443 for something else, so EntryStation cannot '
-          + 'have them. Instead it runs on a port of its own and Caddy — on the machine, not in '
-          + 'the stack — sends your domain to it. Skip this if Caddy, nginx or Apache is already '
-          + 'installed; you only need the site block in the next step.',
-      code: `sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \\
-  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \\
-  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy`,
-    }, {
-      id: 'v-proxy-site',
-      title: 'Point your domain at the app',
-      body: `One block, appended to the Caddyfile so anything already in there is untouched. `
-          + `Caddy gets the certificate for ${D} and passes everything to the app on 8477.`,
+    {
+      id: 'v-caddyfile',
+      title: 'Tell Caddy about your domain',
+      body: `One site block: serve ${D}, get its certificate, and pass everything to the app on `
+          + '8477. The headers are the ordinary ones — they stop the site being framed by '
+          + 'another, and stop a browser guessing at content types.',
       code: `sudo tee -a /etc/caddy/Caddyfile <<'EOF'
 
 ${D} {
     encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        -Server
+    }
+
     reverse_proxy 127.0.0.1:8477
 }
 EOF
 
+sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy`,
-      note: 'The blank line before the block matters: without it Caddy reads it as part of '
-          + 'whatever site block came before.',
-      warn: 'Use tee -a, not tee. Without the -a this replaces the whole Caddyfile and every '
-          + 'other site on the server stops answering.',
-    }] : []),
+      note: 'The blank line before the block matters. Without it Caddy reads it as part of '
+          + 'whatever site block came before it. `caddy validate` tells you before a reload does.',
+      warn: 'tee -a, with the -a. Without it you replace the whole Caddyfile, and every other '
+          + 'site on this server stops answering.',
+    },
     {
       id: 'v-run',
       title: 'Start it',
-      body: 'The first build takes several minutes, most of it downloading the browser. Watch the '
-          + 'log until Caddy says it has a certificate.',
-      code: 'docker compose up -d --build\ndocker compose logs -f',
-      note: 'Look for "certificate obtained successfully" and "Application startup complete". '
-          + 'Then press Ctrl-C, which stops watching the log rather than the app.',
+      body: 'The first build takes several minutes, most of it downloading the browser. After '
+          + 'that it starts in seconds.',
+      code: `docker compose up -d --build
+docker compose logs -f app`,
+      note: 'Wait for "Application startup complete", then press Ctrl-C — that stops '
+          + 'watching the log, not the app.',
+    },
+    {
+      id: 'v-check',
+      title: 'Check the chain',
+      body: 'Three links: the app answers locally, Caddy is running, and the domain comes back '
+          + 'through it. Test them in that order and whichever fails is where the problem is.',
+      code: `docker compose ps
+curl -s -o /dev/null -w "app  %{http_code}\n" http://127.0.0.1:8477
+systemctl is-active caddy
+curl -s -o /dev/null -w "site %{http_code}\n" https://${D}`,
+      note: 'app 200 and site 200 means it is done. app 200 with a failing site is Caddy or DNS; '
+          + 'app failing is the stack, and `docker compose logs app` will say why.',
     },
     {
       id: 'v-open',
@@ -446,9 +481,8 @@ sudo systemctl reload caddy`,
       body: `Go to https://${D}. The first account you create is the owner, and registration `
           + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
           + 'server afterwards.',
-      code: `docker compose ps   # all three should say running`,
     },
-  ], [H, U, D, shared])
+  ], [H, U, D])
 
   const steps = where === 'windows' ? WINDOWS : where === 'macos' ? MACOS : VPS
   const after = steps.length
@@ -533,15 +567,6 @@ sudo systemctl reload caddy`,
                          onChange={(e) => setUser(e.target.value)} />
                 </label>
               </div>
-              <label className="ins-shared">
-                <input type="checkbox" checked={shared}
-                       onChange={(e) => setShared(e.target.checked)} />
-                <span>
-                  <b>This server already runs other websites</b>
-                  Then it cannot give up ports 80 and 443. The app takes port 8477 instead and
-                  sits behind Caddy on the server. Four of the steps below change.
-                </span>
-              </label>
             </div>
           ) : (
             <div className="home-panel ins-pre">
@@ -561,30 +586,15 @@ sudo systemctl reload caddy`,
 
           {where === 'vps' && (
             <div className="ins-callout">
-              {shared ? (
-                <>
-                  <b>This server keeps the sites it already has.</b>
-                  <p>
-                    EntryStation will not touch ports 80 and 443. It runs on <code>8477</code>,
-                    bound to the machine itself so nothing reaches it from outside, and Caddy on
-                    the server sends your domain to it. 8477 rather than 3000 or 8080 on purpose:
-                    those are the first ports anything else on the box will have taken. If you
-                    already run nginx or Apache instead of Caddy, use it — the block in step 7 is
-                    a plain reverse proxy and every one of them can do it.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <b>You do not install a web server or a reverse proxy.</b>
-                  <p>
-                    Caddy is part of the stack and starts with it. It answers on 80 and 443, gets
-                    a free certificate for your domain by itself, renews it by itself, and passes
-                    requests to the app. There is no Caddyfile to write, no certbot to run and no
-                    nginx to configure. All it needs from you is a domain already pointing at the
-                    server, and those two ports free.
-                  </p>
-                </>
-              )}
+              <b>How the pieces fit</b>
+              <p>
+                Caddy sits at the front of the server on ports 80 and 443. It gets the HTTPS
+                certificate for your domain and renews it on its own. Behind it, EntryStation runs
+                on port <code>8477</code>, bound to the machine itself so nothing from outside can
+                reach it directly. Caddy passes requests through. That is what a reverse proxy is,
+                and it is why the same server can serve this and other sites without either
+                knowing about the other.
+              </p>
             </div>
           )}
 
