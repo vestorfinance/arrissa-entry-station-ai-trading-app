@@ -41,7 +41,7 @@ MODULES_DIR = module_system.MODULES_DIR
 SIGNATURE_FILE = "signature.txt"
 # The vendor's ed25519 public key, hex. Empty here: this build signs nothing, so
 # every module is treated as unsigned/free. Set it in the release build.
-VENDOR_PUBLIC_KEY = "d93a6f614fc857e8ebb47036a220fe6bd64f8b7742784c09143b3f91a5f4339b"
+VENDOR_PUBLIC_KEY = "af8334d4ff20e102feddf24c1cdae638016d1e5d70efc73dd4c2c8345392dae9"
 
 # Never unpack these, whatever a ZIP contains.
 UNSAFE = ("..", "/etc", "/usr", "\\")

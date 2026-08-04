@@ -44,3 +44,8 @@ dist/
 *_db_dump.sql
 *.dump
 research-har/          # captured HAR sessions — reference material, not shipped code
+
+# The vendor signing key. Never in the repo — public remote included.
+.signing.key
+signing.key
+*.signing.key
