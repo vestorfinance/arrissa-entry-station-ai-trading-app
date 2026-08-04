@@ -360,26 +360,34 @@ export default function Home() {
           <div className="home-mcp">
             <div className="home-mcp-code">
               <div className="home-mcp-code-head">claude_desktop_config.json</div>
-              <pre className="home-code">{`{
+              <pre className="home-code home-code--block">{`{
   "mcpServers": {
     "entrystation": {
       "command": "npx",
-      "args": ["-y", "mcp-remote",
-               "https://your-instance.com/api/v1/mcp",
-               "--header", "Authorization: Bearer ak_live_..."]
+      "args": [
+        "-y", "mcp-remote",
+        "https://your-instance.com/api/v1/mcp",
+        "--header",
+        "Authorization: Bearer ak_live_..."
+      ]
     }
   }
 }`}</pre>
             </div>
+            {/* Each line's text is wrapped in ONE span. `.home-ticks li` is a
+                two-column grid — icon, then text — so inline markup inside it
+                becomes several grid items and scatters into cells. That is
+                exactly what happened here, and it is the second time: the legal
+                pages had it too. A single child cannot scatter. */}
             <ul className="home-ticks home-mcp-list">
-              <li><Check size={15} /> 33 tools, from <code>positions</code> and <code>price</code> to
-                <code> place_order</code> and <code>risk_plan</code></li>
-              <li><Check size={15} /> A module you have not bought contributes nothing; one you
-                install tomorrow appears with no configuration</li>
-              <li><Check size={15} /> Read-only mode offers only the tools that read, so nothing
-                can place or close a trade</li>
-              <li><Check size={15} /> Authenticated with the API key you already have, and every
-                call runs as you</li>
+              <li><Check size={15} /><span>Thirty-three tools: prices, positions, orders,
+                sizing, and every data module you own</span></li>
+              <li><Check size={15} /><span>A module you have not bought contributes nothing.
+                One you install tomorrow appears with no configuration</span></li>
+              <li><Check size={15} /><span>Read-only mode offers only the tools that read, so
+                nothing can place or close a trade</span></li>
+              <li><Check size={15} /><span>Authenticated with the API key you already have,
+                and every call runs as you</span></li>
             </ul>
           </div>
         </div>

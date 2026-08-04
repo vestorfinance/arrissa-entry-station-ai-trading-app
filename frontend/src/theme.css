@@ -6882,8 +6882,9 @@ a.dv-card-title:hover { text-decoration: underline; }
    a technical reader believes a snippet they could paste before they believe a
    paragraph about integration. */
 .home-mcp {
-  margin-top: 34px; display: grid; grid-template-columns: 1.05fr 1fr;
-  gap: 28px; align-items: start;
+  margin-top: 34px; display: grid; grid-template-columns: 1fr 1fr;
+  gap: 30px; align-items: center;
+  text-align: left;                 /* the section centres its prose; this is not prose */
 }
 .home-mcp-code { border-radius: var(--radius-card); background: var(--home-raise); overflow: hidden; }
 .home-mcp-code-head {
@@ -6891,9 +6892,14 @@ a.dv-card-title:hover { text-decoration: underline; }
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 /* Inside the framed block it keeps the type but drops the frame: two rounded
-   backgrounds nested inside each other read as a mistake. */
+   backgrounds nested inside each other read as a mistake.
+   And `white-space: pre`, because .home-code is nowrap — it was written for
+   one-line commands, and a multi-line config under it collapsed onto a single
+   line that ran off the edge. */
 .home-mcp-code .home-code {
-  margin: 0; border-radius: 0; background: transparent; font-size: 12.5px;
+  margin: 0; border-radius: 0; background: transparent;
+  font-size: 12.5px; line-height: 1.65;
+  white-space: pre; overflow-x: auto;
 }
 .home-mcp-list { margin-top: 0; }
 .home-mcp-list code {
