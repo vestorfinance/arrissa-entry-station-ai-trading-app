@@ -104,14 +104,6 @@ export default function Buy() {
           {busy ? 'Opening payment…' : <>Continue to payment <ArrowRight size={15} strokeWidth={2.2} /></>}
         </button>
 
-        {/* Who takes the money. Somebody about to enter a card is asking exactly
-            this, and a page that leaves it unanswered feels like one avoiding
-            the question. */}
-        <p className="buy-secure">
-          <Lock size={12} strokeWidth={2.2} />
-          Payment is handled by Paystack. Your card details never reach EntryStation.
-        </p>
-
         <div className="buy-next">
           <span className="buy-next-title"><ShieldCheck size={13} strokeWidth={2} /> What happens next</span>
           <ol>
@@ -120,6 +112,28 @@ export default function Buy() {
             <li>The receipt and key are emailed to you, in case you move servers.</li>
           </ol>
         </div>
+      </div>
+
+      {/* Who takes the money, said with their marks rather than a sentence.
+          Somebody about to enter a card is asking exactly this, and the answer
+          they trust is a logo they already recognise.
+
+          These are the official files, not drawings of them. Both wordmarks are
+          drawn for light backgrounds — Paystack's is near-black, Visa's is its
+          blue — so each has a reversed copy for the dark theme, changing only
+          that one colour. Mastercard is left exactly as issued: its circles
+          read on either background, and altering it would be the one change
+          nobody is permitted to make. */}
+      <div className="buy-trust">
+        <span className="buy-trust-label"><Lock size={11} strokeWidth={2.4} /> Secure payment by</span>
+        <span className="buy-marks">
+          <img className="buy-mark buy-mark--onlight" src="/logos/paystack.svg" alt="Paystack" />
+          <img className="buy-mark buy-mark--ondark" src="/logos/paystack-dark.svg" alt="Paystack" />
+          <i className="buy-marks-sep" />
+          <img className="buy-mark buy-mark--onlight buy-mark--card" src="/logos/visa.svg" alt="Visa" />
+          <img className="buy-mark buy-mark--ondark buy-mark--card" src="/logos/visa-dark.svg" alt="Visa" />
+          <img className="buy-mark buy-mark--card buy-mark--mc" src="/logos/mastercard.svg" alt="Mastercard" />
+        </span>
       </div>
 
       <p className="buy-foot">

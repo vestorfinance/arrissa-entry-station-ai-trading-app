@@ -6438,12 +6438,12 @@ a.dv-card-title:hover { text-decoration: underline; }
 /* ── the purchase page ────────────────────────────────────────────────────────
    Somebody arrives here from their own machine, about to type an email and
    reach for a card, on a domain they may never have visited. Everything below
-   exists to answer a question they are asking silently: what am I buying, what
-   will it cost, who takes the money, what happens after. */
+   answers a question they are asking silently: what am I buying, what will it
+   cost, who takes the money, what happens after. */
 .buy-wrap {
   min-height: 100vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 18px; padding: 32px 20px;
+  gap: 16px; padding: 32px 20px;
 }
 .buy-brand {
   display: flex; align-items: center; gap: 9px;
@@ -6453,14 +6453,19 @@ a.dv-card-title:hover { text-decoration: underline; }
 .buy-card {
   width: 100%; max-width: 460px;
   display: flex; flex-direction: column; gap: 16px;
-  padding: 24px; border-radius: var(--radius-md);
-  background: var(--surface-2);
+  padding: 24px;
+  /* The same corner every other card in the app wears, from the same knob. */
+  border-radius: var(--radius-card);
+  /* --card-bg, NOT --surface-2. They are different tokens with the same value,
+     and inputs sit on --input-bg which equals --surface-2 — so a card painted
+     --surface-2 swallowed its own input whole. */
+  background: var(--card-bg);
 }
 .buy-item { display: flex; align-items: flex-start; gap: 13px; }
 .buy-item-icon {
   flex: none; width: 46px; height: 46px; border-radius: var(--radius-sm);
   display: grid; place-items: center;
-  background: var(--bg-tertiary); color: var(--text-primary);
+  background: var(--surface-2); color: var(--text-primary);
 }
 .buy-item-text { flex: 1; min-width: 0; }
 .buy-name { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
@@ -6475,14 +6480,15 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .buy-gets svg { flex: none; margin-top: 3px; color: var(--tone-ok); }
 
+/* The input needs no help beyond sitting on the card: --input-bg is a step up
+   from --card-bg, which is the whole point of having both. It only vanished
+   because the card was painted --surface-2, and --surface-2 IS --input-bg — two
+   names for one colour, so the control and the thing under it were identical.
+   Elevation, not an outline: rule 2 up top. */
+.buy-card .input { width: 100%; }
+
 .buy-go { width: 100%; min-height: 46px; gap: 8px; font-size: 14.5px; }
-.buy-secure {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  margin: -6px 0 0; font-size: 12px; color: var(--text-secondary); text-align: center;
-}
-.buy-next {
-  padding: 14px 16px; border-radius: var(--radius-sm); background: var(--input-bg);
-}
+.buy-next { padding: 14px 16px; border-radius: var(--radius-sm); background: var(--surface-2); }
 .buy-next-title {
   display: flex; align-items: center; gap: 7px;
   font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
@@ -6490,4 +6496,29 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .buy-next ol { margin: 9px 0 0; padding-left: 19px; display: flex; flex-direction: column; gap: 5px; }
 .buy-next li { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+
+/* The payment marks, outside the card: they vouch for the page, not for the
+   product on it. */
+.buy-trust {
+  display: flex; flex-direction: column; align-items: center; gap: 9px; margin-top: 2px;
+}
+.buy-trust-label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--text-secondary); opacity: .8;
+}
+.buy-marks { display: flex; align-items: center; gap: 16px; }
+.buy-mark { height: 19px; width: auto; display: block; }
+/* A card scheme's mark is squarer than a wordmark and reads small, so it gets
+   its own height rather than being scaled to match Paystack's. */
+.buy-mark--card { height: 15px; }
+.buy-mark--mc { height: 21px; }
+/* Spacing, not a rule: a 1px line is a border wearing a different name. */
+.buy-marks-sep { width: 5px; }
+/* Dark is the default theme, so the reversed marks show and the originals hide;
+   [data-theme="light"] swaps them. */
+.buy-mark--onlight { display: none; }
+[data-theme="light"] .buy-mark--onlight { display: block; }
+[data-theme="light"] .buy-mark--ondark { display: none; }
+
 .buy-foot { margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center; max-width: 420px; }
