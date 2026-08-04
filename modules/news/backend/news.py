@@ -322,7 +322,15 @@ def _split(value):
     if not value:
         return []
     parts = value if isinstance(value, (list, tuple)) else str(value).split(",")
-    return [str(p).strip() for p in parts if str(p).strip()]
+    # `any` and `all` mean NO FILTER, not an instrument called ANY.
+    #
+    # Filters are usually turned off by omitting them, which works when a person
+    # is typing the call and fails the moment one is built from a variable:
+    # `symbol={{symbol}}` has to be able to say "every instrument", and leaving
+    # the parameter out is not something a value can do. So the word is a value.
+    off = {"any", "all", "*", "none", "everything"}
+    return [str(p).strip() for p in parts
+            if str(p).strip() and str(p).strip().lower() not in off]
 
 
 def query(symbol=None, impact=None, min_score=None, source=None, category=None, q=None,

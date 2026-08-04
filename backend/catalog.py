@@ -287,13 +287,22 @@ def remote(force=False, max_age=None) -> tuple[list, str | None]:
         return (_cache["data"] or []), err
 
 
-def _update_gate(module_id: str, offered: bool) -> dict:
+def _update_gate(module_id: str, offered: bool, row: dict = None) -> dict:
     """Whether a newer build may actually be fetched, and if not, why.
 
     Said in the same breath as the offer: an Update button that fails with 402
-    when pressed is worse than one that explains itself before you press it."""
+    when pressed is worse than one that explains itself before you press it.
+
+    FREE is decided from the row the store just sent, not by asking store.py.
+    `store._is_free` reads store/catalog.json — a file that exists on the store
+    and on no instance — so on a self-hosted box every module looked unpriced,
+    fell through to the licence check, and a free module was told it needed a
+    live subscription to update. The remote row carries `price_usd`, which is
+    the same fact from the machine that actually knows it."""
     if not offered:
         return {"can_update": False, "update_blocked": ""}
+    if (row or {}).get("price_usd") == 0:
+        return {"can_update": True, "update_blocked": ""}
     import store
     ok, why = store.can_update(licence_key(), module_id)
     return {"can_update": ok, "update_blocked": "" if ok else why}
@@ -330,7 +339,7 @@ def view(max_age=None) -> dict:
             "update_available": bool(inst) and versions.newer(m.get("version"),
                                                               inst.get("version")),
             **_update_gate(mid, bool(inst) and versions.newer(m.get("version"),
-                                                              inst.get("version"))),
+                                                              inst.get("version")), m),
         }
     for mid, inst in local.items():
         if mid in rows:

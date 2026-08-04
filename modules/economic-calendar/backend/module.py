@@ -128,7 +128,7 @@ def _node(text, context, ctx, nv):
     text into its parameters, exactly as core's data nodes do."""
     import analysis_agent as eng
     p = eng._params(ctx, nv, "economic calendar",
-                    "Fields: symbol (optional); currency (e.g. USD,EUR); impact "
+                    "Fields: symbol (optional, or 'any' for every instrument); currency (e.g. USD,EUR, or 'any'); impact "
                     "(high|moderate|low); range (today|tomorrow|this_week); hours (int); "
                     "days (int); limit (int). ALSO: latest (true for ONLY the most recent "
                     "RELEASE — the newest event whose actual is in — and every other event "
@@ -169,7 +169,7 @@ def register(registry, module_id):
                            "api_example": "currency=USD&impact=high&range=today",
                            "api_doc": [{"key": "latest", "values": ["true"],
                                         "note": "only the most recent release, plus everything printed at the same moment"},
-                                       {"key": "symbol", "values": ["XAUUSD", "EURUSD"]}, {"key": "currency", "values": ["USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
+                                       {"key": "symbol", "values": ["any", "XAUUSD", "EURUSD"], "note": "any = every instrument"}, {"key": "currency", "values": ["any", "USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
         opinion=True, catalog=CATALOG, values=("text",), module=module_id)
 
     registry.worker("economic-calendar-fetcher", econ.start_worker,

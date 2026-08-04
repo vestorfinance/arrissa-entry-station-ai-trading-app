@@ -1,7 +1,7 @@
 {
   "id": "economic-calendar",
   "name": "Economic Calendar",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "edition": "free",
   "description": "Scheduled economic releases and what they move, with a live watcher for the minutes around a print.",
   "requires": {

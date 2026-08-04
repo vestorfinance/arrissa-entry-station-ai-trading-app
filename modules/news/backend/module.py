@@ -135,7 +135,7 @@ def _latest(rows, key):
 def _node(text, context, ctx, nv):
     import analysis_agent as eng
     p = eng._params(ctx, nv, "market news",
-                    "Fields: symbol (optional); impact (high|medium|low); min_score (0-100); "
+                    "Fields: symbol (optional, or 'any' for every instrument); impact (high|medium|low); min_score (0-100); "
                     "hours (int); days (int); range (today|yesterday|this_week); q (text search); "
                     "limit. ALSO: measure (true when the ask is about how HEAVY or BUSY the news "
                     "is, or a comparison with an earlier period — 'more news than yesterday', "
@@ -197,7 +197,7 @@ def register(registry, module_id):
                            "api_example": "symbol=XAUUSD&impact=high&hours=24&limit=20",
                            "api_doc": [{"key": "latest", "values": ["true"],
                                         "note": "only the most recent story, plus any published at the same moment; add symbol to scope it"},
-                                       {"key": "symbol", "values": ["XAUUSD", "EURUSD", "US30"], "note": "instrument to filter to"}, {"key": "impact", "values": ["high", "medium", "low"]}, {"key": "min_score", "values": ["50", "70", "90"], "note": "0-100"}, {"key": "hours", "values": ["6", "12", "24"]}, {"key": "days", "values": ["1", "3", "7"]}, {"key": "range", "values": ["today", "yesterday", "this_week"]}, {"key": "q", "values": ["tariff", "rate cut"], "note": "free text search"}, {"key": "limit", "values": ["10", "20", "50"]}, {"key": "measure", "values": ["true"], "note": "how heavy the news is, not the headlines"}]},
+                                       {"key": "symbol", "values": ["any", "XAUUSD", "EURUSD", "US30"], "note": "instrument to filter to; any = every instrument"}, {"key": "impact", "values": ["high", "medium", "low"]}, {"key": "min_score", "values": ["50", "70", "90"], "note": "0-100"}, {"key": "hours", "values": ["6", "12", "24"]}, {"key": "days", "values": ["1", "3", "7"]}, {"key": "range", "values": ["today", "yesterday", "this_week"]}, {"key": "q", "values": ["tariff", "rate cut"], "note": "free text search"}, {"key": "limit", "values": ["10", "20", "50"]}, {"key": "measure", "values": ["true"], "note": "how heavy the news is, not the headlines"}]},
                   opinion=True, catalog=CATALOG, values=("text",), module=module_id)
     registry.worker("news-fetcher", news.start_fetcher,
                     stop=news.stop_fetcher, module=module_id)
