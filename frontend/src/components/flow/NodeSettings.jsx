@@ -264,19 +264,6 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
   const [rulesOpen, setRulesOpen] = useState(false)
   const [big, setBig] = useState(null)     // which text arg is open in the big window
 
-  // The variables a trigger declares. Everything downstream can then use them —
-  // `symbol={{symbol}}` in a parameter, `trade_type=scalper` as a condition — so
-  // the instrument stops being something each node re-derives from the prose.
-  const vars = values.vars || []
-  const setVars = (v) => set('vars', v)
-  const isTrigger = ['trigger-agent-call', 'trigger', 'trigger-interval', 'triggerInterval']
-    .includes(node.data.kind)
-
-  // The conditional calls on a data node. Ordered, first match wins, and a rule
-  // with no condition is the default — which is why order is editable.
-  const rules = values.api_rules || []
-  const setRules = (r) => set('api_rules', r)
-
   // What this node's API accepts. Core nodes spell it apiDoc; module nodes send
   // api_doc through the palette. Same thing, two naming conventions meeting.
   const apiDoc = node.data.apiDoc || node.data.api_doc || []
@@ -297,6 +284,20 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
   const values = node.data.values || {}
 
   const set = (name, value) => onChange(node.id, { ...values, [name]: value })
+
+  // The variables a trigger declares. Everything downstream can then use them —
+  // `symbol={{symbol}}` in a parameter, `trade_type=scalper` as a condition — so
+  // the instrument stops being something each node re-derives from the prose.
+  const vars = values.vars || []
+  const setVars = (v) => set('vars', v)
+  const isTrigger = ['trigger-agent-call', 'trigger', 'trigger-interval', 'triggerInterval']
+    .includes(node.data.kind)
+
+  // The conditional calls on a data node. Ordered, first match wins, and a rule
+  // with no condition is the default — which is why order is editable.
+  const rules = values.api_rules || []
+  const setRules = (r) => set('api_rules', r)
+
   // Picking an agent stores both its id (used at runtime) and name (shown on the canvas).
   const setAgent = (id) => onChange(node.id, {
     ...values, agent_id: id,
