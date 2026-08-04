@@ -105,12 +105,26 @@ fi
 cd /app/backend
 if [ "$(printf '%s' "${ENTRYSTATION_AUTO_UPDATE:-on}" | tr 'A-Z' 'a-z')" != "off" ]; then
     python3 -c "
+# Core's tables first. On a FRESH install nothing has created them yet — main.py
+# does it at import time, and that has not happened: this runs BEFORE the app so
+# the modules it fetches are the ones that load. So the first boot of every new
+# install failed here on 'relation admin_settings does not exist', which is both
+# alarming and meaningless, since a box with no database has bought nothing.
+# Idempotent, and the app runs it again a moment later regardless.
+import db
+db.init_schema()
+
 import auto_update, edition
 if edition.is_community() and auto_update.enabled():
     r = auto_update.run_once()
-    n = len(r.get('took') or [])
-    print('[entrypoint] ' + (f'{n} purchased module(s) updated' if n
-                             else 'purchased modules are up to date'), flush=True)
+    if r.get('error'):
+        # Say what went wrong rather than 'up to date', which is a claim this
+        # has no standing to make when it could not read the catalogue at all.
+        print('[entrypoint] could not check for purchased updates: ' + r['error'], flush=True)
+    else:
+        n = len(r.get('took') or [])
+        print('[entrypoint] ' + (f'{n} purchased module(s) updated' if n
+                                 else 'purchased modules are up to date'), flush=True)
 " 2>&1 || echo "[entrypoint] update check skipped (store unreachable or no licence)"
 fi
 
