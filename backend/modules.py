@@ -45,7 +45,15 @@ import registry
 MODULES_DIR = Path(os.environ.get("ENTRYSTATION_MODULES_DIR")
                    or Path(__file__).parent.parent / "modules")
 MANIFEST = "module.json"
-CORE_VERSION = "1.0.0"
+# The app's own version, and the ONLY thing that makes the update ribbon fire.
+#
+# An instance compares this against what the store reports. Ship without raising
+# it and every self-hosted box stays silent no matter how much changed — which is
+# exactly what happened after a day of work: both ends said 1.0.0, so there was
+# nothing to notice.
+#
+# Raise it in the same commit as the change. See FINDINGS.md.
+CORE_VERSION = "1.1.0"
 
 # Loaded this boot: id -> {"manifest", "path", "status", "error"}
 _loaded: dict = {}
