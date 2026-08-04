@@ -1,26 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import * as Icons from 'lucide-react'
+import { Puzzle, ShieldCheck, ArrowRight, Check, Lock } from 'lucide-react'
 
 // The page a Community operator lands on when they click Buy on their own
 // machine. PUBLIC on purpose: the buyer has no account here and never will —
 // what they have is an instance and an email, and that is all a purchase needs.
 // Sending them to a login form was the bug: they were being asked to sign in to
 // a service they were trying to pay for.
+//
+// It has to LOOK like somewhere it is safe to type an email and reach for a
+// card, because that is precisely what it asks for. "Buy truth-social" over a
+// bare input reads as a phishing page, and somebody who hesitates there is
+// somebody the product has already lost. So it names the thing properly, shows
+// the price it is about to charge, says who takes the money and says what
+// happens afterwards. None of that is decoration — each one is a question a
+// person is asking themselves with their hand on the mouse.
 export default function Buy() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  // The instance travels in the URL from their own Module Store. If it did not
-  // arrive, they can type it — their Settings page shows it.
   const instance = params.get('instance') || ''
-  const [email, setEmail] = useState(params.get('email') || '')
   // Where to send them when the payment clears. It travels from their own
   // Module Store and has to be handed on to the checkout — this page was
   // dropping it, which is the whole reason a buyer ended up looking at a
   // receipt instead of their own modules page. It is never shown or typed:
   // it is the address of the machine that sent them, not an answer they have.
   const returnUrl = params.get('return_url') || ''
+  const [email, setEmail] = useState(params.get('email') || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [item, setItem] = useState(null)
+
+  // What is being bought, from the store's own catalogue rather than from the
+  // address bar. The id there is a slug — `truth-social` — and showing that to
+  // a buyer as the product name was most of what made this look improvised.
+  useEffect(() => {
+    fetch('/api/store/catalog')
+      .then((r) => r.json())
+      .then((d) => {
+        const all = [...(d.modules || []), ...(d.bundles || [])]
+        setItem(all.find((x) => x.id === id) || null)
+      })
+      .catch(() => {})       // the page still works priced or not
+  }, [id])
 
   async function go() {
     setBusy(true); setErr('')
@@ -41,36 +63,71 @@ export default function Buy() {
     } catch (e) { setErr(e.message); setBusy(false) }
   }
 
+  const Icon = (item && Icons[item.icon]) || Puzzle
+  const name = item?.name || id
+  const price = item?.price_usd
+
   return (
-    <div className="auth-wrap">
-      <div className="auth-card">
-        <h1 className="auth-title">Buy {id}</h1>
-        <p className="auth-subtitle">
-          {instance
-            /* It knows which installation this is for, so it says what happens
-               next instead of asking a question it already has the answer to. */
-            ? <>The licence activates on the installation you came from. You will be taken
-               straight back to it.</>
-            : <>Start this from the Module Store on your own EntryStation — the Buy button
-               there knows which installation to licence.</>}
-        </p>
-        {/* No field for it. The id is not shown anywhere in the app any
-            more, so asking somebody to type it would be asking for something
-            they have no way to find — and a form you cannot fill in is worse
-            than no form. A purchase starts inside the instance being licensed,
-            where the link carries the id by itself. */}
+    <div className="buy-wrap">
+      <a className="buy-brand" href="https://entrystation.com">
+        <img src="/entry-station-mark.png" alt="" width={26} height={26} className="brand-mark" />
+        EntryStation
+      </a>
+
+      <div className="buy-card">
+        <div className="buy-item">
+          <span className="buy-item-icon"><Icon size={21} strokeWidth={1.8} /></span>
+          <div className="buy-item-text">
+            <h1 className="buy-name">{name}</h1>
+            {item?.tagline && <p className="buy-tagline">{item.tagline}</p>}
+          </div>
+          {price != null && <span className="buy-price">${price}<em>/yr</em></span>}
+        </div>
+
+        <ul className="buy-gets">
+          <li><Check size={14} strokeWidth={2.4} /> Installs on your instance by itself</li>
+          <li><Check size={14} strokeWidth={2.4} /> Updates included for the year</li>
+          <li><Check size={14} strokeWidth={2.4} /> Keeps working if it lapses — only new versions stop</li>
+        </ul>
+
         <label className="field">
-          <span className="field-label">Email for the licence key</span>
-          <input className="input" type="email" value={email} placeholder="you@example.com"
+          <span className="field-label">Email for the receipt and licence key</span>
+          <input className="input" type="email" autoComplete="email" value={email}
+                 placeholder="you@example.com"
                  onChange={(e) => setEmail(e.target.value)} />
         </label>
-        {err && <div className="alert alert--danger" style={{ marginTop: 10 }}>{err}</div>}
-        <div className="modal-actions" style={{ marginTop: 14 }}>
-          <button className="btn btn--primary" disabled={busy || !instance || !email} onClick={go}>
-            {busy ? 'Starting…' : 'Continue to payment'}
-          </button>
+
+        {err && <div className="alert alert--danger">{err}</div>}
+
+        <button className="btn btn--primary buy-go" disabled={busy || !instance || !email}
+                onClick={go}>
+          {busy ? 'Opening payment…' : <>Continue to payment <ArrowRight size={15} strokeWidth={2.2} /></>}
+        </button>
+
+        {/* Who takes the money. Somebody about to enter a card is asking exactly
+            this, and a page that leaves it unanswered feels like one avoiding
+            the question. */}
+        <p className="buy-secure">
+          <Lock size={12} strokeWidth={2.2} />
+          Payment is handled by Paystack. Your card details never reach EntryStation.
+        </p>
+
+        <div className="buy-next">
+          <span className="buy-next-title"><ShieldCheck size={13} strokeWidth={2} /> What happens next</span>
+          <ol>
+            <li>You come straight back to your own Module Store.</li>
+            <li>{name} installs itself — there is no key to type.</li>
+            <li>The receipt and key are emailed to you, in case you move servers.</li>
+          </ol>
         </div>
       </div>
+
+      <p className="buy-foot">
+        {instance
+          ? <>Licensed to the installation you came from.</>
+          : <>Start this from the Module Store on your own EntryStation — the Buy button
+             there knows which installation to licence.</>}
+      </p>
     </div>
   )
 }
