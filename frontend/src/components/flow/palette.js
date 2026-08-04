@@ -249,4 +249,12 @@ export function setModulePalette(entries) {
 /** Core nodes plus whatever the installed modules currently add. */
 export const fullPalette = () => [...PALETTE, ...MODULE_PALETTE]
 
-export const paletteItem = (key) => fullPalette().find((p) => p.key === key)
+// A node stores its `kind`, and depending on who created it that is the palette
+// KEY ('market-data') or the node TYPE ('marketData') — the canvas, the AI flow
+// builder and older saved flows have not always agreed. Matching on either means
+// a node found by one name is not treated as unknown by the other, which is how
+// it ended up with a label but no args and no API documentation.
+export const paletteItem = (key) => {
+  const all = fullPalette()
+  return all.find((p) => p.key === key) || all.find((p) => p.type === key) || null
+}

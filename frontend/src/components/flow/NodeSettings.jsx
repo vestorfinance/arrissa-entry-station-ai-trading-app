@@ -505,6 +505,19 @@ export default function NodeSettings({ node, models = [], agents = [], defaultMo
                 reading the module's source to find out that News takes
                 `min_score`. Clicking a value writes `key=value` into the field,
                 so the documentation is also the way to fill it in. */}
+            {/* Blank is never the answer. A node with nothing documented says so,
+                and names itself, rather than leaving an empty modal that looks
+                identical to a bug — which is exactly what it was. */}
+            {big === 'api_params' && apiDoc.length === 0 && (
+              <div className="api-doc">
+                <span className="api-doc-title">Parameters</span>
+                <p className="api-doc-note">
+                  This node ({node.data.kind || 'unknown'}) publishes no parameter list.
+                  Anything you put above is still sent as-is.
+                </p>
+              </div>
+            )}
+
             {big === 'api_params' && apiDoc.length > 0 && (
               <div className="api-doc">
                 <span className="api-doc-title">Everything this node accepts</span>
