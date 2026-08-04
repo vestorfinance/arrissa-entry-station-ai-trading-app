@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, ArrowUp, Minus, X } from 'lucide-react'
+import { Sparkles, ArrowUp, Minus, X, ChevronUp } from 'lucide-react'
 import * as store from '../../services/agents.js'
 
-// Floating "Ask AI to build your agent" box on the flow page. Auto-opens (it
-// replaces the briefcase/positions FAB here). Whatever the user types is sent
-// to the AI flow builder, which returns a full flow; the parent applies it to
-// the canvas via onBuilt().
+// Floating "Ask AI to build your agent" box on the flow page. Whatever the user
+// types is sent to the AI flow builder, which returns a full flow; the parent
+// applies it to the canvas via onBuilt().
+//
+// Starts as the button, not the panel. It opened itself, which is right the
+// first time somebody arrives at an empty canvas and wrong every time
+// afterwards: the reason to come back to this page is usually to adjust a node,
+// and a panel sitting over the canvas is then something to dismiss before the
+// work can start. The button is one click away and says what it is.
 export default function AgentBuilderChat({ agentId, onBuilt }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [closed, setClosed] = useState(false)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -62,8 +67,10 @@ export default function AgentBuilderChat({ agentId, onBuilt }) {
       <div className="builder-head" onClick={() => setOpen((o) => !o)}>
         <span className="builder-head-title"><Sparkles size={15} strokeWidth={2} /> Build with AI</span>
         <span className="builder-head-actions" onClick={(e) => e.stopPropagation()}>
+          {/* A minus on something already minimised offers to do what has
+              been done. The icon says which way it goes. */}
           <button className="builder-icon" title={open ? 'Minimise' : 'Expand'} onClick={() => setOpen((o) => !o)}>
-            <Minus size={15} strokeWidth={2} />
+            {open ? <Minus size={15} strokeWidth={2} /> : <ChevronUp size={15} strokeWidth={2} />}
           </button>
           <button className="builder-icon" title="Close" onClick={() => setClosed(true)}>
             <X size={15} strokeWidth={2} />
