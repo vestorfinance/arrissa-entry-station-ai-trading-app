@@ -6734,3 +6734,12 @@ a.dv-card-title:hover { text-decoration: underline; }
 .signup-agree input { width: 16px; height: 16px; margin-top: 2px; flex: none; accent-color: var(--accent); cursor: pointer; }
 .signup-agree span { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); text-align: left; }
 .signup-agree a { color: var(--text-primary); text-decoration: underline; }
+
+/* A legal list is prose with bullets. It used .home-ticks, whose li is a
+   two-column GRID — so a line containing <b> became three grid items scattered
+   into cells, and every word after the bold one landed on its own row in a
+   column one word wide. Nothing about a grid is needed here. */
+.legal-list { margin: 4px 0 14px; padding-left: 22px; display: block; }
+.legal-list li { margin-bottom: 9px; line-height: 1.7; }
+.legal-list li::marker { color: var(--text-secondary); }
+.legal-main .legal-list b { color: var(--text-primary); }

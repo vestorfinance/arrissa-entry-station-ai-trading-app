@@ -9,7 +9,7 @@ import * as api from '../services/appConfig.js'
 // Written from what the app ACTUALLY does rather than from a template, because
 // a policy that describes a different product protects nobody: it misleads the
 // person reading it and it is worthless the moment anyone checks it against the
-// software. Every claim below is one the code can be held to — the password
+// software. Every claim below is one the code can be held to the password
 // that is genuinely never stored, the API key that is genuinely unrecoverable,
 // the Community install where we genuinely hold nothing.
 //
@@ -73,10 +73,10 @@ export function Terms() {
 
       <S id="t-what" n="1" title="What this software is, and is not">
         <p>
-          EntryStation is a tool. It reads market data, helps you analyse it, and — when you tell
-          it to — sends orders to a broker account that is yours. That is the whole of it.
+          EntryStation is a tool. It reads market data, helps you analyse it, and when you tell
+          it to sends orders to a broker account that is yours. That is the whole of it.
         </p>
-        <ul className="home-ticks">
+        <ul className="legal-list">
           <li>It is <b>not</b> a broker. It never holds your money. Your funds stay with your
             broker and your relationship about them is with your broker, not with us.</li>
           <li>It is <b>not</b> a financial adviser and gives no financial, investment, tax or
@@ -94,7 +94,7 @@ export function Terms() {
       </S>
 
       <S id="t-you" n="2" title="What you are responsible for">
-        <ul className="home-ticks">
+        <ul className="legal-list">
           <li>Every trade placed through your accounts, including by agents, schedules or
             automations you created or enabled.</li>
           <li>Your own eligibility. Leveraged trading is restricted or prohibited in some
@@ -144,7 +144,7 @@ export function Terms() {
           Paid plans and paid modules are billed in advance for the period shown at checkout.
           Payments are taken by Paystack; we never see or store your card details.
         </p>
-        <ul className="home-ticks">
+        <ul className="legal-list">
           <li>A module licence is tied to the <b>installation</b> that bought it, not to a person.
             It may be re-bound to a new installation a limited number of times.</li>
           <li>What lapses when a subscription ends is the right to <b>new versions</b>. What you
@@ -190,7 +190,7 @@ export function Terms() {
         <p>
           You agree to indemnify {COMPANY} against any claim, loss or cost arising from your use
           of the software, your trading, your breach of these terms, or your breach of anyone
-          else's rights — including your broker's terms or the terms of any data or model provider
+          else's rights including your broker's terms or the terms of any data or model provider
           you connect.
         </p>
       </S>
@@ -199,7 +199,7 @@ export function Terms() {
         <p>
           Keep your credentials to yourself; you are responsible for what happens under your
           account. You may close it at any time. We may suspend or close an account that breaches
-          these terms, is used unlawfully, or threatens the service or other users — and where it
+          these terms, is used unlawfully, or threatens the service or other users and where it
           is reasonable to do so, we will tell you why.
         </p>
       </S>
@@ -225,7 +225,7 @@ export function Terms() {
         </p>
         <p>
           These terms are governed by the law of the Republic of South Africa, and the courts of
-          South Africa have jurisdiction — without taking away any protection you have under the
+          South Africa have jurisdiction without taking away any protection you have under the
           mandatory law of the country you live in.
         </p>
         <p>
@@ -247,35 +247,35 @@ export function Privacy() {
         </p>
         <p>
           On a <b>self-hosted Community instance, we hold nothing</b>. Your database is on your
-          machine and we cannot see it, reach it or recover it. The operator of that instance —
-          usually you — is the controller. We only receive what your instance sends us when it
+          machine and we cannot see it, reach it or recover it. The operator of that instance 
+          usually you is the controller. We only receive what your instance sends us when it
           asks the store about licences and updates: an installation id, and which modules it
           owns.
         </p>
       </S>
 
       <S id="p-what" n="2" title="What we hold">
-        <ul className="home-ticks">
-          <li><b>Account</b> — name, email, phone, country, and a hash of your password. We cannot
+        <ul className="legal-list">
+          <li><b>Account</b>  name, email, phone, country, and a hash of your password. We cannot
             read your password.</li>
-          <li><b>Usage</b> — what you asked the assistant, what your agents ran, and the results,
+          <li><b>Usage</b>  what you asked the assistant, what your agents ran, and the results,
             so you can look back at them.</li>
-          <li><b>Broker connections</b> — the session token your broker issues, encrypted at rest.</li>
-          <li><b>Provider keys</b> — any AI provider key you add, encrypted at rest.</li>
-          <li><b>Billing</b> — plan, credits, and payment references. Paystack holds the card
+          <li><b>Broker connections</b>  the session token your broker issues, encrypted at rest.</li>
+          <li><b>Provider keys</b>  any AI provider key you add, encrypted at rest.</li>
+          <li><b>Billing</b>  plan, credits, and payment references. Paystack holds the card
             details; we never see them.</li>
-          <li><b>Technical</b> — logs and errors needed to keep the service running and secure.</li>
+          <li><b>Technical</b>  logs and errors needed to keep the service running and secure.</li>
         </ul>
       </S>
 
       <S id="p-never" n="3" title="What we deliberately never keep">
-        <ul className="home-ticks">
+        <ul className="legal-list">
           <li><b>Your broker password.</b> It is used once, in the moment, to obtain a session
             token, and then discarded. It is never written to the database. This is why
             reconnecting asks for it again rather than remembering it.</li>
           <li><b>Your card details.</b> They go to Paystack and never reach us.</li>
           <li><b>Your API keys, in readable form.</b> Keys the app issues are stored hashed. Not
-            even we can recover one — which is why a lost key is replaced rather than looked up.</li>
+            even we can recover one which is why a lost key is replaced rather than looked up.</li>
         </ul>
       </S>
 
@@ -291,14 +291,14 @@ export function Privacy() {
         <p>
           Only what is needed to make the thing work, and only for that purpose:
         </p>
-        <ul className="home-ticks">
-          <li><b>AI providers</b> — the content of a request goes to whichever model answers it.
+        <ul className="legal-list">
+          <li><b>AI providers</b>  the content of a request goes to whichever model answers it.
             On the hosted service that is a provider we chose; on a Community instance it is one
             you chose, and your key.</li>
-          <li><b>Your broker</b> — orders, and account queries you asked for.</li>
-          <li><b>Data providers</b> — market data, calendars, sentiment, news.</li>
-          <li><b>Paystack</b> — payments.</li>
-          <li><b>Our hosting provider</b> — the servers this runs on.</li>
+          <li><b>Your broker</b>  orders, and account queries you asked for.</li>
+          <li><b>Data providers</b>  market data, calendars, sentiment, news.</li>
+          <li><b>Paystack</b>  payments.</li>
+          <li><b>Our hosting provider</b>  the servers this runs on.</li>
         </ul>
         <p>
           Each has its own privacy policy and its own terms. We may also disclose data where the
@@ -313,8 +313,8 @@ export function Privacy() {
         </p>
         <p>
           We keep account data while your account is open. Delete your account and we delete or
-          anonymise your personal data, except where we must keep records — payment records, for
-          example — for as long as the law says.
+          anonymise your personal data, except where we must keep records payment records, for
+          example for as long as the law says.
         </p>
       </S>
 
@@ -325,8 +325,7 @@ export function Privacy() {
           to <a href={`mailto:${CONTACT}`}>{CONTACT}</a> and we will answer within a month.
         </p>
         <p>
-          If you think we have handled your data badly, tell us first — we would rather fix it —
-          but you may also complain to your data protection authority, or in South Africa to the
+          If you think we have handled your data badly, tell us first, because we would rather fix it, but you may also complain to your data protection authority, or in South Africa to the
           Information Regulator.
         </p>
       </S>
@@ -368,7 +367,7 @@ export default function Legal() {
   const isPrivacy = pathname.startsWith('/privacy')
 
   useEffect(() => {
-    document.title = `${isPrivacy ? 'Privacy Policy' : 'Terms of Use'} — ${name}`
+    document.title = `${isPrivacy ? 'Privacy Policy' : 'Terms of Use'}  ${name}`
   }, [isPrivacy, name])
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
@@ -420,7 +419,7 @@ export function Licence() {
   const [err, setErr] = useState('')
 
   useEffect(() => {
-    document.title = `Software Licence — ${name}`
+    document.title = `Software Licence  ${name}`
     window.scrollTo(0, 0)
   }, [name])
 
@@ -451,7 +450,7 @@ export function Licence() {
           <h1 className="ins-title">Software Licence</h1>
           <p className="ins-lede">
             The terms the software itself is under. This is the file shipped in the repository,
-            served as it is — a licence that exists in two places eventually says two things.
+            served as it is a licence that exists in two places eventually says two things.
           </p>
           <p className="legal-updated">
             Self-hosting and modification are permitted. Reselling it as a competing hosted
@@ -461,8 +460,8 @@ export function Licence() {
           {/* Rendered, not printed. LICENSE.md is markdown, and showing its
               source asks somebody to read ## and ** as punctuation while
               agreeing to what it says. `marked` is already how the app renders
-              the assistant's replies. The source is ours — it is the file we
-              ship — so there is nothing here to sanitise against. */}
+              the assistant's replies. The source is ours it is the file we
+              ship so there is nothing here to sanitise against. */}
           {text
             ? <div className="legal-licence"
                    dangerouslySetInnerHTML={{ __html: marked.parse(text) }} />

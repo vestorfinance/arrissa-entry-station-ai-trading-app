@@ -100,7 +100,7 @@ condition, and the licensor will not be liable to you for any damages arising
 out of these terms or the use or nature of the software, under any kind of
 legal claim.*
 
-**For the avoidance of doubt, this includes trading losses of every kind** —
+**For the avoidance of doubt, this includes trading losses of every kind** 
 orders executed, orders not executed, orders executed late, slippage, incorrect
 or delayed data, an automation behaving other than as expected, an output of a
 language model acted upon, a broker or network failure, or the software being
