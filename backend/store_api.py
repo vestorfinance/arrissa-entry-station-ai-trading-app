@@ -48,7 +48,10 @@ def store_catalog(key: str = Query("", description="Licence key, if the caller h
     # had no equivalent, so it could sit a year behind in silence.
     import modules as module_system
     return {"store": "EntryStation", **store.terms(),
-            "core": {"version": module_system.CORE_VERSION},
+            # The release NAME plus the build stamp. The name is for people;
+            # the stamp is what an instance compares, because a name is a thing
+            # somebody has to remember to change and a stamp is not.
+            "core": {**_core_build(), "version": module_system.CORE_VERSION},
             "bundles": store.bundles(),
             "licence": {"valid": bool(lic), "email": lic["email"] if lic else None,
                         "modules": (lic["modules"] if lic else [])} if key else None,
@@ -354,6 +357,14 @@ import store as _store
 
 USD_ZAR = float(os.getenv("ENTRYSTATION_USD_ZAR", "18.5"))
 SITE = os.getenv("ENTRYSTATION_SITE", "https://entrystation.com")
+
+
+def _core_build() -> dict:
+    try:
+        import build_info
+        return build_info.describe()
+    except Exception:
+        return {}
 
 
 def _purchases_table():

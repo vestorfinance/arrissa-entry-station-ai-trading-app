@@ -268,7 +268,8 @@ def remote(force=False) -> tuple[list, str | None]:
         _cache["terms"] = {"currency": body.get("currency", "USD"),
                            "billing": body.get("billing", "yearly"),
                            "bundles": body.get("bundles", []),
-                           "store_core": (body.get("core") or {}).get("version")}
+                           "store_core": (body.get("core") or {}).get("version"),
+                           "store_build": body.get("core") or {}}
         _cache.update(at=now, data=mods, error=None)
         return mods, None
     except Exception as e:
@@ -348,11 +349,28 @@ def view() -> dict:
     # catalogue and core had no equivalent, so an instance could sit a year
     # behind without anything ever saying so.
     import modules as module_system
+    import build_info
     store_core = _cache["terms"].get("store_core")
-    core_update = bool(store_core and versions.newer(store_core, module_system.CORE_VERSION))
+    theirs = _cache["terms"].get("store_build") or {}
+    mine = build_info.describe()
+
+    # The BUILD decides it, not the version name. CORE_VERSION is a constant a
+    # person raises by hand, and twice it shipped unraised — so every instance
+    # compared 1.2.0 against 1.2.0 and correctly concluded there was nothing to
+    # do while sixteen commits sat published. The stamp is written by the act of
+    # publishing, so it cannot be forgotten and cannot disagree with the code.
+    #
+    # The version name is still consulted, for a store or an instance old enough
+    # to carry no stamp: an update must not go unreported just because one end
+    # of the conversation predates this.
+    core_update = build_info.newer_than(mine, theirs)
+    if not core_update and store_core:
+        core_update = bool(versions.newer(store_core, module_system.CORE_VERSION))
+
     return {"store_url": STORE_URL, "has_licence": bool(licence_key()),
             **_cache["terms"], "error": error, "modules": out,
-            "core": {"version": module_system.CORE_VERSION, "latest": store_core,
+            "core": {**mine, "latest": store_core,
+                     "latest_build": theirs.get("date"),
                      "update_available": core_update}}
 
 

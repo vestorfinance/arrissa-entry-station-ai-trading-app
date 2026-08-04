@@ -79,7 +79,30 @@ b = p.chromium.launch(args=['--no-sandbox']); \
 print('chromium ok:', b.version); \
 b.close(); p.stop()"
 
+# What this build IS, stamped from the commit it was built from.
+#
+# The version used to be a constant somebody had to remember to raise, and twice
+# it shipped unraised — so every instance compared the same number against
+# itself and correctly concluded there was nothing to do. This cannot be
+# forgotten: compose passes the commit in, and `git pull && compose up --build`
+# therefore changes it by construction.
+#
+# Empty when built outside a checkout. build_info treats that as "cannot tell"
+# rather than "current", because an instance that cannot prove what it runs
+# should not claim to be up to date.
+ARG BUILD_SHA=""
+ARG BUILD_DATE=""
+ARG BUILD_REF=""
+
 COPY backend/   backend/
+# The repo already carries backend/build.json, written when the code was
+# published — so `git pull` brings a new stamp with the code it describes and
+# nothing has to be remembered. These args only OVERRIDE it, for somebody
+# building from a working tree that has moved past the last publish.
+RUN if [ -n "$BUILD_SHA$BUILD_DATE" ]; then \
+      printf '{"sha":"%s","date":"%s","ref":"%s"}\n' \
+        "$BUILD_SHA" "$BUILD_DATE" "$BUILD_REF" > backend/build.json; \
+    fi; cat backend/build.json 2>/dev/null || echo '(no build stamp)'
 COPY templates/ templates/
 COPY modules/   modules/
 COPY --from=web /build/dist frontend/dist
