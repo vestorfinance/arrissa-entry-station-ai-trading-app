@@ -340,6 +340,51 @@ export default function Home() {
         </div>
       </section>
 
+      {/* MCP. Placed before the modules rather than inside them, because it is
+          not one more data source: it is the whole product handed to software
+          the reader already uses, which is a different kind of claim and the
+          one most likely to make a technical person read further. */}
+      <section className="home-band">
+        <div className="home-wrap">
+          <span className="home-eyebrow home-eyebrow--center">MCP server</span>
+          <h2 className="home-h2 home-h2--center">
+            Drive it from the AI client you already use.
+          </h2>
+          <p className="home-lead home-lead--center">
+            Everything here is exposed over the Model Context Protocol: your accounts, live prices,
+            positions and orders, every data module you own, and the agent builder. Claude Desktop,
+            Claude Code and Cursor connect to your instance and use the same tools the assistant
+            here uses. Not a reduced copy of them.
+          </p>
+
+          <div className="home-mcp">
+            <div className="home-mcp-code">
+              <div className="home-mcp-code-head">claude_desktop_config.json</div>
+              <pre className="home-code">{`{
+  "mcpServers": {
+    "entrystation": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote",
+               "https://your-instance.com/api/v1/mcp",
+               "--header", "Authorization: Bearer ak_live_..."]
+    }
+  }
+}`}</pre>
+            </div>
+            <ul className="home-ticks home-mcp-list">
+              <li><Check size={15} /> 33 tools, from <code>positions</code> and <code>price</code> to
+                <code> place_order</code> and <code>risk_plan</code></li>
+              <li><Check size={15} /> A module you have not bought contributes nothing; one you
+                install tomorrow appears with no configuration</li>
+              <li><Check size={15} /> Read-only mode offers only the tools that read, so nothing
+                can place or close a trade</li>
+              <li><Check size={15} /> Authenticated with the API key you already have, and every
+                call runs as you</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section className="home-band">
         <div className="home-wrap">
           <span className="home-eyebrow home-eyebrow--center">Truth Social API</span>

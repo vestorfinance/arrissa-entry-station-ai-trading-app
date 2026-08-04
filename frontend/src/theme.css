@@ -6877,3 +6877,27 @@ a.dv-card-title:hover { text-decoration: underline; }
   font-size: 11px; font-weight: 600; cursor: pointer;
 }
 .guide-code-copy:hover { color: var(--text-primary); }
+
+/* MCP: the configuration beside what it buys you. The config is the proof —
+   a technical reader believes a snippet they could paste before they believe a
+   paragraph about integration. */
+.home-mcp {
+  margin-top: 34px; display: grid; grid-template-columns: 1.05fr 1fr;
+  gap: 28px; align-items: start;
+}
+.home-mcp-code { border-radius: var(--radius-card); background: var(--home-raise); overflow: hidden; }
+.home-mcp-code-head {
+  padding: 11px 16px; font-size: 12px; color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+/* Inside the framed block it keeps the type but drops the frame: two rounded
+   backgrounds nested inside each other read as a mistake. */
+.home-mcp-code .home-code {
+  margin: 0; border-radius: 0; background: transparent; font-size: 12.5px;
+}
+.home-mcp-list { margin-top: 0; }
+.home-mcp-list code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  color: var(--text-primary);
+}
+@media (max-width: 860px) { .home-mcp { grid-template-columns: 1fr; gap: 20px; } }
