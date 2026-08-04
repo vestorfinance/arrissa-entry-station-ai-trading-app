@@ -268,7 +268,16 @@ export default function NodeSettings({ node, variables = [], models = [], agents
 
   // What this node's API accepts. Core nodes spell it apiDoc; module nodes send
   // api_doc through the palette. Same thing, two naming conventions meeting.
-  const apiDoc = node.data.apiDoc || node.data.api_doc || []
+  //
+  // Read from the PALETTE first, and from the saved node only as a fallback.
+  // The documentation belongs to the installed module, not to a flow somebody
+  // drew last month — a node saved before its module published a parameter list
+  // carries no list, and copying that stale blank into the drawer is how this
+  // window came up empty for a node whose module documents nine fields. There
+  // is an effect that patches saved nodes when the palette loads; this does not
+  // depend on it having run.
+  const live = paletteItem(node.data.kind)
+  const apiDoc = live?.apiDoc || live?.api_doc || node.data.apiDoc || node.data.api_doc || []
 
   // Clicking a value writes `key=value` into the field, REPLACING that key if it
   // is already there — clicking `high` then `low` should change impact, not send
@@ -541,15 +550,15 @@ export default function NodeSettings({ node, variables = [], models = [], agents
           field above, and it should not push that field down the panel.
           The list comes from each node's own handler, so it cannot promise a key
           the node does not accept. */}
-      {(node.data.apiKeys || node.data.api_keys) && (
+      {(live?.apiKeys || live?.api_keys || node.data.apiKeys || node.data.api_keys) && (
         <div className="node-api-help">
           <span className="node-api-help-title">Parameters this node accepts</span>
-          <p className="node-api-help-keys">{node.data.apiKeys || node.data.api_keys}</p>
-          {(node.data.apiExample || node.data.api_example) && (
+          <p className="node-api-help-keys">{live?.apiKeys || live?.api_keys || node.data.apiKeys || node.data.api_keys}</p>
+          {(live?.apiExample || live?.api_example || node.data.apiExample || node.data.api_example) && (
             <button type="button" className="node-api-help-ex"
                     title="Use this example"
-                    onClick={() => set('api_params', node.data.apiExample || node.data.api_example)}>
-              <code>{node.data.apiExample || node.data.api_example}</code>
+                    onClick={() => set('api_params', live?.apiExample || live?.api_example || node.data.apiExample || node.data.api_example)}>
+              <code>{live?.apiExample || live?.api_example || node.data.apiExample || node.data.api_example}</code>
             </button>
           )}
         </div>
