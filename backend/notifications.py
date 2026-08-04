@@ -229,7 +229,20 @@ def _module_faults() -> list:
 
 
 def _mail_gap() -> list:
-    """No SMTP. Nothing that leaves the app by email leaves it at all."""
+    """No SMTP, on an edition that actually sends email.
+
+    Community never does. Sign-up returns the verification code on screen when
+    there is no mail server, because the one person signing up is the person
+    standing there; licence receipts come from the store, not from the box that
+    bought something. So a self-hosted install has nothing to send and nobody to
+    send it to, and telling its owner to configure a mail server is inventing a
+    chore to complete a checklist."""
+    try:
+        import edition
+        if edition.is_community():
+            return []
+    except Exception:
+        pass
     try:
         import mailer
         mailer._smtp()               # noqa: SLF001 — raises when unconfigured
