@@ -13,6 +13,12 @@ export default function Buy() {
   // arrive, they can type it — their Settings page shows it.
   const [instance, setInstance] = useState(params.get('instance') || '')
   const [email, setEmail] = useState(params.get('email') || '')
+  // Where to send them when the payment clears. It travels from their own
+  // Module Store and has to be handed on to the checkout — this page was
+  // dropping it, which is the whole reason a buyer ended up looking at a
+  // receipt instead of their own modules page. It is never shown or typed:
+  // it is the address of the machine that sent them, not an answer they have.
+  const returnUrl = params.get('return_url') || ''
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -20,6 +26,7 @@ export default function Buy() {
     setBusy(true); setErr('')
     try {
       const q = new URLSearchParams({ product: id, instance, email })
+      if (returnUrl) q.set('return_url', returnUrl)
       const r = await fetch(`/api/store/checkout?${q}`)
       const d = await r.json()
       if (!r.ok) throw new Error(d.detail || 'Could not start the purchase.')
