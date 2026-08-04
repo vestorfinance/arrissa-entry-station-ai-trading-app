@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactFlow, {
-  Background, BackgroundVariant, Controls, MiniMap, MarkerType,
+  Background, BackgroundVariant, Controls, MarkerType,
   addEdge, updateEdge, useNodesState, useEdgesState,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -538,6 +538,12 @@ export default function AnalysisAgentFlow() {
                     <span className="palette-item-sub">{sub}</span>
                   </span>
                 </span>
+                {/* The argument pills and the add mark are hidden on a phone
+                    by CSS rather than dropped here, because they are useful on
+                    a desktop and the only problem with them is height: twenty
+                    cards each carrying a row of pills turns the list into a
+                    scroll nobody reaches the end of. Icon, name and what it
+                    does are what a card has to say. */}
                 <span className="palette-item-foot">
                   <span className="palette-item-args">
                     {args.map((a) => (
@@ -573,7 +579,6 @@ export default function AnalysisAgentFlow() {
             >
               <Background variant={BackgroundVariant.Dots} gap={22} size={1.5} color="#2d2d2d" />
               <Controls showInteractive={false} />
-              <MiniMap pannable zoomable maskColor="rgba(0,0,0,0.6)" nodeColor="#4f46e5" />
             </ReactFlow>
 
             {nodes.length === 0 && (

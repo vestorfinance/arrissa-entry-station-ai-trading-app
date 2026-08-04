@@ -6789,3 +6789,14 @@ a.dv-card-title:hover { text-decoration: underline; }
   font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre-wrap; overflow-wrap: break-word;
 }
+
+/* On a phone the node list has to be short enough to reach the end of.
+   Twenty cards each carrying a row of argument pills is a scroll nobody
+   finishes, and the pills are reference for building on a desktop rather than
+   something you read while picking. Icon, name, and what it does: that is what
+   a card has to say to be chosen from. */
+@media (max-width: 860px) {
+  .palette-item-foot { display: none; }
+  .palette-item { padding: 10px; gap: 9px; }
+  .palette-item-sub { -webkit-line-clamp: 2; }
+}
