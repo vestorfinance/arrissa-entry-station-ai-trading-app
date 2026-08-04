@@ -60,7 +60,9 @@ export default function UpdateRibbon() {
       try { await api.updateModule(m.id); ok += 1 } catch { /* reported below */ }
     }
     setBusy(false)
-    setDone(`${ok} of ${mods.length} updated. Reload to see them.`)
+    // Not "reload". Modules load at import time, so a browser refresh shows
+    // exactly the same code — it is the app that has to come back, not the page.
+    setDone(`${ok} of ${mods.length} updated. They apply when the app restarts.`)
   }
 
   const cmd = 'cd ~/entrystation && git pull && docker compose up -d --build'
