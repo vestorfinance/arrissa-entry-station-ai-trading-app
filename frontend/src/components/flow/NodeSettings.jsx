@@ -132,6 +132,7 @@ const NODE_HELP = {
   respond: 'Composes the final answer back to the calling agent from everything gathered. Terminal node.',
   versatile: 'Freely consults any analysis source to satisfy your description, then answers.',
   'call-agent': 'Runs another of your agents and waits for it, then feeds its response into this flow. Pick the agent to call; the optional text is an instruction to send it. With chain of thought on, the reasoning so far is passed in too, and the called agent’s response flows to the next node.',
+  'trade-actions': 'The node that DOES things. It has the instrument, order and position tools and calls them in a loop \u2014 resolve the symbol, read what is open, size it properly, place it, confirm \u2014 deciding each step from what the last one returned, up to 10 rounds. Write the instruction in plain words. It stops as soon as the job is done, and says so plainly if it runs out of rounds rather than reporting success. Sizing always goes through the risk engine rather than being worked out by hand. State a fixed call in API parameters instead and no model is used at all.',
   'trigger-interval': 'Entry point on a clock: the agent runs itself, without waiting to be called. Set a plain interval, or a cron expression for something calendar-shaped like weekday mornings. Only ACTIVE agents run — a draft or paused one keeps its schedule but stays put — and every run costs credits, like any other.',
 }
 

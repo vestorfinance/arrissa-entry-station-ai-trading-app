@@ -139,6 +139,39 @@ export const PALETTE = [
     tone: 'market',
   },
   {
+    // The node that ACTS. Every other data node makes one call and hands back
+    // what it got, which is right for reading and wrong for doing: "close the
+    // losers on gold" is four calls, and the third cannot be written until the
+    // second has answered.
+    key: 'trade-actions',
+    apiDoc: [
+      { key: 'tool', values: ['positions', 'orders', 'close', 'place_order', 'break_even'],
+        note: 'one fixed call, no model used' },
+      { key: 'symbol', values: ['XAUUSD', 'EURUSD'] },
+      { key: 'side', values: ['buy', 'sell'] },
+      { key: 'volume', values: ['0.01', '0.1', '1'] },
+      { key: 'sl_points', values: ['200', '500'] },
+      { key: 'tp_points', values: ['400', '1000'] },
+      { key: 'only', values: ['profit', 'loss'], note: 'for close: just winners or losers' },
+      { key: 'position_id', values: ['123456789'] },
+      { key: 'account', values: ['1234567'], note: 'defaults to the active one' },
+    ],
+    apiKeys: 'tool (required) plus that tool\u2019s own arguments \u2014 leave it empty and the '
+           + 'node works the instruction out for itself',
+    apiExample: 'tool=close&symbol=XAUUSD&only=loss',
+    type: 'tradeActions',
+    Icon: Zap,
+    label: 'Trading Actions',
+    sub: 'Acts on the account until the job is done',
+    args: [{ name: 'text', type: 'text', required: true,
+             placeholder: 'Close the losing positions on gold, then move the winners to break even.' },
+      API_PARAMS_ARG,
+    ],
+    configurable: true,
+    model: true,
+    tone: 'risk',
+  },
+  {
     key: 'risk-management',
     apiDoc: [
       { key: 'symbol', values: ['XAUUSD', 'EURUSD'], note: 'required' },

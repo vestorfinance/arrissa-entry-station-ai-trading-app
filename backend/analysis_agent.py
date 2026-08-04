@@ -1757,6 +1757,8 @@ _PALETTE = {
     "versatile":          {"type": "versatile",         "args": ["name", "description", "text"]},
     "call-agent":         {"type": "callAgent",         "args": ["agent_id", "agent_name", "text"]},
     "octo-agent":         {"type": "octoAgent",         "args": ["text"]},
+    # Acts, and keeps acting until the instruction is carried out.
+    "trade-actions":      {"type": "tradeActions",      "args": ["text", "api_params"]},
 }
 
 def _palette() -> dict:
@@ -1797,6 +1799,15 @@ _BUILD_CATALOG = (
     "genuinely has to be worked out from the request.\n"
     "trigger-agent-call — the entry point; values.requirement describes what the agent expects "
     "(e.g. 'an instrument to analyse'). Exactly ONE, always first.\n"
+    "trade-actions — the node that DOES things on the account, and keeps going until the "
+    "instruction is carried out rather than until one call returns. It has the instrument, order "
+    "and position tools and calls them in a loop, up to 10 rounds, deciding each step from what "
+    "the last one returned: resolve the symbol, read what is open, size with risk_plan, place it, "
+    "confirm. values.text is the instruction in plain words ('close the losers on gold', 'open a "
+    "0.1 lot buy on EURUSD with a 20 pip stop', 'move every winner to break even'). "
+    "values.api_params may instead state ONE fixed call as tool=<name>&arg=value, which skips the "
+    "model entirely. Use this whenever the request is to DO something to the account; use "
+    "market-data or the read-only nodes when it is only to look.\n"
     "trigger-data — an entry point that runs the agent when something HAPPENS rather than on a "
     "clock: a new Truth Social post, a new market news story, news naming particular instruments, "
     "a set time BEFORE an economic release lands, or a set time AFTER one prints. values.conditions "
@@ -2024,3 +2035,143 @@ def suggest_cron(brief, ctx):
     return {"cron": expr,
             "explanation": (out.get("explanation") or "").strip() or agent_schedule.describe_cron(expr),
             "reads_as": agent_schedule.describe_cron(expr), **usage}
+
+
+# ── Trading Actions ───────────────────────────────────────────────────────────
+#
+# The node that DOES things, and keeps doing them until the instruction is
+# satisfied rather than until one call returns.
+#
+# Every other data node makes one call and hands back what it got. That is right
+# for reading and wrong for acting, because acting has steps that depend on each
+# other: find the symbol, check what is already open, work out the size, place
+# it, confirm it went on. "Close the losers on gold" is four calls and the third
+# cannot be written until the second has answered.
+#
+# So this one loops. Each round it is shown what it has done and what came back,
+# and it either calls another tool or says it is finished. Ten rounds is the
+# ceiling, not the plan: the common case is two or three, and the ceiling exists
+# because a model that has misunderstood will otherwise try for ever.
+#
+# The tools are the chat agent's own, not a second implementation. There is one
+# place in this codebase that knows how to place an order safely, and a node
+# that reimplemented it would be a second place to fix every bug in it.
+TRADE_ROUNDS = 10
+
+# Reading, sizing, acting, and cleaning up after. Deliberately not every tool the
+# assistant has: an analysis flow has no business editing other agents or
+# writing memories, and a tool that is not offered cannot be called by mistake.
+TRADE_TOOLS = [
+    # instruments
+    "list_accounts", "search_symbols", "list_symbols", "symbol_info", "price",
+    "account_stats",
+    # orders and positions, as they stand
+    "positions", "orders", "history", "closed_trades",
+    # sizing before acting
+    "calc_sltp", "risk_plan",
+    # acting
+    "place_order", "pending_order",
+    # managing what is open
+    "close", "break_even", "lock_profit", "modify_position", "delete_sltp",
+    "cancel_orders",
+]
+
+TRADE_SYSTEM = (
+    "You operate a trading account inside an automated flow. You are given an instruction and a "
+    "set of tools, and you work until the instruction is CARRIED OUT — not until you have "
+    "answered a question about it.\n\n"
+    "Each round: either call ONE tool, or declare you are done.\n"
+    "Reply with JSON only.\n"
+    '  {\"tool\": \"<name>\", \"args\": {…}, \"why\": \"<one short line>\"}\n'
+    '  {\"done\": true, \"summary\": \"<what you actually did, in plain words>\"}\n\n'
+    "How to work:\n"
+    "- LOOK BEFORE YOU ACT. Check positions, the symbol and the account before opening or "
+    "closing anything. A tool that reports is cheap; an order placed on a guess is not.\n"
+    "- NEVER size a position or place a stop by hand. risk_plan and calc_sltp exist for that "
+    "and they know the contract size, the point value and the account currency.\n"
+    "- Resolve the instrument with search_symbols or list_symbols if the instruction names it "
+    "loosely ('gold', 'the indices'). Do not guess a broker's spelling.\n"
+    "- One tool per round. If a call fails, read the error and fix the ARGUMENTS rather than "
+    "calling the same thing again unchanged.\n"
+    "- Do only what was asked. If the instruction is to close losers, do not also open "
+    "anything. If something needed is missing or ambiguous, stop and say so in the summary "
+    "rather than choosing for the user.\n"
+    "- Say you are done as soon as it is done. Rounds left are not a budget to spend."
+)
+
+
+def _n_trade_actions(text, context, ctx, nv):
+    """Carry out a trading instruction, in as many steps as it takes."""
+    import agent as chat_agent
+
+    uid = (ctx or {}).get("user_id")
+    if not uid:
+        return {"error": "this flow has no user to trade as"}
+
+    allowed = {t["name"]: t for t in chat_agent.TOOLS if t["name"] in TRADE_TOOLS}
+
+    # Stated wins, and skips the model entirely: `tool=positions&symbol=XAUUSD`
+    # is a fixed call, the same as any other node's api_params, and costs
+    # nothing. The loop is for instructions, not for the calls you already know.
+    stated = _explicit_params(nv, (context or {}).get("vars"))
+    if stated and stated.get("tool"):
+        name = str(stated.pop("tool"))
+        if name not in allowed:
+            return {"error": f"{name} is not a trading tool this node offers",
+                    "available": sorted(allowed)}
+        try:
+            return {"did": [{"tool": name, "args": stated}],
+                    "result": chat_agent.execute_tool(name, stated, user_id=uid, ctx=ctx)}
+        except Exception as e:
+            return {"error": str(e), "tool": name}
+
+    listing = "\n".join(f'- {t["name"]}: {t["description"][:220]}' for t in allowed.values())
+    did, results = [], []
+
+    for rnd in range(TRADE_ROUNDS):
+        left = TRADE_ROUNDS - rnd - 1
+        user = (f"The user's request: {context.get('request') or '(none)'}\n\n"
+                f"YOUR INSTRUCTION: {text or 'Carry out the request.'}\n\n"
+                f"TOOLS:\n{listing}\n\n"
+                f"Flow context: {_ctx_json(context)}\n\n"
+                + (f"WHAT YOU HAVE DONE SO FAR:\n{json.dumps(results, default=str)[:_CTX_CHARS]}\n\n"
+                   if results else "Nothing done yet.\n\n")
+                + f"You have {left} round(s) after this one.")
+
+        plan = _llm(ctx, nv, TRADE_SYSTEM, user, want_json=True)
+        if not isinstance(plan, dict):
+            return {"did": did, "results": results,
+                    "error": "could not decide what to do"
+                             + (f" ({ctx.get('_llm_error')})" if ctx.get("_llm_error") else "")}
+
+        if plan.get("done") or not plan.get("tool"):
+            return {"did": did, "results": results, "rounds": rnd,
+                    "summary": plan.get("summary") or "Nothing further to do."}
+
+        name = str(plan.get("tool"))
+        args = plan.get("args") if isinstance(plan.get("args"), dict) else {}
+        if name not in allowed:
+            # Told, not silently dropped: an unknown name is usually a near-miss
+            # the next round can correct.
+            results.append({"tool": name, "error": f"no such tool. Available: {sorted(allowed)}"})
+            continue
+
+        try:
+            out = chat_agent.execute_tool(name, args, user_id=uid, ctx=ctx)
+        except Exception as e:
+            out = {"error": str(e)}
+        did.append({"tool": name, "args": args, "why": plan.get("why")})
+        results.append({"tool": name, "args": args, "result": out})
+
+    # Out of rounds. Say so plainly: a flow that reports success here would be
+    # claiming an instruction was finished when it was only abandoned.
+    return {"did": did, "results": results, "rounds": TRADE_ROUNDS,
+            "incomplete": True,
+            "summary": f"Stopped after {TRADE_ROUNDS} rounds without finishing. "
+                       f"The instruction may be too broad, or a call kept failing."}
+
+
+# Registered here rather than in _DATA above, because the handler is defined
+# below that table and Python reads a module top to bottom.
+_DATA["trade-actions"] = _n_trade_actions
+_DATA["tradeActions"] = _n_trade_actions
