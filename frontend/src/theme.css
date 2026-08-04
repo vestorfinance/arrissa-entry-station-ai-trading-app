@@ -6672,3 +6672,10 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .ins-callout b { display: block; font-size: 14px; margin-bottom: 6px; }
 .ins-callout p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--text-secondary); }
+
+/* Whether this server already has sites on it. It decides four of the steps, so
+   it is asked once, up front, rather than hedged into each of them. */
+.ins-shared { display: flex; gap: 11px; margin-top: 16px; cursor: pointer; }
+.ins-shared input { width: 16px; height: 16px; margin-top: 2px; flex: none; accent-color: var(--text-primary); cursor: pointer; }
+.ins-shared span { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); }
+.ins-shared b { display: block; font-size: 13.5px; color: var(--text-primary); }

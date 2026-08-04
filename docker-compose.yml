@@ -66,7 +66,18 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on: [app]
-    ports: ["80:80", "443:443"]
+    # Where this instance answers. 80 and 443 when it owns the server, which is
+    # the ordinary case and the default.
+    #
+    # A server that already runs other sites cannot give those away, so both are
+    # settable: HTTP_PORT=127.0.0.1:8477 puts this behind whatever proxy is
+    # already there, reachable only from the machine itself. The host binding is
+    # part of the value rather than a separate switch, because "which interface"
+    # and "which port" are one decision — exposing 8477 to the internet while
+    # believing it was local is the mistake that arrangement invites.
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
     volumes:

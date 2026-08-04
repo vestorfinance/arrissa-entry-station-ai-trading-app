@@ -285,6 +285,10 @@ export default function Install() {
   const [host, setHost] = useState('')
   const [user, setUser] = useState('root')
   const [domain, setDomain] = useState('')
+  // Does this server already serve something else? It decides whether the app
+  // takes 80 and 443 or gets a port of its own behind an existing proxy, and
+  // that changes four of the steps below.
+  const [shared, setShared] = useState(false)
 
   useEffect(() => { api.appConfig().then(setCfg).catch(() => {}) }, [])
   const name = cfg?.app_name || 'EntryStation'
@@ -297,6 +301,9 @@ export default function Install() {
   const U = user.trim() || 'root'
   const D = domain.trim() || 'yourdomain.com'
 
+  // Two shapes of server, and they are not a detail. A box that already serves
+  // other sites cannot hand over 80 and 443, and a guide that assumes it can
+  // fails at the last step with an error that only mentions a port number.
   const VPS = useMemo(() => [
     {
       id: 'v-vps',
@@ -355,9 +362,12 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw --force enable
 sudo ufw status`,
-      warn: 'Nothing else may already be using 80 or 443. If this server runs Apache, nginx or a '
-          + 'Caddy of its own, stop it first \u2014 `sudo systemctl disable --now apache2 nginx` '
-          + '\u2014 or the app cannot start and the error will only say the port is in use.',
+      warn: shared
+        ? 'Leave whatever is already serving 80 and 443 exactly as it is. The app will take a '
+          + 'port of its own instead, and only answer on it locally.'
+        : 'Nothing else may already be using 80 or 443. If this server runs Apache, nginx or a '
+          + 'Caddy of its own, either stop it \u2014 `sudo systemctl disable --now apache2 '
+          + 'nginx` \u2014 or go back up and say the server is shared.',
     },
     {
       id: 'v-code',
@@ -374,7 +384,9 @@ sudo ufw status`,
       code: `cp .env.docker.example .env
 
 cat >> .env <<EOF
-DOMAIN=${D}
+${shared ? `DOMAIN=:80
+HTTP_PORT=127.0.0.1:8477
+HTTPS_PORT=127.0.0.1:8443` : `DOMAIN=${D}`}
 DOCKER_PLATFORM=
 FERNET_KEY=$(python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
@@ -387,6 +399,38 @@ cat .env`,
       warn: 'Copy .env somewhere off the server. Losing FERNET_KEY makes every stored broker '
           + 'session and API key permanently unreadable.',
     },
+    ...(shared ? [{
+      id: 'v-proxy',
+      title: 'Install Caddy on the server',
+      body: 'This server already answers on 80 and 443 for something else, so EntryStation cannot '
+          + 'have them. Instead it runs on a port of its own and Caddy — on the machine, not in '
+          + 'the stack — sends your domain to it. Skip this if Caddy, nginx or Apache is already '
+          + 'installed; you only need the site block in the next step.',
+      code: `sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \\
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \\
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install -y caddy`,
+    }, {
+      id: 'v-proxy-site',
+      title: 'Point your domain at the app',
+      body: `One block, appended to the Caddyfile so anything already in there is untouched. `
+          + `Caddy gets the certificate for ${D} and passes everything to the app on 8477.`,
+      code: `sudo tee -a /etc/caddy/Caddyfile <<'EOF'
+
+${D} {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8477
+}
+EOF
+
+sudo systemctl reload caddy`,
+      note: 'The blank line before the block matters: without it Caddy reads it as part of '
+          + 'whatever site block came before.',
+      warn: 'Use tee -a, not tee. Without the -a this replaces the whole Caddyfile and every '
+          + 'other site on the server stops answering.',
+    }] : []),
     {
       id: 'v-run',
       title: 'Start it',
@@ -404,7 +448,7 @@ cat .env`,
           + 'server afterwards.',
       code: `docker compose ps   # all three should say running`,
     },
-  ], [H, U, D])
+  ], [H, U, D, shared])
 
   const steps = where === 'windows' ? WINDOWS : where === 'macos' ? MACOS : VPS
   const after = steps.length
@@ -489,6 +533,15 @@ cat .env`,
                          onChange={(e) => setUser(e.target.value)} />
                 </label>
               </div>
+              <label className="ins-shared">
+                <input type="checkbox" checked={shared}
+                       onChange={(e) => setShared(e.target.checked)} />
+                <span>
+                  <b>This server already runs other websites</b>
+                  Then it cannot give up ports 80 and 443. The app takes port 8477 instead and
+                  sits behind Caddy on the server. Four of the steps below change.
+                </span>
+              </label>
             </div>
           ) : (
             <div className="home-panel ins-pre">
@@ -508,14 +561,30 @@ cat .env`,
 
           {where === 'vps' && (
             <div className="ins-callout">
-              <b>You do not install a web server or a reverse proxy.</b>
-              <p>
-                Caddy is part of the stack and starts with it. It answers on 80 and 443, gets a
-                free certificate for your domain by itself, renews it by itself, and passes
-                requests to the app. There is no Caddyfile to write, no certbot to run, and no
-                nginx to configure. The only thing it needs from you is a domain that already
-                points at the server, and those two ports free.
-              </p>
+              {shared ? (
+                <>
+                  <b>This server keeps the sites it already has.</b>
+                  <p>
+                    EntryStation will not touch ports 80 and 443. It runs on <code>8477</code>,
+                    bound to the machine itself so nothing reaches it from outside, and Caddy on
+                    the server sends your domain to it. 8477 rather than 3000 or 8080 on purpose:
+                    those are the first ports anything else on the box will have taken. If you
+                    already run nginx or Apache instead of Caddy, use it — the block in step 7 is
+                    a plain reverse proxy and every one of them can do it.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <b>You do not install a web server or a reverse proxy.</b>
+                  <p>
+                    Caddy is part of the stack and starts with it. It answers on 80 and 443, gets
+                    a free certificate for your domain by itself, renews it by itself, and passes
+                    requests to the app. There is no Caddyfile to write, no certbot to run and no
+                    nginx to configure. All it needs from you is a domain already pointing at the
+                    server, and those two ports free.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
