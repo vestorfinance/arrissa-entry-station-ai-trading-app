@@ -53,7 +53,7 @@ MANIFEST = "module.json"
 # nothing to notice.
 #
 # Raise it in the same commit as the change. See FINDINGS.md.
-CORE_VERSION = "1.3.0"
+CORE_VERSION = "1.4.2"
 
 # Loaded this boot: id -> {"manifest", "path", "status", "error"}
 _loaded: dict = {}
