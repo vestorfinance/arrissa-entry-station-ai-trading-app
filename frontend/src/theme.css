@@ -6661,6 +6661,16 @@ a.dv-card-title:hover { text-decoration: underline; }
    placeholders by hand is where installs are lost: it goes wrong at the step
    where nothing has started yet and nothing says why. */
 .ins-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+/* An input on a RAISED panel has to go the other way. --home-raise computes to
+   almost exactly --input-bg, so a field painted the normal way disappears into
+   the card it sits on — same fault as the purchase page, different pair of
+   tokens. Sinking it to the page colour reads as a well in both themes, where
+   raising it further would need a third shade nobody has defined. */
+.home-panel .input {
+  background: var(--bg-primary);
+  width: 100%;
+}
+.home-panel .input:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 720px) {
   .ins-where { grid-template-columns: 1fr; }
   .ins-form { grid-template-columns: 1fr; }
