@@ -62,6 +62,8 @@ $jwt    = python -c "import secrets; print(secrets.token_urlsafe(48))"
 $dbpass = python -c "import secrets; print(secrets.token_urlsafe(24))"
 
 Add-Content .env "DOMAIN=:80"
+Add-Content .env "HTTP_PORT=127.0.0.1:8477"
+Add-Content .env "HTTPS_PORT=127.0.0.1:8443"
 Add-Content .env "FERNET_KEY=$fernet"
 Add-Content .env "JWT_SECRET=$jwt"
 Add-Content .env "DB_PASSWORD=$dbpass"`,
@@ -82,9 +84,11 @@ Add-Content .env "DB_PASSWORD=$dbpass"`,
   {
     id: 'w-open',
     title: 'Open it',
-    body: 'Go to http://localhost. The first account you create is the owner, and registration '
-        + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
-        + 'machine afterwards.',
+    body: 'Go to http://localhost:8477. The first account you create is the owner, and '
+        + 'registration closes behind it: a Community instance is single-user, so nobody can sign '
+        + 'up on your machine afterwards.',
+    note: '8477 rather than the usual port 80, so it cannot collide with anything else you run. '
+        + 'It answers on this machine only.',
   },
 ]
 
@@ -123,6 +127,8 @@ const MACOS = [
 
 cat >> .env <<EOF
 DOMAIN=:80
+HTTP_PORT=127.0.0.1:8477
+HTTPS_PORT=127.0.0.1:8443
 DOCKER_PLATFORM=linux/arm64
 FERNET_KEY=$(python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
@@ -144,9 +150,11 @@ EOF`,
   {
     id: 'm-open',
     title: 'Open it',
-    body: 'Go to http://localhost. The first account you create is the owner, and registration '
-        + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
-        + 'machine afterwards.',
+    body: 'Go to http://localhost:8477. The first account you create is the owner, and '
+        + 'registration closes behind it: a Community instance is single-user, so nobody can sign '
+        + 'up on your machine afterwards.',
+    note: '8477 rather than the usual port 80, so it cannot collide with anything else you run. '
+        + 'It answers on this machine only.',
   },
 ]
 
@@ -579,7 +587,7 @@ curl -s -o /dev/null -w "site %{http_code}\n" https://${D}`,
                 <li><Check size={15} /> An API key from OpenAI, Anthropic, DeepSeek or any other
                   provider. You can add it after installing.</li>
                 <li><Check size={15} /> No domain, no certificate, no server. It runs at
-                  http://localhost on this machine.</li>
+                  http://localhost:8477 on this machine, on a port nothing else uses.</li>
               </ul>
             </div>
           )}
