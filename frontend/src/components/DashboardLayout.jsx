@@ -26,13 +26,17 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
   }, [rail])
 
   return (
+    <div className="app-outer">
+      {/* Outside the shell, not inside it. The topbar is absolutely positioned
+          at top:0 with a transparent background and a blur, so anything placed
+          before it as a sibling ends up UNDERNEATH it — which is what turned
+          the whole header accent-blue. A column wrapper gives the ribbon real
+          height that the sidebar and the body both start below. */}
+      <UpdateRibbon />
     <div className={'app-shell' + (navOpen ? ' app-shell--nav-open' : '') + (rail ? ' app-shell--rail' : '')}>
       <Sidebar onNavigate={() => setNavOpen(false)} collapsed={rail} onToggleCollapse={() => setRail((r) => !r)} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="app-body">
-        {/* Above the topbar, so it is the first thing on the page rather than a
-            notice competing with the page's own title. */}
-        <UpdateRibbon />
         <Topbar title={title} titleExtra={titleExtra} onMenu={() => setNavOpen((o) => !o)} />
         <main className={flush ? 'app-main app-main--flush' : 'app-main'}>{children}</main>
       </div>
@@ -42,6 +46,7 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
           from Settings > Connections when the user wants one — an app that
           refuses to open until you hand over a broker password is a worse first
           impression than an app with nothing connected yet. */}
+    </div>
     </div>
   )
 }

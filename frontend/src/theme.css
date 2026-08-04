@@ -473,9 +473,18 @@ a {
 .cc-name { flex: 1; }
 
 /* ── app shell ───────────────────────────────────────────── */
+/* A column: the update ribbon, then the app. The shell used to BE the full
+   height; it now fills whatever the ribbon leaves, which is nothing at all when
+   there is no ribbon. */
+.app-outer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .app-shell {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0;      /* or the shell refuses to shrink and the page scrolls */
 }
 .sidebar {
   width: var(--sidebar-w);
