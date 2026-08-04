@@ -92,7 +92,10 @@ export default function AnalysisAgentFlow() {
   const [palette, setPalette] = useState(fullPalette())
   useEffect(() => {
     const load = () => api.modulePalette()
-      .then((r) => { setModulePalette(r.nodes || []); setPalette(fullPalette()) })
+      .then((r) => {
+        setModulePalette(r.nodes || [])
+        setPalette(fullPalette())
+      })
       .catch(() => {})
     load()
     return moduleBus.onChanged(load)
@@ -106,6 +109,30 @@ export default function AnalysisAgentFlow() {
   // model bills, and on Community that is the person at the keyboard.
   const [operator, setOperator] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState([])
+
+  // Re-read every node from the palette whenever the palette changes.
+  //
+  // The agent and the module palette load in parallel and the agent usually
+  // wins, so `paletteItem('news')` found nothing at load time and the node kept
+  // whatever the saved flow held. Label and sub survived that because they are
+  // saved WITH the flow; anything that exists only in the palette — the args,
+  // the API documentation — silently did not, and a module node ended up with no
+  // documented parameters and no error to explain why.
+  //
+  // Its own effect rather than a line inside the fetch, so it also runs when a
+  // module is switched on or off, and so it cannot reference setNodes before the
+  // line that creates it.
+  useEffect(() => {
+    setNodes((ns) => ns.map((n) => {
+      const item = paletteItem(n.data?.kind)
+      return item
+        ? { ...n, data: { ...n.data, label: item.label, sub: item.sub, args: item.args,
+                          apiKeys: item.apiKeys || item.api_keys,
+                          apiExample: item.apiExample || item.api_example,
+                          apiDoc: item.apiDoc || item.api_doc } }
+        : n
+    }))
+  }, [palette, setNodes])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [cot, setCot] = useState(false)   // chain-of-thought: feed each node's read into the next
   const [selectedId, setSelectedId] = useState(null)
