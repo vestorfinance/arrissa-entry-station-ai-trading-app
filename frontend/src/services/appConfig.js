@@ -52,3 +52,18 @@ export function useAppName() {
   }, [])
   return n
 }
+
+// Where the legal documents live for THIS edition.
+//
+// On the hosted service they are pages of this app. On a Community install they
+// are not: those documents are the agreement between the operator and us, they
+// are maintained by us, and a self-hosted copy would be a stale fork of a legal
+// text the moment either is updated. So the links go to entrystation.com, and
+// the instance still serves its own copies for anyone who deep-links one.
+export const STORE_ORIGIN = 'https://entrystation.com'
+
+export function useLegalBase() {
+  const cfg = useAppConfig()
+  if (cfg === null) return ''                     // unknown yet: keep it internal
+  return cfg.edition === 'community' ? STORE_ORIGIN : ''
+}

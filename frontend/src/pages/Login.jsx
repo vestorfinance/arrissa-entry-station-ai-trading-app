@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation, Navigate, Link} from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useAppName, useAppConfig } from '../services/appConfig.js'
+import LegalLinks from '../components/LegalLinks.jsx'
 
 function GoogleIcon() {
   return (
@@ -128,15 +129,7 @@ export default function Login() {
           </form>
         )}
 
-        {/* They were words, not links. Somebody deciding whether to hand over
-            an email should be able to read what they are agreeing to. */}
-        <div className="auth-legal">
-          <Link to="/terms">Terms of use</Link>
-          <span className="auth-legal-sep">|</span>
-          <Link to="/privacy">Privacy policy</Link>
-          <span className="auth-legal-sep">|</span>
-          <Link to="/licence">Licence</Link>
-        </div>
+        <LegalLinks />
       </div>
     </div>
   )

@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, Navigate, Link} from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
+import LegalLinks from '../components/LegalLinks.jsx'
+import { useLegalBase } from '../services/appConfig.js'
 import { COUNTRIES, flagUrl, countryByDial } from '../data/countries.js'
 import { useAppName } from '../services/appConfig.js'
 
@@ -76,6 +78,10 @@ export default function Signup({ invite = '' }) {
   // The one thing on this page that has to be a deliberate act, so it starts
   // unticked and the button stays dead until it is not.
   const [agreed, setAgreed] = useState(false)
+  // The documents somebody is agreeing to have to be the authoritative ones.
+  // On a Community box a local copy is a fork of a legal text, and consent to a
+  // fork is not consent to the agreement.
+  const legal = useLegalBase()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -240,9 +246,9 @@ export default function Signup({ invite = '' }) {
                      onChange={(e) => { setAgreed(e.target.checked); setError('') }} />
               <span>
                 I have read and accept the{' '}
-                <a href="/terms" target="_blank" rel="noreferrer">Terms of Use</a>, the{' '}
-                <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a> and the{' '}
-                <a href="/licence" target="_blank" rel="noreferrer">Software Licence</a>.
+                <a href={legal + '/terms'} target="_blank" rel="noreferrer">Terms of Use</a>, the{' '}
+                <a href={legal + '/privacy'} target="_blank" rel="noreferrer">Privacy Policy</a> and the{' '}
+                <a href={legal + '/licence'} target="_blank" rel="noreferrer">Software Licence</a>.
                 I understand that trading carries a high risk of loss, that this software gives no
                 financial advice, and that I am responsible for every trade placed through my
                 accounts.
@@ -259,15 +265,7 @@ export default function Signup({ invite = '' }) {
         )}
 
 
-        {/* They were words, not links. Somebody deciding whether to hand over
-            an email should be able to read what they are agreeing to. */}
-        <div className="auth-legal">
-          <Link to="/terms">Terms of use</Link>
-          <span className="auth-legal-sep">|</span>
-          <Link to="/privacy">Privacy policy</Link>
-          <span className="auth-legal-sep">|</span>
-          <Link to="/licence">Licence</Link>
-        </div>
+        <LegalLinks />
       </div>
     </div>
   )
