@@ -106,9 +106,12 @@ export default function Modules() {
       const d = await api.claimEntitlements()
       // Bought and installed are one state now, so the page has to show the new
       // cards immediately rather than the ones it loaded a second ago.
-      if (d.installed?.length) {
-        api.moduleCatalog().then((v) => { setData(v) }).catch(() => {})
-        moduleBus.changed()
+      // Repaint whenever anything moved — a module installed, or a licence that
+      // now covers more than it did. "Owned" changes the card even when there
+      // was nothing left to download.
+      if (d.installed?.length || d.applied) {
+        api.moduleCatalog().then((v) => { if (v) setData(v) }).catch(() => {})
+        if (d.installed?.length) moduleBus.changed()
       }
       setData(d)
       if (d.installed?.length) setNote(`Purchase applied — ${d.installed.join(', ')} installed and ready.`)
@@ -124,10 +127,17 @@ export default function Modules() {
 
   // On arrival: load the page, then collect anything owed to this box.
   //
-  // Not on every visit — proving this host costs the store a round trip back to
-  // us, and there is nothing to learn when the licence is already in place. So
-  // it runs when there is a reason: straight back from a purchase, or on a box
-  // that holds no licence at all.
+  // EVERY visit. This used to skip the check when a licence was already in
+  // place, on the reasoning that proving the host cost the store a round trip
+  // back to us and there was nothing to learn. Both halves of that are now
+  // wrong. Claiming by instance id is one request with no callback, so it costs
+  // nothing worth saving; and a second purchase ADDS to the licence already
+  // held, so "a licence is in place" says nothing about whether it covers what
+  // was bought a minute ago.
+  //
+  // That skip is exactly what somebody hits when they buy a module, come back,
+  // press refresh, and are still looking at a Buy button for the thing they
+  // just paid for.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const fromUrl = (q.get('licence_key') || '').trim()
@@ -147,7 +157,7 @@ export default function Modules() {
         instanceId = i.instance_id || ''
         if (!dead) setInst(i)
       }).catch(() => {})
-      if (dead || (!bought && !fromUrl && view?.has_licence)) return
+      if (dead) return
 
       const d = await claim(false)
       if (dead || d?.applied) return
