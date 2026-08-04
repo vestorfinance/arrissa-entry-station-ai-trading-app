@@ -1,7 +1,7 @@
 {
   "id": "telegram",
   "name": "Telegram",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "edition": "free",
   "description": "Send messages and charts to Telegram — to chosen chats, from any of your bots — and talk to your agent from it.",
   "requires": {

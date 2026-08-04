@@ -1,7 +1,7 @@
 {
   "id": "news",
   "name": "Market News",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "edition": "paid",
   "description": "Impact-scored market news from TradingView and FXStreet, filtered to the instruments this app trades.",
   "requires": {

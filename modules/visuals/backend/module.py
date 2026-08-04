@@ -289,10 +289,30 @@ def _node(text, context, ctx, nv):
     uid = (ctx or {}).get("user_id")
     if not uid:
         return {"error": "this flow has no user to draw for"}
-    user = (f"The user's request: {context.get('request') or '(none)'}\n\n"
-            f"Node instruction: {text or 'Show what this flow found.'}\n\n"
-            f"Flow context: {eng._ctx_json(context)}")
-    spec = eng._llm(ctx, nv, NODE_SYSTEM, user, want_json=True)
+    # Stated wins, and skips the model entirely. This node was asking an LLM
+    # which symbol to chart even when the node said `symbol=XAUUSD` — a guess
+    # bought every fifteen minutes at something that was never in question.
+    # The field was on the node the whole time and silently ignored here.
+    stated = eng._explicit_params(nv, (context or {}).get("vars"))
+    if stated and (stated.get("symbol") or stated.get("html")):
+        spec = dict(stated)
+        for k in ("count", "width", "height"):
+            if spec.get(k) is not None:
+                try:
+                    spec[k] = int(float(spec[k]))
+                except (TypeError, ValueError):
+                    spec.pop(k)
+        for k in ("entry", "sl", "tp"):
+            if spec.get(k) is not None:
+                try:
+                    spec[k] = float(spec[k])
+                except (TypeError, ValueError):
+                    spec.pop(k)
+    else:
+        user = (f"The user's request: {context.get('request') or '(none)'}\n\n"
+                f"Node instruction: {text or 'Show what this flow found.'}\n\n"
+                f"Flow context: {eng._ctx_json(context)}")
+        spec = eng._llm(ctx, nv, NODE_SYSTEM, user, want_json=True)
     if not isinstance(spec, dict):
         return {"error": "could not decide what to draw"
                          + (f" ({ctx.get('_llm_error')})" if ctx.get("_llm_error") else "")}
@@ -302,7 +322,10 @@ def _node(text, context, ctx, nv):
             return make_chart(uid, symbol=spec["symbol"],
                               timeframe=spec.get("timeframe") or "M15",
                               count=_clamp(spec.get("count", 120), 10, 600),
-                              levels=levels, title=spec.get("title"))
+                              levels=levels, title=spec.get("title"),
+                              note=spec.get("note"),
+                              width=_clamp(spec.get("width", 1000), 320, 2000),
+                              height=_clamp(spec.get("height", 560), 200, 1400))
         if spec.get("html"):
             return make_html(uid, spec["html"], title=spec.get("title"),
                              width=_clamp(spec.get("width", 760), 200, 2000))
@@ -339,7 +362,24 @@ def register(registry, module_id):
     registry.node("visual", "visual", _node,
                   palette={"label": "Visual", "sub": "Draw a chart or a card from the findings",
                            "icon": "Image", "tone": "respond", "model": True,
-                           "args": [{"name": "text", "type": "text", "required": True}]},
+                           "args": [{"name": "text", "type": "text", "required": True}],
+                           "api_keys": "symbol · timeframe · count · entry · sl · tp · title · width · height, or html",
+                           "api_example": "symbol=XAUUSD&timeframe=H1&count=200",
+                           "api_doc": [
+                               {"key": "symbol", "values": ["XAUUSD", "EURUSD", "US30"],
+                                "note": "draws a price chart; no model is used"},
+                               {"key": "timeframe", "values": ["M1", "M5", "M15", "M30", "H1", "H4", "D1"]},
+                               {"key": "count", "values": ["60", "120", "300"], "note": "candles, 10-600"},
+                               {"key": "entry", "values": ["2415.50"], "note": "ruled on the chart"},
+                               {"key": "sl", "values": ["2402.00"]},
+                               {"key": "tp", "values": ["2440.00"]},
+                               {"key": "title", "values": ["Gold H1"]},
+                               {"key": "note", "values": ["London open"], "note": "caption under the chart"},
+                               {"key": "width", "values": ["760", "1000", "1400"], "note": "px, 320-2000"},
+                               {"key": "height", "values": ["420", "560", "800"], "note": "px, 200-1400"},
+                               {"key": "html", "values": ["<div>…</div>"],
+                                "note": "a card instead of a chart — your own markup, no model used"},
+                           ]},
                   catalog=CATALOG, values=("text",), module=module_id)
     registry.system_note(
         "You can DRAW REAL IMAGES. create_chart makes a candlestick chart of an instrument with "

@@ -1,7 +1,7 @@
 {
   "id": "visuals",
   "name": "Visuals",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "edition": "free",
   "description": "The app draws instead of describing: real price charts with the trade ruled on them, and any card or table the AI writes as HTML — shown in chat or sent to Telegram.",
   "requires": {

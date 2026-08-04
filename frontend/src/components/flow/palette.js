@@ -126,10 +126,16 @@ export const PALETTE = [
     key: 'risk-management',
     apiDoc: [
       { key: 'symbol', values: ['XAUUSD', 'EURUSD'], note: 'required' },
-      { key: 'side', values: ['buy', 'sell'] },
-      { key: 'style', values: ['scalp', 'intraday', 'swing'] },
+      { key: 'side', values: ['buy', 'sell'], note: 'required — or inferred from the flow' },
+      { key: 'style', values: ['scalp', 'intraday', 'swing', 'position'] },
+      { key: 'risk_pct', values: ['0.5', '1', '2'], note: 'percent of the account' },
+      { key: 'risk_money', values: ['50', '250'], note: 'an absolute amount instead' },
+      { key: 'rr', values: ['1.5', '2', '3'], note: 'reward:risk override' },
+      { key: 'basis', values: ['equity', 'balance'], note: 'what the risk is taken from' },
+      { key: 'sl_mode', values: ['structure', 'atr', 'swing'] },
+      { key: 'entry', values: ['2415.50'], note: 'omit for the live price' },
     ],
-    apiKeys: 'symbol (required) · side (buy|sell) · style (scalp|intraday|swing)',
+    apiKeys: 'symbol · side · style · risk_pct | risk_money · rr · basis · sl_mode · entry',
     apiExample: 'symbol=XAUUSD&side=buy&style=intraday',
     type: 'riskManagement',
     Icon: Target,
@@ -144,14 +150,14 @@ export const PALETTE = [
   },
   {
     key: 'time-session',
-    apiKeys: 'takes no parameters — it reports the clock and the open sessions',
     type: 'timeSession',
     Icon: Clock,
     label: 'Time & Session',
     sub: 'Current time + open trading sessions',
-    args: [{ name: 'text', type: 'text', required: false },
-      API_PARAMS_ARG,
-    ],
+    // No parameters field: the clock and the open sessions are computed, not
+    // fetched, and the handler reads nothing. Offering the field here meant a
+    // box that accepted whatever you typed and threw it away.
+    args: [{ name: 'text', type: 'text', required: false }],
     configurable: true,
     tone: 'time',
   },

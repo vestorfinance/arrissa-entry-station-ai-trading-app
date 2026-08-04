@@ -360,14 +360,21 @@ def _node(text, context, ctx, nv):
     if not uid:
         return {"error": "this flow has no user to send as"}
 
-    user = (f"The user's request (what is being analysed): {context.get('request') or '(none)'}\n\n"
-            f"Node instruction: {text or 'Summarise what the flow found.'}\n\n"
-            f"Flow context: {eng._ctx_json(context)}")
-    out = eng._llm(ctx, nv, NODE_SYSTEM, user, want_json=True)
+    # A message stated outright is not a thing to ask a model about. The field
+    # was offered on this node and read by nothing — so `text=Done` paid for a
+    # model call and then discarded what it wrote.
+    stated = eng._explicit_params(nv, (context or {}).get("vars")) or {}
+    if stated.get("text"):
+        out = {"text": stated["text"], "chat_id": stated.get("chat_id")}
+    else:
+        user = (f"The user's request (what is being analysed): {context.get('request') or '(none)'}\n\n"
+                f"Node instruction: {text or 'Summarise what the flow found.'}\n\n"
+                f"Flow context: {eng._ctx_json(context)}")
+        out = eng._llm(ctx, nv, NODE_SYSTEM, user, want_json=True)
     # A chat picked in the node is a decision the user has already made, so it
     # beats anything the model volunteers. Only when they picked none does the
     # instruction get to name one.
-    picked = nv.get("chats")
+    picked = nv.get("chats") or stated.get("chat_id")
     if isinstance(picked, str):
         picked = [c.strip() for c in picked.split(",") if c.strip()]
     body = (out or {}).get("text") if isinstance(out, dict) else None
@@ -643,6 +650,14 @@ def register(registry, module_id):
                                 "empty": "Wherever you last messaged the bot from",
                                 "none": "No chats known yet — message your bot once, or type "
                                         "a chat id below."},
+                           ],
+                           "api_keys": "text (the exact message — no model used) · chat_id",
+                           "api_example": "text=Flow finished&chat_id=123456789",
+                           "api_doc": [
+                               {"key": "text", "values": ["Flow finished", "{{symbol}} setup found"],
+                                "note": "sent word for word; no model is used to write it"},
+                               {"key": "chat_id", "values": ["123456789", "-1001234567890"],
+                                "note": "overridden by the picker above if you used it"},
                            ]},
                   catalog=CATALOG, values=("text", "connection", "chats"), module=module_id)
     registry.worker("telegram-listener", _start, stop=_stop, module=module_id)
