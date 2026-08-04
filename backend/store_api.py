@@ -499,6 +499,11 @@ def _receipt_page(*, key, product, instance, back, modules, email, expires, refe
     survives being read aloud down a phone, with a copy button that reports back,
     and it is selectable — a receipt you cannot copy from is a receipt that
     failed. Everything else is secondary and reads as such.
+
+    The instance id is NOT on it. It is the mechanism by which a licence binds to
+    a box, and a buyer has no decision to make with it — it travels on the link
+    by itself. Printing it on a receipt only invites somebody to reason about how
+    the binding works, which is not a conversation a receipt should start.
     """
     from fastapi.responses import HTMLResponse
     import html as _html
@@ -584,7 +589,6 @@ def _receipt_page(*, key, product, instance, back, modules, email, expires, refe
   <dl class="facts">
     <div><dt>Covers</dt><dd>{e(covers)}</dd></div>
     {f'<div><dt>Updates until</dt><dd>{e(expires)}</dd></div>' if expires else ''}
-    <div><dt>Installation</dt><dd><code>{e(instance)}</code></dd></div>
     <div><dt>Receipt to</dt><dd>{e(email)}</dd></div>
     <div><dt>Reference</dt><dd><code>{e(reference)}</code></dd></div>
   </dl>

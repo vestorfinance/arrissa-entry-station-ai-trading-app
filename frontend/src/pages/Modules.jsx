@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Icons from 'lucide-react'
 import { Puzzle, Upload, Trash2, Power, PowerOff, RefreshCw, Check, KeyRound,
          ShoppingCart, Download, ExternalLink, AlertTriangle, Search, X,
-         Sparkles, ArrowUpCircle, Lock, Fingerprint, Copy} from 'lucide-react'
+         Sparkles, ArrowUpCircle, Lock, Copy} from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout.jsx'
 import * as api from '../services/api.js'
 import * as moduleBus from '../services/moduleBus.js'
@@ -84,8 +84,9 @@ export default function Modules() {
   const [busy, setBusy] = useState(null)          // module id, 'install' or 'licence'
   const [note, setNote] = useState(null)
   const [upd, setUpd] = useState(null)     // the updates summary, incl. whether they self-install
-  const [inst, setInst] = useState(null)   // this installation's own id
-  const [idShown, setIdShown] = useState(false)
+  // Fetched, never shown. Buy needs it to bind the licence to this box, and the
+  // buyer needs it for nothing: it travels on the link by itself, and putting a
+  // licensing primitive on screen invites people to reason about the licensing.
   const [dragging, setDragging] = useState(false)
   const [licence, setLicence] = useState('')
   const [showLicence, setShowLicence] = useState(false)
@@ -153,10 +154,7 @@ export default function Modules() {
       // Whether updates arrive on their own. Its own call because the store
       // being unreachable must not take the toggle down with it.
       api.moduleUpdates().then((u) => { if (!dead) setUpd(u) }).catch(() => {})
-      api.moduleInstance().then((i) => {
-        instanceId = i.instance_id || ''
-        if (!dead) setInst(i)
-      }).catch(() => {})
+      api.moduleInstance().then((i) => { instanceId = i.instance_id || '' }).catch(() => {})
       if (dead) return
 
       const d = await claim(false)
@@ -286,40 +284,6 @@ export default function Modules() {
                 <> {upd.blocked} update{upd.blocked === 1 ? '' : 's'} held back — the subscription lapsed.</>
               )}
             </span>
-          </div>
-        )}
-
-        {/* What this box is called when it buys something. Shown rather than
-            hidden: the operator has to be able to give it to the store, and a
-            credential nobody can read is a credential nobody can use. Folded
-            away by default because Buy carries it on its own and almost nobody
-            needs to look. */}
-        {inst?.instance_id && (
-          <div className="mod-ident">
-            <button type="button" className="mod-ident-head" onClick={() => setIdShown((v) => !v)}>
-              <Fingerprint size={14} strokeWidth={2} />
-              This installation <em>{inst.short}</em>
-              <span>{idShown ? 'hide' : 'show'}</span>
-            </button>
-            {idShown && (
-              <div className="mod-ident-body">
-                <code className="mod-ident-id">{inst.instance_id}</code>
-                <button className="btn btn--sm"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(inst.instance_id)
-                          setNote('Instance id copied.')
-                        }}>
-                  <Copy size={13} strokeWidth={2} /> Copy
-                </button>
-                <p className="mod-ident-note">
-                  Purchases bind to this, not to the address in your browser —
-                  so a licence works on <code>localhost</code>, behind NAT, and
-                  after you move the box to a real domain. Buy carries it for
-                  you; you only need it if you are paying from another machine.
-                  Treat it like a password.
-                </p>
-              </div>
-            )}
           </div>
         )}
 
