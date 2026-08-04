@@ -283,7 +283,17 @@ def remote(force=False, max_age=None) -> tuple[list, str | None]:
         err = f"could not reach the module store at {STORE_URL}: {e}"
         # Keep whatever was last fetched. A store outage should cost the page its
         # prices, not its list.
-        _cache.update(at=now, error=err)
+        #
+        # But only extend the cache window if there IS something cached. Stamping
+        # `at` after a failure with nothing to serve starts a five-minute
+        # cooldown on an empty catalogue — so an instance whose FIRST fetch
+        # happened to land during a store restart reports that no module exists
+        # for five minutes, and describes everything installed as sideloaded.
+        # With no data, the next caller retries.
+        if _cache["data"] is not None:
+            _cache.update(at=now, error=err)
+        else:
+            _cache.update(error=err)
         return (_cache["data"] or []), err
 
 
@@ -346,7 +356,12 @@ def view(max_age=None) -> dict:
             continue
         rows[mid] = {
             "id": mid, "name": inst.get("name") or mid, "icon": None, "group": "other",
-            "tagline": "Installed from a file — not listed in the store.",
+            # Two different situations, and saying the wrong one is worse than
+            # saying nothing: a module genuinely sideloaded, versus one the
+            # store could not be asked about. Claiming it is not listed when
+            # nothing could be reached is a statement the instance cannot make.
+            "tagline": ("The store could not be reached, so this could not be looked up."
+                        if error else "Installed from a file. Not listed in the store."),
             "price_usd": None, "purchase_url": None, "requires": [],
             "version": inst.get("version"), "deliverable": False, "owned": True,
             "installed": True, "status": inst.get("status"),
