@@ -353,7 +353,10 @@ def updates(user=Depends(_current_user)):
     so "you have updates" and "here is why you cannot take one" arrive together
     rather than as a surprise at the moment of pressing the button."""
     import catalog
-    view = catalog.view()
+    # A minute, not five. This is the endpoint behind the ribbon, and somebody
+    # told there is a new version refreshes the page — which, against a
+    # five-minute cache, shows them the same answer that sent them looking.
+    view = catalog.view(max_age=60)
     rows = [m for m in view["modules"] if m.get("update_available")]
     core = view.get("core") or {}
     return {

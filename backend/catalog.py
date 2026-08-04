@@ -250,11 +250,18 @@ def claim(instance: str) -> dict:
 
 
 # ── the store's catalogue ──────────────────────────────────────────────────────
-def remote(force=False) -> tuple[list, str | None]:
+def remote(force=False, max_age=None) -> tuple[list, str | None]:
     """(modules, error). Cached briefly: the shop window is opened often and the
-    prices change rarely."""
+    prices change rarely.
+
+    `max_age` is for the caller that cannot tolerate five minutes. The update
+    check is one: somebody who has just been told there is a new version does
+    the obvious thing and refreshes the page, and a five-minute cache means the
+    obvious thing cannot work. Prices can be stale for five minutes; "are you
+    behind" cannot."""
     now = time.time()
-    if not force and _cache["data"] is not None and now - _cache["at"] < CACHE_TTL_S:
+    ttl = CACHE_TTL_S if max_age is None else max_age
+    if not force and _cache["data"] is not None and now - _cache["at"] < ttl:
         return _cache["data"], _cache["error"]
     try:
         from curl_cffi import requests as creq
@@ -292,7 +299,7 @@ def _update_gate(module_id: str, offered: bool) -> dict:
     return {"can_update": ok, "update_blocked": "" if ok else why}
 
 
-def view() -> dict:
+def view(max_age=None) -> dict:
     """The shop window: everything on offer, merged with what is installed.
 
     One row per module, whether it came from the store, from disk, or both — a
@@ -302,7 +309,7 @@ def view() -> dict:
     import modules as module_system
     import registry
 
-    offered, error = remote()
+    offered, error = remote(max_age=max_age)
     local = {m["id"]: m for m in module_system.status()["modules"]}
 
     rows = {}
