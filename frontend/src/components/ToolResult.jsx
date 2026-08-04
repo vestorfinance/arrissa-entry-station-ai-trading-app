@@ -58,7 +58,17 @@ export function TraceView({ steps }) {
 
 function TraceStep({ step }) {
   const [open, setOpen] = useState(false)
+  // The formatted view answers "what did this find". The raw JSON answers "what
+  // exactly did this node hand to the next one", which is the question while
+  // building a flow: a field that is null, a list that came back empty, a key
+  // spelled differently from the one downstream expects. A news view showing
+  // three tidy headlines cannot tell you any of that.
+  const [raw, setRaw] = useState(false)
+  const [copied, setCopied] = useState(false)
   const parsed = parseMaybe(step.result)
+  const json = (() => {
+    try { return JSON.stringify(parsed, null, 2) } catch { return String(step.result ?? '') }
+  })()
   return (
     <div className="dv-trace-step">
       <button type="button" className="dv-trace-head" onClick={() => setOpen((o) => !o)}>
@@ -93,7 +103,29 @@ function TraceStep({ step }) {
           )}
           {step.text && <div className="dv-trace-instruction"><span className="dv-trace-io-label">Instruction</span>{step.text}</div>}
           {step.opinion && <div className="dv-trace-opinion"><strong>Opinion (this node's read). </strong>{step.opinion}</div>}
-          <ToolResult result={parsed} />
+
+          <div className="dv-trace-rawbar">
+            <span className="dv-trace-io-label">
+              {raw ? 'What this node returned' : 'Result'}
+            </span>
+            <button type="button" className="btn btn--ghost btn--sm dv-trace-rawbtn"
+                    onClick={() => setRaw((v) => !v)}>
+              {raw ? 'Formatted' : 'JSON'}
+            </button>
+            {raw && (
+              <button type="button" className="btn btn--ghost btn--sm dv-trace-rawbtn"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(json).then(() => setCopied(true))
+                        setTimeout(() => setCopied(false), 1600)
+                      }}>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            )}
+          </div>
+
+          {raw
+            ? <pre className="dv-trace-raw">{json}</pre>
+            : <ToolResult result={parsed} />}
         </div>
       )}
     </div>

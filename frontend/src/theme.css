@@ -6841,3 +6841,18 @@ a.dv-card-title:hover { text-decoration: underline; }
   .ptm-left, .ptm-right { overflow: visible; }
   .ptm-right .try-out { max-height: 40vh; }
 }
+
+/* The exact bytes a node handed to the next one. The formatted view answers
+   "what did this find"; this answers "what did it actually return", which is
+   the question while a flow is being built — a null field, an empty list, a key
+   spelled differently from the one downstream reads for. */
+.dv-trace-rawbar { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; }
+.dv-trace-rawbar .dv-trace-io-label { margin: 0; }
+.dv-trace-rawbtn { margin-left: auto; height: 26px; padding: 0 10px; font-size: 11.5px; }
+.dv-trace-rawbtn + .dv-trace-rawbtn { margin-left: 0; }
+.dv-trace-raw {
+  margin: 0; padding: 12px 14px; max-height: 46vh; overflow: auto;
+  border-radius: var(--radius-sm); background: var(--input-bg);
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap; overflow-wrap: break-word;
+}
