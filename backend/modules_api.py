@@ -253,9 +253,14 @@ def updates(user=Depends(_current_user)):
     so "you have updates" and "here is why you cannot take one" arrive together
     rather than as a surprise at the moment of pressing the button."""
     import catalog
-    rows = [m for m in catalog.view()["modules"] if m.get("update_available")]
+    view = catalog.view()
+    rows = [m for m in view["modules"] if m.get("update_available")]
+    core = view.get("core") or {}
     return {
-        "count": len(rows),
+        "core": core,
+        # The ribbon counts BOTH, because a user does not think in terms of
+        # "core" and "modules" — they think the app has an update or it does not.
+        "count": len(rows) + (1 if core.get("update_available") else 0),
         "blocked": sum(1 for m in rows if not m.get("can_update")),
         "modules": [{"id": m["id"], "name": m["name"],
                      "from": m.get("installed_version"), "to": m.get("version"),

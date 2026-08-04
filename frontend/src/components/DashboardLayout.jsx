@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 import LivePanel from './LivePanel.jsx'
+import UpdateRibbon from './UpdateRibbon.jsx'
 
 // App shell: fixed sidebar + topbar, scrollable main content area.
 // On mobile the sidebar becomes an off-canvas drawer toggled from the topbar.
@@ -29,6 +30,9 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
       <Sidebar onNavigate={() => setNavOpen(false)} collapsed={rail} onToggleCollapse={() => setRail((r) => !r)} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="app-body">
+        {/* Above the topbar, so it is the first thing on the page rather than a
+            notice competing with the page's own title. */}
+        <UpdateRibbon />
         <Topbar title={title} titleExtra={titleExtra} onMenu={() => setNavOpen((o) => !o)} />
         <main className={flush ? 'app-main app-main--flush' : 'app-main'}>{children}</main>
       </div>

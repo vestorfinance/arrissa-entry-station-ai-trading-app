@@ -6056,3 +6056,45 @@ a.dv-card-title:hover { text-decoration: underline; }
 .tok-v { color: var(--tone-sky); }       /* $VAR and $(…) */
 .tok-f { color: var(--tone-violet); }    /* --flag */
 .tok-k { color: var(--tone-ok); font-weight: 600; }   /* the command itself */
+
+/* ── "there is a new version" ──────────────────────────────
+   A single line above everything. It has to be noticed once and then get out of
+   the way, so it is a strip rather than a card and it can be dismissed — against
+   the VERSION it announced, so the next release speaks up again. */
+.upd-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13.5px;
+}
+.upd-ribbon > svg { flex: none; }
+.upd-text { flex: 1; min-width: 0; line-height: 1.4; }
+.upd-done { display: inline-flex; align-items: center; gap: 6px; opacity: .9; }
+/* On the accent strip the app's own buttons would read as another colour, so
+   both are white-on-transparent and the primary one is the solid of the two. */
+.upd-ribbon .btn--primary,
+:root[data-theme="dark"] .upd-ribbon .btn--primary {
+  background: #fff; color: var(--accent);
+}
+.upd-ribbon .btn--primary:hover { background: #eceafe; color: var(--accent); }
+.upd-ribbon .upd-cmd,
+:root[data-theme="dark"] .upd-ribbon .upd-cmd {
+  background: rgba(255, 255, 255, 0.16); color: #fff;
+}
+.upd-ribbon .upd-cmd:hover { background: rgba(255, 255, 255, 0.26); color: #fff; }
+.upd-x {
+  flex: none;
+  display: grid; place-items: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: transparent; color: #fff;
+  cursor: pointer; opacity: .8;
+}
+.upd-x:hover { background: rgba(255, 255, 255, 0.18); opacity: 1; }
+@media (max-width: 700px) {
+  .upd-ribbon { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .upd-text { flex: 1 1 100%; }
+}

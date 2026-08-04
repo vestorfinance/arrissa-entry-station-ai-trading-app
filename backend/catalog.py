@@ -267,7 +267,8 @@ def remote(force=False) -> tuple[list, str | None]:
         mods = body.get("modules", [])
         _cache["terms"] = {"currency": body.get("currency", "USD"),
                            "billing": body.get("billing", "yearly"),
-                           "bundles": body.get("bundles", [])}
+                           "bundles": body.get("bundles", []),
+                           "store_core": (body.get("core") or {}).get("version")}
         _cache.update(at=now, data=mods, error=None)
         return mods, None
     except Exception as e:
@@ -343,8 +344,16 @@ def view() -> dict:
                  key=lambda r: (order.get(r.get("group") or "other", 3),
                                 (r.get("price_usd") if r.get("price_usd") is not None else 999),
                                 r["name"]))
+    # Is CORE itself behind? Modules announce their versions through the
+    # catalogue and core had no equivalent, so an instance could sit a year
+    # behind without anything ever saying so.
+    import modules as module_system
+    store_core = _cache["terms"].get("store_core")
+    core_update = bool(store_core and versions.newer(store_core, module_system.CORE_VERSION))
     return {"store_url": STORE_URL, "has_licence": bool(licence_key()),
-            **_cache["terms"], "error": error, "modules": out}
+            **_cache["terms"], "error": error, "modules": out,
+            "core": {"version": module_system.CORE_VERSION, "latest": store_core,
+                     "update_available": core_update}}
 
 
 # ── history that came before this instance existed ────────────────────────────

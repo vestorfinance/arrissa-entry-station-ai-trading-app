@@ -42,7 +42,13 @@ def store_catalog(key: str = Query("", description="Licence key, if the caller h
             "deliverable": mid in builds,
             "owned": store.owns(key, mid),
         })
+    # What core the STORE is running. An instance compares its own against it,
+    # which is the only way a self-hosted box can learn that the app itself has
+    # moved on — modules announce their versions through the catalogue, and core
+    # had no equivalent, so it could sit a year behind in silence.
+    import modules as module_system
     return {"store": "EntryStation", **store.terms(),
+            "core": {"version": module_system.CORE_VERSION},
             "bundles": store.bundles(),
             "licence": {"valid": bool(lic), "email": lic["email"] if lic else None,
                         "modules": (lic["modules"] if lic else [])} if key else None,
