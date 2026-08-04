@@ -382,8 +382,8 @@ export default function Home() {
             <ul className="home-ticks home-mcp-list">
               <li><Check size={15} /><span>Thirty-three tools: prices, positions, orders,
                 sizing, and every data module you own</span></li>
-              <li><Check size={15} /><span>A module you have not bought contributes nothing.
-                One you install tomorrow appears with no configuration</span></li>
+              <li><Check size={15} /><span>Add a module and its tools show up in your client
+                straight away, with nothing to set up</span></li>
               <li><Check size={15} /><span>Read-only mode offers only the tools that read, so
                 nothing can place or close a trade</span></li>
               <li><Check size={15} /><span>Authenticated with the API key you already have,
