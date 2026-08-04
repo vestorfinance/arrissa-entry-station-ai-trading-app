@@ -150,48 +150,74 @@ a {
   cursor: pointer;
   transition: background 0.15s ease, opacity 0.15s ease;
 }
-/* In dark theme a #2d2d2d button on a #262626 surface is 1.1:1 — that is not a
-   subtle button, it is an invisible one. The SECONDARY action goes white (15:1,
-   unmistakably a button) while primary keeps the accent: two clearly different
-   things instead of two nearly identical ones.
-   theme.js always stamps data-theme, so keying off "dark" is enough. */
-:root[data-theme="dark"] .btn {
-  background: #ffffff;
-  color: #14171a;
-}
-:root[data-theme="dark"] .btn:hover {
-  background: #e6e8ec;
-}
-/* The variants say their own thing and must win over the white default. */
-:root[data-theme="dark"] .btn--primary { background: var(--accent); color: #fff; }
-:root[data-theme="dark"] .btn--primary:hover { background: var(--accent-hover); }
-:root[data-theme="dark"] .btn--ghost { background: transparent; color: var(--text-secondary); }
-:root[data-theme="dark"] .btn--ghost:hover { background: var(--bg-secondary); color: var(--text-primary); }
-:root[data-theme="dark"] .btn--danger { background: rgba(239, 68, 68, 0.14); color: var(--tone-bad); }
-:root[data-theme="dark"] .btn--danger:hover { background: rgba(239, 68, 68, 0.24); }
+/* Buttons are the page's own ink, inverted. No accent.
+   ------------------------------------------------------------------
+   PRIMARY is solid: white on the dark theme, black on the light one — literally
+   black-or-white rather than a colour standing in for emphasis.
 
+   SECONDARY is outlined. It cannot be a grey fill: in dark theme a #2d2d2d
+   button on a #262626 surface is 1.1:1, which is not a subtle button but an
+   invisible one — that is why the old rule made it WHITE and gave primary the
+   accent instead. With primary taking the white, the outline is what keeps the
+   two apart, and it does it without introducing a hue.
+
+   The outline is an inset shadow rather than a border, so it costs no layout and
+   does not breach the no-borders rule any more than a focus ring does.
+
+   theme.js always stamps data-theme, so keying off it is enough. */
 .btn:hover {
-  background: #363636;
+  background: color-mix(in srgb, var(--text-primary) 14%, var(--bg-primary));
 }
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.btn--primary {
-  background: var(--accent);
-  color: #fff;
-}
-.btn--primary:hover {
-  background: var(--accent-hover);
-}
-.btn--ghost {
+
+/* secondary — the default */
+.btn,
+:root[data-theme="dark"] .btn {
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 32%, transparent);
 }
-.btn--ghost:hover {
-  background: var(--bg-secondary);
+.btn:hover,
+:root[data-theme="dark"] .btn:hover {
+  background: color-mix(in srgb, var(--text-primary) 12%, var(--bg-primary));
   color: var(--text-primary);
 }
+
+/* primary — solid, inverted */
+.btn--primary,
+:root[data-theme="dark"] .btn--primary {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  box-shadow: none;
+}
+.btn--primary:hover,
+:root[data-theme="dark"] .btn--primary:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  opacity: 0.85;
+}
+
+/* ghost — no fill and no outline, for a tertiary action beside the other two */
+.btn--ghost,
+:root[data-theme="dark"] .btn--ghost {
+  background: transparent;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+.btn--ghost:hover,
+:root[data-theme="dark"] .btn--ghost:hover {
+  background: color-mix(in srgb, var(--text-primary) 10%, var(--bg-primary));
+  color: var(--text-primary);
+}
+
+/* danger keeps its colour. It is the one button whose meaning IS the colour, and
+   a delete that looks like every other button is a delete somebody presses by
+   mistake. */
+:root[data-theme="dark"] .btn--danger { background: rgba(239, 68, 68, 0.14); color: var(--tone-bad); box-shadow: none; }
+:root[data-theme="dark"] .btn--danger:hover { background: rgba(239, 68, 68, 0.24); }
 .btn--danger {
   background: rgba(239, 68, 68, 0.14);
   color: var(--tone-bad);
@@ -5346,28 +5372,12 @@ a.dv-card-title:hover { text-decoration: underline; }
   padding: 0 20px;
   font-size: 14px;
 }
-.home .btn,
-.home .btn--primary,
-:root[data-theme="dark"] .home .btn,
-:root[data-theme="dark"] .home .btn--primary {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-}
-.home .btn:hover,
-.home .btn--primary:hover,
-:root[data-theme="dark"] .home .btn:hover,
-:root[data-theme="dark"] .home .btn--primary:hover { opacity: 0.85; background: var(--text-primary); }
-
+/* The homepage used to define its own black-or-white buttons. The whole app
+   does that now, so only the SIZES are still its own — and its ghost wants the
+   outline, which app-wide belongs to the default rather than to ghost. */
 .home .btn--ghost,
 :root[data-theme="dark"] .home .btn--ghost {
-  background: transparent;
-  color: var(--text-primary);
   box-shadow: inset 0 0 0 1px var(--text-primary);
-}
-.home .btn--ghost:hover,
-:root[data-theme="dark"] .home .btn--ghost:hover {
-  background: var(--home-raise);
-  color: var(--text-primary);
 }
 
 .home-nav-cta {
@@ -6075,6 +6085,12 @@ a.dv-card-title:hover { text-decoration: underline; }
 .upd-done { display: inline-flex; align-items: center; gap: 6px; opacity: .9; }
 /* On the accent strip the app's own buttons would read as another colour, so
    both are white-on-transparent and the primary one is the solid of the two. */
+/* These two sit ON the accent strip, so they are the one place that keeps a
+   white-on-colour treatment — and they must drop the outline the app's default
+   button now carries, which is drawn from --text-primary and would be a black
+   ring on blue in the light theme. */
+.upd-ribbon .btn,
+:root[data-theme="dark"] .upd-ribbon .btn { box-shadow: none; }
 .upd-ribbon .btn--primary,
 :root[data-theme="dark"] .upd-ribbon .btn--primary {
   background: #fff; color: var(--accent);
