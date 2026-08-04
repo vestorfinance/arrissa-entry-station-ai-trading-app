@@ -6907,3 +6907,14 @@ a.dv-card-title:hover { text-decoration: underline; }
   color: var(--text-primary);
 }
 @media (max-width: 860px) { .home-mcp { grid-template-columns: 1fr; gap: 20px; } }
+
+/* The protocol's mark, above a centred heading that had nothing to anchor it.
+   A disc with real gutters around the glyph, so it reads as a mark rather than
+   as an icon that happens to have a circle behind it. */
+.home-mcp-badge {
+  display: grid; place-items: center;
+  width: 62px; height: 62px; margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 30px;                 /* the glyph is sized in em, so this is the gutter */
+}
