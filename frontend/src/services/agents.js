@@ -31,3 +31,9 @@ export const importAgent = (payload) => api.importAnalysisAgent(payload)
 // Which data conditions this instance can offer. A condition whose module is
 // not installed is shown disabled rather than silently never firing.
 export const triggerSources = () => api.get('/api/trigger-sources')
+
+// Run this node's call with these parameters and show what came back. The same
+// handler the flow uses, so it is the real answer rather than a description of
+// one. Nothing that changes an account will run from here.
+export const previewParams = (kind, api_params, variables) =>
+  api.post('/api/analysis/preview-params', { kind, api_params, variables })

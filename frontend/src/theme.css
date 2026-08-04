@@ -6777,3 +6777,15 @@ a.dv-card-title:hover { text-decoration: underline; }
   padding: 2px 14px 12px;
   margin: 0 -14px;
 }
+
+/* Run the call, see the answer. Guessing from a parameter list is how a flow
+   gets built on a filter that was never biting. */
+.try-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.try-meta { font-size: 12px; color: var(--text-secondary); }
+.try-err { margin: 10px 0 0; }
+.try-out {
+  margin: 10px 0 0; padding: 14px 16px; max-height: 40vh; overflow: auto;
+  border-radius: var(--radius-sm); background: var(--input-bg);
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap; overflow-wrap: break-word;
+}

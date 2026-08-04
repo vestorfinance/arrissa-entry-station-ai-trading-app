@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Trash2, Sparkles, Check, Plus, Maximize2 } from 'lucide-react'
+import { X, Trash2, Sparkles, Check, Plus, Maximize2, Play, AlertTriangle} from 'lucide-react'
 import { backdrop } from '../../services/backdrop.js'
 import { paletteItem } from './palette.js'
 import { UNITS, floorNote } from './schedule.js'
@@ -394,6 +394,9 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                                        onChange, onDelete, onClose }) {
   const paramsRef = useRef(null)
   const [rulesOpen, setRulesOpen] = useState(false)
+  // What the call actually returns. Guessing from a parameter list is how a
+  // flow gets built on a filter that was never biting.
+  const [tryOut, setTryOut] = useState(null)     // {busy, ms, count, result, error}
   const [big, setBig] = useState(null)     // which text arg is open in the big window
 
   // What this node's API accepts. Core nodes spell it apiDoc; module nodes send
@@ -753,6 +756,43 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 reading the module's source to find out that News takes
                 `min_score`. Clicking a value writes `key=value` into the field,
                 so the documentation is also the way to fill it in. */}
+            {big === 'api_params' && (
+              <div className="try-bar">
+                <button type="button" className="btn btn--primary btn--sm"
+                        disabled={tryOut?.busy || !(values.api_params || '').trim()}
+                        onClick={async () => {
+                          setTryOut({ busy: true })
+                          try {
+                            const vars = Object.fromEntries(
+                              (variables || []).map((v) => [v.key, v.example || v.key]))
+                            const r = await store.previewParams(
+                              node.data.kind, values.api_params, vars)
+                            setTryOut({ ...r, busy: false })
+                          } catch (e) { setTryOut({ busy: false, error: e.message }) }
+                        }}>
+                  <Play size={13} strokeWidth={2.4} />
+                  {tryOut?.busy ? 'Running…' : 'Test this call'}
+                </button>
+                {tryOut && !tryOut.busy && !tryOut.error && (
+                  <span className="try-meta">
+                    {tryOut.count != null ? `${tryOut.count} row${tryOut.count === 1 ? '' : 's'} · ` : ''}
+                    {tryOut.ms} ms
+                  </span>
+                )}
+                {tryOut && <button type="button" className="var-del" title="Clear"
+                                   onClick={() => setTryOut(null)}><X size={13} /></button>}
+              </div>
+            )}
+
+            {tryOut?.error && (
+              <p className="ins-warn try-err"><AlertTriangle size={14} /><span>{tryOut.error}</span></p>
+            )}
+            {tryOut?.result && (
+              <pre className="try-out">{tryOut.result}
+                {tryOut.truncated ? '\n\n… trimmed. The point here is the shape, not every row.' : ''}
+              </pre>
+            )}
+
             {/* The variables this agent was given. Drag one into the field, or
                 click it — dragging is the gesture people reach for and clicking
                 is the one that always works, so it does both. */}

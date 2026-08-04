@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 import LivePanel from './LivePanel.jsx'
@@ -13,7 +13,7 @@ import SetupModal from './SetupModal.jsx'
 // flow builder, which shows its own "Ask AI to build your agent" box instead.
 const RAIL_KEY = 'es.sidebar.rail'
 
-export default function DashboardLayout({ title, titleExtra = null, children, flush = false, hideLive = false }) {
+export default function DashboardLayout({ title, titleExtra = null, children, flush = false, hideLive = false, railHint = false }) {
   const [navOpen, setNavOpen] = useState(false)
   // Collapsed = an icon-only rail. Remembered, because it is a working
   // preference: having to re-collapse on every page load would make it a
@@ -22,9 +22,34 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
   const [rail, setRail] = useState(() => {
     try { return localStorage.getItem(RAIL_KEY) === '1' } catch { return false }
   })
+  // A page may collapse the rail for its own sake — the flow canvas wants every
+  // pixel — and that must not become the user's setting. `auto` marks the
+  // current value as the page's doing rather than theirs, so it is not saved
+  // and is put back on the way out.
+  const auto = useRef(false)
   useEffect(() => {
+    if (auto.current) return
     try { localStorage.setItem(RAIL_KEY, rail ? '1' : '0') } catch { /* private mode */ }
   }, [rail])
+
+  useEffect(() => {
+    if (!railHint) return undefined
+    let saved = false
+    try { saved = localStorage.getItem(RAIL_KEY) === '1' } catch { saved = false }
+    // Already working collapsed: nothing to collapse, and nothing to restore
+    // later. Expanding them on the way out would be undoing a choice they made.
+    if (saved) return undefined
+    auto.current = true
+    setRail(true)
+    return () => {
+      // Only if it is still the page's doing. Toggling it by hand while here
+      // makes it theirs, and theirs survives leaving.
+      if (auto.current) { auto.current = false; setRail(false) }
+    }
+  }, [railHint])
+
+  // A deliberate toggle is a preference, whatever the page wanted.
+  const toggleRail = () => { auto.current = false; setRail((r) => !r) }
 
   return (
     <div className="app-outer">
@@ -36,7 +61,7 @@ export default function DashboardLayout({ title, titleExtra = null, children, fl
       <UpdateRibbon />
       <SetupModal />
     <div className={'app-shell' + (navOpen ? ' app-shell--nav-open' : '') + (rail ? ' app-shell--rail' : '')}>
-      <Sidebar onNavigate={() => setNavOpen(false)} collapsed={rail} onToggleCollapse={() => setRail((r) => !r)} />
+      <Sidebar onNavigate={() => setNavOpen(false)} collapsed={rail} onToggleCollapse={toggleRail} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="app-body">
         <Topbar title={title} titleExtra={titleExtra} onMenu={() => setNavOpen((o) => !o)} />

@@ -447,7 +447,10 @@ export default function AnalysisAgentFlow() {
   if (!agent) return null
 
   return (
-    <DashboardLayout title={agent.name} flush hideLive>
+    /* The canvas wants every pixel it can get, so the rail collapses on the way
+       in. railHint, not a setting: it is put back when you leave, and it does
+       nothing at all if you already work collapsed. */
+    <DashboardLayout title={agent.name} flush hideLive railHint>
       <div className="flow-page">
         <div className="flow-bar">
           <button className="btn btn--ghost btn--icon" title="Back" onClick={() => navigate('/analysis-agents')}>

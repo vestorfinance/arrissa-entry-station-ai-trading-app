@@ -372,6 +372,74 @@ def check_invite(code: str = ""):
     return {"valid": _signup_allowed(code), "open": _registrations_open()}
 
 
+# Read-only, for the Test button. Anything that changes an account is refused:
+# somebody checking whether their parameters are right has not asked to close a
+# position, and a preview that could is not a preview.
+TRADE_READONLY = {
+    "list_accounts", "search_symbols", "list_symbols", "symbol_info", "price",
+    "account_stats", "positions", "orders", "history", "closed_trades",
+    "calc_sltp", "risk_plan",
+}
+
+
+class ParamsPreview(BaseModel):
+    kind: str
+    api_params: str = ""
+    variables: dict = {}
+
+
+@app.post("/api/analysis/preview-params")
+def preview_params(body: ParamsPreview, user=Depends(current_user)):
+    """Run this node's call with these parameters, and return what came back.
+
+    The same handler the flow uses, so what is shown is what the node will
+    actually receive rather than an approximation of it. api_params is
+    explicit, so no model is consulted and nothing is charged.
+
+    Anything that would change an account is refused."""
+    import analysis_agent as eng
+    import registry
+    import user_session
+    import json as _json
+    import time as _time
+
+    kind = (body.kind or "").strip()
+    handler = eng._DATA.get(kind) or registry.node_handler(kind)
+    if not handler:
+        raise HTTPException(404, f"no node called {kind!r}")
+
+    params = (body.api_params or "").strip()
+    if not params:
+        raise HTTPException(400, "Nothing to test — write the parameters first.")
+
+    if kind in ("trade-actions", "tradeActions"):
+        stated = eng._explicit_params({"api_params": params}, body.variables or {}) or {}
+        tool = str(stated.get("tool") or "")
+        if not tool:
+            raise HTTPException(400, "Testing this node needs a fixed tool= call. Without one "
+                                     "it would decide for itself what to do.")
+        if tool not in TRADE_READONLY:
+            raise HTTPException(400, f"{tool} changes the account, so it is not run from here. "
+                                     f"Testing is limited to calls that only read.")
+
+    ctx = {"user_id": user["id"], "agent_tools": {}}
+    context = {"request": "(parameter test)", "vars": body.variables or {}}
+
+    t0 = _time.time()
+    try:
+        with user_session.as_user(user["id"]):
+            out = handler("", context, ctx, {"api_params": params})
+    except Exception as e:
+        raise HTTPException(400, f"{type(e).__name__}: {e}")
+
+    # Trimmed: a news call can return two hundred rows, and the point is to see
+    # the SHAPE and whether the filters bit.
+    text = _json.dumps(out, default=str, indent=2)
+    return {"ok": True, "ms": int((_time.time() - t0) * 1000),
+            "truncated": len(text) > 12000, "result": text[:12000],
+            "count": (out.get("count") if isinstance(out, dict) else None)}
+
+
 @app.get("/api/trigger-sources")
 def trigger_sources(user=Depends(current_user)):
     """Which data conditions this instance can offer.
