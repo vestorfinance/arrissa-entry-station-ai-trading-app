@@ -67,6 +67,10 @@ function buyLink(url) {
     // until the id has loaded.
     u.searchParams.set('instance', instanceId || window.location.host)
     if (operatorEmail) u.searchParams.set('email', operatorEmail)
+    // Where to come back to. The id says WHICH box owns the licence and nothing
+    // about how to reach it — different questions, and answering only the first
+    // is what left a local buyer on a page of raw JSON with nowhere to go.
+    u.searchParams.set('return_url', window.location.origin)
     return u.toString()
   } catch { return url }
 }

@@ -189,12 +189,21 @@ def claim_entitlements(body: ClaimBody, request: Request, user=Depends(require_a
     if host and host not in names:
         names.append(host)
 
+    first = None
     for name in names:
         out = catalog.claim(name)
         tried.append(name)
         if out.get("applied"):
             host = name
             break
+        if first is None:
+            first = out
+    else:
+        # Nothing applied. Report the FIRST attempt — the instance's own id —
+        # not the last. The last is the hostname, and on a local install its
+        # answer is "localhost is not a routable host", which is true, useless,
+        # and tells somebody to fix a thing that is no longer how this works.
+        out = first or out
     out = out or {"applied": False, "reason": "This instance has no name to claim with."}
     if out.get("applied"):
         audit(user["email"], "module.claim", "licence", host,

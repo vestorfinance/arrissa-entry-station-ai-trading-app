@@ -27,6 +27,10 @@ import time
 # Every six hours. An update is not urgent enough to hammer the store for, and
 # the check costs a request whether or not anything has changed.
 INTERVAL = 6 * 3600
+# A purchase is waited on in a way an update never is: somebody has just paid
+# and is watching the page. So entitlements are collected on their own, faster
+# cycle, without the download work that makes the six hours reasonable.
+COLLECT_INTERVAL = 180
 # Not on boot. A fresh start has schema migrations, module loading and the
 # fetchers all going at once, and a download on top of that is how a small
 # machine falls over on the first boot somebody is watching.
@@ -75,11 +79,36 @@ def enabled() -> bool:
     return True
 
 
+def collect(log=print) -> dict:
+    """Pick up anything bought since the last look.
+
+    A purchase used to arrive only when somebody opened the store and pressed a
+    button, which meant paying for a module and then waiting on the buyer to go
+    and fetch it. The instance knows its own id and the store knows what that id
+    owns, so nothing about that exchange needs a person in it.
+
+    Quiet about failure: an unreachable store or a box that has bought nothing
+    are both ordinary, and neither is worth a line in the log every six hours."""
+    try:
+        import catalog
+        import instance as _instance
+        out = catalog.claim(_instance.ident())
+        if out.get("applied"):
+            log(f"[auto-update] collected purchase: {', '.join(out.get('modules') or [])}")
+        return out
+    except Exception as e:
+        return {"applied": False, "reason": str(e)}
+
+
 def run_once(log=print) -> dict:
     """Install every update this instance is entitled to. Returns what it took."""
     import catalog
     import module_installer
     import tempfile
+
+    # A licence bought a minute ago is what decides the next few lines, so it is
+    # collected BEFORE the catalogue is read rather than after.
+    collect(log)
 
     took, refused, failed = [], [], []
     try:
@@ -134,6 +163,15 @@ def apply_when_idle(log=print) -> None:
     os._exit(0)
 
 
+def _collect_loop():
+    """Just the entitlement check, often. Cheap: one request, no downloads."""
+    while not _stop.wait(COLLECT_INTERVAL):
+        try:
+            collect()
+        except Exception:
+            pass
+
+
 def _loop():
     if _stop.wait(FIRST_DELAY):
         return
@@ -154,6 +192,7 @@ def start():
     if not edition.is_community():
         return
     threading.Thread(target=_loop, name="auto-update", daemon=True).start()
+    threading.Thread(target=_collect_loop, name="auto-collect", daemon=True).start()
 
 
 def stop():

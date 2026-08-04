@@ -372,6 +372,11 @@ def _purchases_table():
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
                 paid_at     TIMESTAMPTZ
             )""")
+        # Where the buyer came FROM. An instance id says WHICH box owns the
+        # licence and nothing at all about how to get back to it — the two are
+        # different questions, and answering only the first is why a localhost
+        # buyer was left staring at raw JSON.
+        conn.execute("ALTER TABLE store_purchases ADD COLUMN IF NOT EXISTS return_url TEXT")
         conn.commit()
 
 
@@ -481,10 +486,157 @@ def admin_transactions(limit: int = Query(200, le=1000),
     }
 
 
+def _receipt_page(*, key, product, instance, back, modules, email, expires, reference):
+    """What somebody sees the moment their payment goes through.
+
+    Built here rather than in the app because the buyer is not in the app — they
+    are on Paystack's return leg, on entrystation.com, and the instance they own
+    may not even be reachable from this browser. So it is one self-contained
+    page: no stylesheet to fetch, no script to block, nothing that can fail on
+    the one screen where a person has just handed over money.
+
+    The key is the thing on it. It is set in a monospace block at a size that
+    survives being read aloud down a phone, with a copy button that reports back,
+    and it is selectable — a receipt you cannot copy from is a receipt that
+    failed. Everything else is secondary and reads as such.
+    """
+    from fastapi.responses import HTMLResponse
+    import html as _html
+
+    e = _html.escape
+    covers = ", ".join(modules or []) or product
+    back_btn = (f'<a class="btn primary" href="{e(back)}/modules?licence_key={e(key)}'
+                f'&amp;bought={e(product)}">Return to your instance</a>') if back else ""
+    return HTMLResponse(f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Payment complete — EntryStation</title>
+<style>
+  :root {{ color-scheme: light dark; }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: #0b0b0c; color: #f4f4f5;
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  }}
+  @media (prefers-color-scheme: light) {{ body {{ background: #fff; color: #101010; }} }}
+  .card {{ width: 100%; max-width: 560px; }}
+  .tick {{
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: #16a34a; color: #fff; font-size: 22px; margin-bottom: 18px;
+  }}
+  h1 {{ margin: 0 0 6px; font-size: 25px; letter-spacing: -0.02em; }}
+  .sub {{ margin: 0 0 26px; opacity: .65; font-size: 14px; }}
+  .label {{ font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; opacity: .55; margin-bottom: 7px; }}
+  .keyrow {{ display: flex; gap: 8px; align-items: stretch; }}
+  .key {{
+    flex: 1; min-width: 0; padding: 15px 16px; border-radius: 10px;
+    background: #1a1a1d; border: 1px solid #2c2c31;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 19px; letter-spacing: .06em; overflow-wrap: anywhere; user-select: all;
+  }}
+  @media (prefers-color-scheme: light) {{
+    .key {{ background: #f6f6f7; border-color: #e2e2e5; }}
+  }}
+  .btn {{
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 0 18px; min-height: 46px; border-radius: 10px; border: 1px solid #2c2c31;
+    background: transparent; color: inherit; font: inherit; font-weight: 600;
+    cursor: pointer; text-decoration: none; white-space: nowrap;
+  }}
+  @media (prefers-color-scheme: light) {{ .btn {{ border-color: #d6d6da; }} }}
+  .btn.primary {{ background: #f4f4f5; color: #0b0b0c; border-color: #f4f4f5; }}
+  @media (prefers-color-scheme: light) {{ .btn.primary {{ background: #101010; color: #fff; border-color: #101010; }} }}
+  .btn:active {{ transform: translateY(1px); }}
+  .actions {{ display: flex; gap: 10px; flex-wrap: wrap; margin: 24px 0 0; }}
+  .facts {{ margin: 26px 0 0; padding: 16px 0 0; border-top: 1px solid #232327; font-size: 13.5px; }}
+  @media (prefers-color-scheme: light) {{ .facts {{ border-color: #ebebee; }} }}
+  .facts div {{ display: flex; gap: 12px; padding: 4px 0; }}
+  .facts dt {{ opacity: .55; min-width: 96px; }}
+  .facts dd {{ margin: 0; overflow-wrap: anywhere; }}
+  .note {{ margin: 20px 0 0; padding: 13px 15px; border-radius: 10px;
+           background: #14331f; color: #b7f7cf; font-size: 13.5px; }}
+  @media (prefers-color-scheme: light) {{ .note {{ background: #eaf8f0; color: #14532d; }} }}
+  code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }}
+</style></head>
+<body><div class="card">
+  <div class="tick">&check;</div>
+  <h1>Payment complete</h1>
+  <p class="sub">{e(covers)} is now licensed to this installation.</p>
+
+  <div class="label">Licence key</div>
+  <div class="keyrow">
+    <div class="key" id="k">{e(key)}</div>
+    <button class="btn" id="c">Copy</button>
+  </div>
+
+  <div class="note">
+    You should not need this. The installation it belongs to checks in with the
+    store on its own and activates it — usually within a few minutes. Keep it in
+    case you move to another server.
+  </div>
+
+  <div class="actions">
+    {back_btn}
+    <a class="btn" href="https://entrystation.com/modules">Browse modules</a>
+  </div>
+
+  <dl class="facts">
+    <div><dt>Covers</dt><dd>{e(covers)}</dd></div>
+    {f'<div><dt>Updates until</dt><dd>{e(expires)}</dd></div>' if expires else ''}
+    <div><dt>Installation</dt><dd><code>{e(instance)}</code></dd></div>
+    <div><dt>Receipt to</dt><dd>{e(email)}</dd></div>
+    <div><dt>Reference</dt><dd><code>{e(reference)}</code></dd></div>
+  </dl>
+</div>
+<script>
+  document.getElementById('c').onclick = function () {{
+    var t = document.getElementById('k').textContent;
+    navigator.clipboard.writeText(t).then(function () {{
+      var b = document.getElementById('c'); b.textContent = 'Copied';
+      setTimeout(function () {{ b.textContent = 'Copy'; }}, 1800);
+    }});
+  }};
+</script>
+</body></html>""")
+
+
+def _safe_return(raw: str) -> str:
+    """Where we are willing to send a buyer after they pay.
+
+    A URL supplied by whoever started the checkout and then handed to a browser
+    is an open redirect unless something decides what is allowed. Two things are:
+
+    A LOOPBACK address, because it can only ever mean the buyer's own machine.
+    Redirecting a victim to their own localhost gains an attacker nothing, and
+    refusing it is what left every local install reading raw JSON.
+
+    An https host, because that is the shape a real instance has and the scheme
+    a licence key may travel over. Plain http to somebody else's server would
+    put the key on the wire in clear.
+    """
+    from urllib.parse import urlparse
+    raw = (raw or "").strip()
+    if not raw:
+        return ""
+    try:
+        u = urlparse(raw)
+    except Exception:
+        return ""
+    host = (u.hostname or "").lower()
+    loopback = host in ("localhost", "127.0.0.1", "::1", "0.0.0.0")
+    if u.scheme == "http" and loopback:
+        return raw
+    if u.scheme == "https" and host and "." in host:
+        return raw
+    return ""
+
+
 @router.get("/api/store/checkout")
 def store_checkout(product: str = Query(..., description="module or bundle id"),
                    instance: str = Query(..., description="the buying instance's domain or id"),
-                   email: str = Query(..., description="where the key is sent")):
+                   email: str = Query(..., description="where the key is sent"),
+                   return_url: str = Query("", description="where to send the buyer back to")):
     """Begin a purchase. Returns the Paystack URL to send the buyer to."""
     inst = _store.normalise_instance(instance)
     if not inst:
@@ -508,8 +660,9 @@ def store_checkout(product: str = Query(..., description="module or bundle id"),
     import db
     with db.connect() as conn:
         conn.execute("INSERT INTO store_purchases (reference, product, email, instance_id, "
-                     "amount_zar, mode) VALUES (%s,%s,%s,%s,%s,%s)",
-                     (ref, product, email.lower().strip(), inst, zar, mode))
+                     "amount_zar, mode, return_url) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                     (ref, product, email.lower().strip(), inst, zar, mode,
+                      _safe_return(return_url)))
         conn.commit()
 
     out = paystack.initialize(
@@ -536,8 +689,12 @@ def store_checkout_verify(reference: str = Query(...)):
     if not row:
         raise HTTPException(404, "Unknown payment reference.")
     if row["status"] == "paid" and row["licence_key"]:
-        return {"status": "paid", "licence_key": row["licence_key"], "product": row["product"],
-                "instance_id": row["instance_id"], "already": True}
+        # A refresh, or Paystack retrying. Same page, same key — not a second
+        # licence, and not the JSON this used to fall back to.
+        back = _safe_return(row.get("return_url") or "")
+        return _receipt_page(key=row["licence_key"], product=row["product"],
+                             instance=row["instance_id"], back=back, modules=[],
+                             email=row["email"], expires="", reference=reference)
 
     data = paystack.verify(reference, mode=row["mode"])
     if (data.get("status") or "").lower() != "success":
@@ -596,14 +753,21 @@ def store_checkout_verify(reference: str = Query(...)):
     # be an open redirect wearing a payment callback as a disguise. An instance
     # that is not a routable host — a generated id, localhost, a bare IP — gets
     # the key on screen instead, because there is nowhere to send them.
-    dest = _store.normalise_instance(row["instance_id"])
-    routable = ("." in dest and " " not in dest and not dest.startswith("es-")
-                and not dest.startswith("localhost"))
-    payload = {"status": "paid", "licence_key": key, "product": row["product"],
-               "instance_id": row["instance_id"], "bound": bound.get("ok"), "modules": grants}
-    if routable:
-        from fastapi.responses import RedirectResponse
-        from urllib.parse import urlencode
-        q = urlencode({"licence_key": key, "bought": row["product"]})
-        return RedirectResponse(f"https://{dest}/modules?{q}", status_code=303)
-    return payload
+    # A page, not a payload. This used to answer a browser with raw JSON whenever
+    # it could not redirect — which is every local install — leaving somebody who
+    # had just paid to hunt a licence key out of a wall of punctuation.
+    #
+    # And it does not redirect on its own any more. The return address comes from
+    # whoever started the checkout, so sending a browser there automatically is
+    # an open redirect with a payment receipt for a disguise; a button the buyer
+    # presses is the same journey without that. It also leaves the key on screen
+    # long enough to copy, which was the point.
+    back = _safe_return(row.get("return_url") or "")
+    if not back:
+        dest = _store.normalise_instance(row["instance_id"])
+        if "." in dest and " " not in dest and not dest.startswith(("es-", "localhost")):
+            back = f"https://{dest}"
+    return _receipt_page(key=key, product=row["product"], instance=row["instance_id"],
+                         back=back, modules=grants, email=row["email"],
+                         expires=str(expires)[:10] if expires else "",
+                         reference=reference)
