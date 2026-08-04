@@ -87,5 +87,31 @@ except Exception:
     done
 fi
 
+# Take the module updates this instance is entitled to, BEFORE the app starts.
+#
+# The bundled modules above come out of the image. A module the operator BOUGHT
+# does not — it was installed from the store, so a rebuilt image knows nothing
+# about it and `git pull && compose up --build` left every purchased module
+# frozen while core and the free ones moved. That is not what "update" means to
+# the person typing it.
+#
+# Here rather than in the running app because nothing has imported a module yet.
+# Modules load at import time, so the same work done a minute later would need a
+# restart to take effect; done now it simply IS the version that loads.
+#
+# Entitlement is store.can_update's decision, the same one the button uses: a
+# lapsed subscription keeps what it has and receives nothing new. Never fatal —
+# an unreachable store or an expired licence must not stop the app from booting.
 cd /app/backend
+if [ "$(printf '%s' "${ENTRYSTATION_AUTO_UPDATE:-on}" | tr 'A-Z' 'a-z')" != "off" ]; then
+    python3 -c "
+import auto_update, edition
+if edition.is_community() and auto_update.enabled():
+    r = auto_update.run_once()
+    n = len(r.get('took') or [])
+    print('[entrypoint] ' + (f'{n} purchased module(s) updated' if n
+                             else 'purchased modules are up to date'), flush=True)
+" 2>&1 || echo "[entrypoint] update check skipped (store unreachable or no licence)"
+fi
+
 exec "$@"

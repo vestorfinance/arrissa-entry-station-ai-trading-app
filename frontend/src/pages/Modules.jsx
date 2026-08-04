@@ -217,6 +217,25 @@ export default function Modules() {
                      }} />
               <span>Install updates automatically</span>
             </label>
+            {/* Everything eligible, now. The per-module buttons are still
+                there and still right for taking one; this is for the case the
+                page usually presents — several at once, all entitled, and no
+                reason to press them one at a time. */}
+            {upd.count > 0 && upd.modules?.some((m) => m.can_update) && (
+              <button className="btn btn--primary btn--sm" disabled={busy === '*'}
+                      onClick={() => act('*', async () => {
+                        const r = await api.updateAll()
+                        const n = (r.took || []).length
+                        setNote(n
+                          ? `${n} module${n === 1 ? '' : 's'} updated`
+                            + (r.restarting ? ' — restarting to apply, reload in a moment.' : '.')
+                          : 'Nothing to update.')
+                        return r
+                      })}>
+                <ArrowUpCircle size={14} strokeWidth={2} />
+                {busy === '*' ? 'Updating…' : 'Update everything eligible'}
+              </button>
+            )}
             <span className="mod-auto-note">
               {upd.auto
                 ? 'Checked every six hours. Only modules your subscription still covers, '

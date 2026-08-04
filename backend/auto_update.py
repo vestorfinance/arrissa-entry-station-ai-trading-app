@@ -115,7 +115,7 @@ def run_once(log=print) -> dict:
     return {"took": took, "refused": refused, "failed": failed}
 
 
-def _apply(log=print) -> None:
+def apply_when_idle(log=print) -> None:
     """Restart, so the code that was just downloaded is the code that is running.
 
     Waits for the instance to go quiet. If it never does, the update stays on
@@ -142,7 +142,7 @@ def _loop():
             if enabled():
                 res = run_once()
                 if res.get("took"):
-                    _apply()
+                    apply_when_idle()
         except Exception as e:
             print(f"[auto-update] {e!r}", flush=True)
         if _stop.wait(INTERVAL):

@@ -272,6 +272,25 @@ def set_auto_update(body: AutoBody, user=Depends(require_admin)):
     return {"ok": True, "auto": _auto_on()}
 
 
+@router.post("/update-all")
+def update_all(user=Depends(require_admin)):
+    """Take every update this instance is entitled to, now, in one press.
+
+    The same work the six-hourly worker does and the same rule deciding it —
+    this is only the impatient path. Modules load at import time, so what is
+    installed here is inert until the process comes back; the restart is
+    scheduled rather than immediate so it waits for the instance to go quiet
+    instead of cutting off whoever pressed the button."""
+    import auto_update
+    import threading
+    res = auto_update.run_once()
+    if res.get("took"):
+        audit(user["email"], "modules.update_all", "module", None,
+              {"took": [t["id"] for t in res["took"]]})
+        threading.Thread(target=auto_update.apply_when_idle, daemon=True).start()
+    return {**res, "restarting": bool(res.get("took"))}
+
+
 @router.get("/updates")
 def updates(user=Depends(_current_user)):
     """Everything with a newer version waiting, in one answer.
