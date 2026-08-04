@@ -3050,7 +3050,10 @@ a.dv-card-title:hover { text-decoration: underline; }
   position: relative;
   flex: 1;
   min-height: 0;
-  border-radius: var(--radius);
+  /* The same corner as the bar above it. They sit together as one arrangement,
+     and three panels disagreeing about their radius read as three different
+     kinds of thing that happen to be adjacent. */
+  border-radius: var(--radius-sm);
   background: var(--card-bg);
   overflow: hidden;
 }
@@ -3110,7 +3113,7 @@ a.dv-card-title:hover { text-decoration: underline; }
   gap: 8px;
   padding: 16px;
   background: var(--card-bg);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);   /* matches .flow-bar and .flow-canvas */
   overflow-y: auto;
 }
 .flow-palette-label {
