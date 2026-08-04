@@ -203,10 +203,32 @@ const TROUBLE = [
        + 'key rather than ours, so nothing that thinks will work until one is there.',
   },
   {
-    q: 'I want to start completely over',
-    a: '`docker compose down -v` removes the containers AND the volumes, which is your database, '
-       + 'your modules and your broker session. It is not reversible. Keep .env if you want your '
-       + 'keys back.',
+    q: 'Remove it completely, and everything it holds',
+    danger: true,
+    a: 'This deletes the database, every account and setting, the modules you installed including '
+       + 'ones you paid for, your broker session, the browser profile and the images. None of it '
+       + 'is recoverable and nothing asks twice. Purchases are not lost, because a licence lives '
+       + 'on the store, but the installation id does: a reinstall is a NEW installation and '
+       + 'anything bought will need re-binding to it.',
+    before: 'If there is any chance you want it back, take these first. The dump is your data; '
+          + '.env holds FERNET_KEY, without which a restored dump is unreadable.',
+    backup: `cd ~/entrystation
+docker compose exec -T db pg_dump -U entrystation entrystation > ~/entrystation-backup.sql
+cp .env ~/entrystation-env-backup`,
+    code: `cd ~/entrystation
+
+# containers, networks, and the volumes: database, modules, browser session
+docker compose down -v --remove-orphans
+
+# the code, and .env with it
+cd ~ && rm -rf ~/entrystation
+
+# the images it built and the build cache, which is most of the disk
+docker image prune -af
+docker builder prune -af`,
+    after: 'On a server, also remove its block from /etc/caddy/Caddyfile and reload '
+         + '(sudo systemctl reload caddy), or Caddy keeps answering for a domain that now '
+         + 'proxies to nothing.',
   },
 ]
 
@@ -662,9 +684,18 @@ curl -s -o /dev/null -w "site %{http_code}\n" https://${D}`,
             <p>Every one of these is something that actually happened, and what it turned out to be.</p>
             <div className="ins-faq">
               {TROUBLE.map((t) => (
-                <details key={t.q}>
+                <details key={t.q} className={t.danger ? 'ins-faq-danger' : undefined}>
                   <summary>{t.q}</summary>
                   <p>{t.a}</p>
+                  {/* Answers that end in a command get the same copyable block
+                      as the steps do. Retyping a command out of a paragraph is
+                      how a flag gets dropped, and on the destructive one that
+                      is the difference between removing a container and
+                      removing a database. */}
+                  {t.before && <p className="ins-note">{t.before}</p>}
+                  {t.backup && <Code>{t.backup}</Code>}
+                  {t.code && <Code>{t.code}</Code>}
+                  {t.after && <p className="ins-note">{t.after}</p>}
                 </details>
               ))}
             </div>

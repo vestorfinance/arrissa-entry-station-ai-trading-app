@@ -6766,3 +6766,14 @@ a.dv-card-title:hover { text-decoration: underline; }
 .dt-when-tail { font-size: 12.5px; color: var(--text-secondary); white-space: nowrap; }
 .dt-warn { color: var(--tone-bad); }
 .dt-combine { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+/* The one answer in the list that destroys things. Marked, because a row that
+   looks like the seven above it is a row somebody opens while skimming. */
+.ins-faq-danger > summary { color: var(--tone-bad); }
+.ins-faq-danger > summary::marker { color: var(--tone-bad); }
+.ins-faq-danger { border-radius: var(--radius-sm); }
+.ins-faq-danger[open] {
+  background: color-mix(in srgb, var(--tone-bad) 9%, transparent);
+  padding: 2px 14px 12px;
+  margin: 0 -14px;
+}
