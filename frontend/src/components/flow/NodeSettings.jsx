@@ -340,7 +340,7 @@ function DataTriggerSettings({ values, set }) {
 
           {c.kind === 'news_symbols' && (
             <input className="input" value={c.symbols || ''}
-                   placeholder="XAUUSD, US30, EURUSD"
+                   placeholder="XAUUSD, US30, EURUSD  —  or any"
                    onChange={(e) => setC(i, { symbols: e.target.value })} />
           )}
 
@@ -603,7 +603,12 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                   <ParamsField
                     className="node-settings-text node-settings-text--short"
                     value={values[a.name] || ''}
-                    placeholder={a.placeholder || 'symbol=XAUUSD&count=15'}
+                    /* This node's own example, not a generic one. A source
+                       whose filter can be switched off shows that in its
+                       example, which is the only place somebody looking at an
+                       empty field will read it. */
+                    placeholder={live?.apiExample || live?.api_example
+                                 || a.placeholder || 'symbol=XAUUSD&count=15'}
                     onChange={(v) => set(a.name, v)}
                   />
                 ) : (
@@ -725,7 +730,8 @@ export default function NodeSettings({ node, variables = [], models = [], agents
                 inputRef={paramsRef}
                 autoFocus
                 value={values[big] || ''}
-                placeholder="symbol=XAUUSD&count=15&timeframe=M15"
+                placeholder={live?.apiExample || live?.api_example
+                             || 'symbol=XAUUSD&count=15&timeframe=M15'}
                 onChange={(v) => set(big, v)}
                 onKeyDown={(e) => { if (e.key === 'Escape') setBig(null) }}
               />

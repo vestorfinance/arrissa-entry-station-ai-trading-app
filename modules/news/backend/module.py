@@ -194,7 +194,7 @@ def register(registry, module_id):
                            "icon": "Newspaper", "tone": "news", "model": True,
                            "args": [{"name": "text", "type": "text", "required": True}],
                            "api_keys": "symbol · impact (high|medium|low) · min_score (0-100) · hours · days · range (today|yesterday|this_week) · q · limit",
-                           "api_example": "symbol=XAUUSD&impact=high&hours=24&limit=20",
+                           "api_example": "symbol=any&impact=high&hours=24     (symbol: any = all instruments)",
                            "api_doc": [{"key": "latest", "values": ["true"],
                                         "note": "only the most recent story, plus any published at the same moment; add symbol to scope it"},
                                        {"key": "symbol", "values": ["any", "XAUUSD", "EURUSD", "US30"], "note": "instrument to filter to; any = every instrument"}, {"key": "impact", "values": ["high", "medium", "low"]}, {"key": "min_score", "values": ["50", "70", "90"], "note": "0-100"}, {"key": "hours", "values": ["6", "12", "24"]}, {"key": "days", "values": ["1", "3", "7"]}, {"key": "range", "values": ["today", "yesterday", "this_week"]}, {"key": "q", "values": ["tariff", "rate cut"], "note": "free text search"}, {"key": "limit", "values": ["10", "20", "50"]}, {"key": "measure", "values": ["true"], "note": "how heavy the news is, not the headlines"}]},

@@ -166,7 +166,7 @@ def register(registry, module_id):
                  "icon": "CalendarClock", "tone": "calendar", "model": True,
                  "args": [{"name": "text", "type": "text", "required": True}],
                            "api_keys": "symbol · currency (USD,EUR) · impact (high|moderate|low) · range (today|tomorrow|this_week) · hours · days · limit",
-                           "api_example": "currency=USD&impact=high&range=today",
+                           "api_example": "currency=any&impact=high&range=today     (currency: any = all)",
                            "api_doc": [{"key": "latest", "values": ["true"],
                                         "note": "only the most recent release, plus everything printed at the same moment"},
                                        {"key": "symbol", "values": ["any", "XAUUSD", "EURUSD"], "note": "any = every instrument"}, {"key": "currency", "values": ["any", "USD", "EUR", "GBP", "USD,EUR"]}, {"key": "impact", "values": ["high", "moderate", "low"]}, {"key": "range", "values": ["today", "tomorrow", "this_week"]}, {"key": "hours", "values": ["6", "24"]}, {"key": "days", "values": ["1", "7"]}, {"key": "limit", "values": ["10", "50"]}]},
