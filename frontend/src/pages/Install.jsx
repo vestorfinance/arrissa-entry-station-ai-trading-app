@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Copy, AlertTriangle, Laptop, Server, ExternalLink } from 'lucide-react'
+import { Check, Copy, AlertTriangle, Laptop, Server, ExternalLink, Apple } from 'lucide-react'
 import * as api from '../services/api.js'
 
 // The Community installation guide.
@@ -20,27 +20,105 @@ import * as api from '../services/api.js'
 const REPO = 'https://github.com/vestorfinance/arrissa-entry-station-ai-trading-app.git'
 const DIR = '~/entrystation'
 
-const LOCAL = [
+// ── Windows ───────────────────────────────────────────────────────────────────
+const WINDOWS = [
   {
-    id: 'l-docker',
-    title: 'Install Docker',
-    body: 'Docker Desktop brings everything the app needs — the database, the browser it logs '
-        + 'into your broker with, the web server — in one install. Nothing else has to be set up.',
-    link: { label: 'Download Docker Desktop', url: 'https://www.docker.com/products/docker-desktop/' },
-    note: 'Open it once after installing and leave it running. Everything below talks to it.',
+    id: 'w-docker',
+    title: 'Install Docker Desktop',
+    body: 'Docker Desktop runs the whole stack: the app, its database, the web server, and the '
+        + 'browser it logs into your broker with. You install this one thing and nothing else.',
+    link: { label: 'Download Docker Desktop for Windows', url: 'https://www.docker.com/products/docker-desktop/' },
+    note: 'Windows 10 or 11, 64-bit. The installer turns on WSL 2 for you. If it complains about '
+        + 'virtualisation, it needs to be enabled in your BIOS — restart, enter setup, and look '
+        + 'for Intel VT-x or AMD-V.',
+    warn: 'Restart the machine after installing, then open Docker Desktop once and wait for the '
+        + 'whale icon to stop animating. Nothing below works until it says Engine running.',
   },
   {
-    id: 'l-code',
+    id: 'w-check',
+    title: 'Check it works',
+    body: 'In PowerShell. Both lines should print a version. If they do not, Docker Desktop is '
+        + 'not running yet.',
+    code: 'docker --version\ndocker compose version',
+  },
+  {
+    id: 'w-code',
     title: 'Get the code',
-    body: 'One clone. This is the public edition: core, the free modules, and the store client '
-        + 'that fetches anything you buy.',
+    body: 'Git for Windows if you do not have it, then one clone. This is the public edition: '
+        + 'core, the free modules, and the store client that fetches anything you buy.',
+    link: { label: 'Download Git for Windows', url: 'https://git-scm.com/download/win' },
+    code: `git clone ${REPO} $env:USERPROFILE\\entrystation
+cd $env:USERPROFILE\\entrystation`,
+  },
+  {
+    id: 'w-env',
+    title: 'Settings and keys',
+    body: 'Three secrets, generated on your machine and never leaving it. Run this in PowerShell '
+        + 'from the folder you just cloned into.',
+    code: `Copy-Item .env.docker.example .env
+
+$fernet = python -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+$jwt    = python -c "import secrets; print(secrets.token_urlsafe(48))"
+$dbpass = python -c "import secrets; print(secrets.token_urlsafe(24))"
+
+Add-Content .env "DOMAIN=:80"
+Add-Content .env "FERNET_KEY=$fernet"
+Add-Content .env "JWT_SECRET=$jwt"
+Add-Content .env "DB_PASSWORD=$dbpass"`,
+    note: 'No Python? Install it from python.org, or open .env in Notepad and paste any three '
+        + 'long random strings of your own. They only have to be secret, not special.',
+    warn: 'Back up .env. Losing FERNET_KEY makes every stored broker session and API key '
+        + 'permanently unreadable. There is no recovery, by design.',
+  },
+  {
+    id: 'w-run',
+    title: 'Start it',
+    body: 'The first build takes several minutes, most of it downloading the browser. After that '
+        + 'it starts in seconds.',
+    code: 'docker compose up -d --build\ndocker compose logs -f app',
+    note: 'Wait for "Application startup complete", then press Ctrl-C. That stops watching the '
+        + 'logs, not the app.',
+  },
+  {
+    id: 'w-open',
+    title: 'Open it',
+    body: 'Go to http://localhost. The first account you create is the owner, and registration '
+        + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
+        + 'machine afterwards.',
+  },
+]
+
+// ── macOS ─────────────────────────────────────────────────────────────────────
+const MACOS = [
+  {
+    id: 'm-docker',
+    title: 'Install Docker Desktop',
+    body: 'Docker Desktop runs the whole stack: the app, its database, the web server, and the '
+        + 'browser it logs into your broker with. You install this one thing and nothing else.',
+    link: { label: 'Download Docker Desktop for Mac', url: 'https://www.docker.com/products/docker-desktop/' },
+    note: 'Pick the right build. Apple menu → About This Mac: if it says Apple M1/M2/M3/M4, take '
+        + 'Apple Silicon; if it says Intel, take Intel. The wrong one will not run.',
+    warn: 'Open Docker Desktop once after installing and leave it running. Nothing below works '
+        + 'until the whale icon in the menu bar stops animating.',
+  },
+  {
+    id: 'm-check',
+    title: 'Check it works',
+    body: 'In Terminal. Both lines should print a version.',
+    code: 'docker --version\ndocker compose version',
+  },
+  {
+    id: 'm-code',
+    title: 'Get the code',
+    body: 'macOS asks to install the developer tools the first time you run git. Say yes; it is a '
+        + 'one-time prompt.',
     code: `git clone ${REPO} ${DIR}\ncd ${DIR}`,
   },
   {
-    id: 'l-env',
+    id: 'm-env',
     title: 'Settings and keys',
-    body: 'Three secrets, generated on your machine and never leaving it, written into .env '
-        + 'along with the two settings a local install needs.',
+    body: 'Three secrets, generated on your machine and never leaving it. Paste the whole block '
+        + 'at once — it is one command.',
     code: `cp .env.docker.example .env
 
 cat >> .env <<EOF
@@ -50,35 +128,54 @@ FERNET_KEY=$(python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.ura
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
 DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
 EOF`,
-    note: 'DOCKER_PLATFORM=linux/arm64 is for Apple Silicon. On an Intel Mac, Windows or Linux, '
-        + 'delete that line.',
+    note: 'The DOCKER_PLATFORM line is for Apple Silicon. On an Intel Mac, delete it.',
     warn: 'Back up .env. Losing FERNET_KEY makes every stored broker session and API key '
         + 'permanently unreadable. There is no recovery, by design.',
   },
   {
-    id: 'l-run',
+    id: 'm-run',
     title: 'Start it',
-    body: 'The first build takes a few minutes, most of it pulling the browser. After that it is '
-        + 'seconds.',
-    code: `docker compose up -d --build\ndocker compose logs -f app`,
+    body: 'The first build takes several minutes, most of it downloading the browser. After that '
+        + 'it starts in seconds.',
+    code: 'docker compose up -d --build\ndocker compose logs -f app',
     note: 'Wait for "Application startup complete", then press Ctrl-C. That stops watching the '
         + 'logs, not the app.',
   },
   {
-    id: 'l-open',
+    id: 'm-open',
     title: 'Open it',
     body: 'Go to http://localhost. The first account you create is the owner, and registration '
         + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
-        + 'box afterwards.',
+        + 'machine afterwards.',
   },
 ]
 
 const TROUBLE = [
   {
-    q: 'The page does not load at all',
-    a: 'Check all three containers are up with `docker compose ps`. If caddy keeps restarting it '
-       + 'is usually the certificate: the domain has to resolve to this server, and ports 80 and '
-       + '443 have to be open, before one can be issued.',
+    q: 'docker: command not found',
+    a: 'Docker Desktop is installed but not running, or the terminal was open before you '
+       + 'installed it. Start Docker Desktop, wait for the whale to stop animating, then close '
+       + 'and reopen your terminal. On a server, log out and back in after the usermod line.',
+  },
+  {
+    q: 'Port 80 is already allocated',
+    a: 'Something else on the machine is already serving the web. On a server that is usually '
+       + 'Apache or nginx: `sudo systemctl disable --now apache2 nginx`. On Windows it is often '
+       + 'IIS or Skype. Nothing else may hold 80 or 443, because that is where the certificate '
+       + 'check and the site both arrive.',
+  },
+  {
+    q: 'The site will not load, or the certificate fails',
+    a: 'Three things in order. Does the domain point at the server — `dig +short yourdomain.com` '
+       + 'should print its IP. Are 80 and 443 open — `sudo ufw status`. And is it behind '
+       + 'Cloudflare with the orange cloud on? Turn it to DNS only for the first start, and if '
+       + 'you turn it back on set SSL/TLS to Full, never Flexible.',
+  },
+  {
+    q: 'It redirects forever, or says too many redirects',
+    a: 'Cloudflare SSL/TLS is set to Flexible. Flexible tells Cloudflare to talk to your server '
+       + 'over plain http while the app is redirecting everything to https, so the two send each '
+       + 'other in circles. Set it to Full.',
   },
   {
     q: 'Connecting a broker says the browser executable is missing',
@@ -176,7 +273,14 @@ function Step({ n, s }) {
 
 export default function Install() {
   const [cfg, setCfg] = useState(null)
-  const [where, setWhere] = useState('local')
+  // Default to what they are actually using. Asking somebody on a Mac to pick
+  // "macOS" from three buttons is a question with an answer already on screen.
+  const [where, setWhere] = useState(() => {
+    const p = (navigator.userAgent || '').toLowerCase()
+    if (p.includes('win')) return 'windows'
+    if (p.includes('mac')) return 'macos'
+    return 'vps'
+  })
   // What the VPS commands need, asked for once and written into every block.
   const [host, setHost] = useState('')
   const [user, setUser] = useState('root')
@@ -195,50 +299,78 @@ export default function Install() {
 
   const VPS = useMemo(() => [
     {
+      id: 'v-vps',
+      title: 'Get a server',
+      body: 'Any provider will do — Hetzner, DigitalOcean, Vultr, Contabo. Ask for Ubuntu 22.04 '
+          + 'or 24.04, 2 vCPU and 4GB of memory. When it is built you are given an IP address, a '
+          + 'username (usually root) and either a password or an SSH key.',
+      note: '4GB is not padding. The app logs into your broker with a real browser, and a browser '
+          + 'is the heaviest thing on the box.',
+    },
+    {
       id: 'v-dns',
-      title: 'Point your domain at the server',
-      body: `At your domain registrar, add an A record for ${D} pointing to ${H}. Do this first: `
-          + 'the certificate is issued by proving you control the domain, and that check happens '
-          + 'the moment the app starts.',
-      note: 'Give DNS a few minutes to propagate before the last step.',
+      title: 'Point your domain at it',
+      body: `Wherever you bought ${D}, find DNS settings and add one record: type A, name @ (or `
+          + `the subdomain you want), value ${H}. That is all a domain is here — a name that `
+          + 'answers with your server\u2019s address.',
+      code: `# from your own machine, check it took
+dig +short ${D}
+# should print ${H}`,
+      note: 'It can take a few minutes. Do this before starting the app: the HTTPS certificate is '
+          + 'issued by proving you control the domain, and that check happens against DNS the '
+          + 'moment the app first starts.',
+      warn: 'On Cloudflare, set the record to DNS only (grey cloud) for the first start. Orange '
+          + 'cloud proxies the certificate check and it can fail. Turn it on afterwards if you '
+          + 'want it, and set SSL/TLS to Full \u2014 Flexible causes an endless redirect loop.',
     },
     {
       id: 'v-ssh',
-      title: 'Connect to the server',
-      body: 'Everything from here runs on the server, not on your own machine.',
+      title: 'Log in to the server',
+      body: 'On Mac or Linux use Terminal. On Windows use PowerShell, which has ssh built in. '
+          + 'Everything after this runs on the server, not on your own machine.',
       code: `ssh ${U}@${H}`,
+      note: 'The first time it asks whether you trust the host. Type yes.',
     },
     {
       id: 'v-docker',
       title: 'Install Docker',
-      body: "Docker's own installer, the one their documentation gives. Compose comes with it.",
+      body: "Docker\u2019s own installer, which is the one their documentation gives. Compose "
+          + 'comes with it. The second and third lines let you run docker without typing sudo '
+          + 'every time.',
       code: `curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker ${U}
-newgrp docker`,
-      note: 'The last two lines let you run docker without sudo. Skip them and every docker '
-          + 'command below needs sudo in front of it.',
+newgrp docker
+
+docker --version
+docker compose version`,
+      note: 'Both version lines should print. If they do not, log out and back in.',
     },
     {
       id: 'v-ports',
       title: 'Open the ports',
-      body: '80 and 443, plus the ssh you are already using. 80 is not optional: it is how the '
-          + 'certificate is issued, even though the app redirects to https afterwards.',
+      body: 'A firewall that lets in ssh, web traffic, and nothing else. Port 80 is not optional '
+          + 'even though the site ends up on https: it is how the certificate is issued.',
       code: `sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw --force enable`,
+sudo ufw --force enable
+sudo ufw status`,
+      warn: 'Nothing else may already be using 80 or 443. If this server runs Apache, nginx or a '
+          + 'Caddy of its own, stop it first \u2014 `sudo systemctl disable --now apache2 nginx` '
+          + '\u2014 or the app cannot start and the error will only say the port is in use.',
     },
     {
       id: 'v-code',
       title: 'Get the code',
-      body: 'The same public edition as a local install.',
+      body: 'The same public edition as a local install: core, the free modules, and the store '
+          + 'client that fetches anything you buy.',
       code: `git clone ${REPO} ~/entrystation\ncd ~/entrystation`,
     },
     {
       id: 'v-env',
       title: 'Settings and keys',
-      body: 'Your domain goes in here, and the three secrets are generated on the server. Caddy '
-          + 'reads DOMAIN and gets a certificate for it on the first start.',
+      body: 'Your domain goes in here, and the three secrets are generated on the server. Paste '
+          + 'the whole block at once.',
       code: `cp .env.docker.example .env
 
 cat >> .env <<EOF
@@ -247,29 +379,36 @@ DOCKER_PLATFORM=
 FERNET_KEY=$(python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())")
 JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
 DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
-EOF`,
+EOF
+
+cat .env`,
       note: 'Leave DOCKER_PLATFORM empty on a server. It defaults to amd64, which is what '
           + 'Microsoft publishes Edge for, and Edge is what the broker login uses.',
-      warn: 'Back up .env somewhere that is not the server. Losing FERNET_KEY makes every stored '
-          + 'broker session and API key permanently unreadable.',
+      warn: 'Copy .env somewhere off the server. Losing FERNET_KEY makes every stored broker '
+          + 'session and API key permanently unreadable.',
     },
     {
       id: 'v-run',
       title: 'Start it',
-      body: 'The first build takes a few minutes. Watch the log until the certificate is issued.',
-      code: `docker compose up -d --build\ndocker compose logs -f`,
+      body: 'The first build takes several minutes, most of it downloading the browser. Watch the '
+          + 'log until Caddy says it has a certificate.',
+      code: 'docker compose up -d --build\ndocker compose logs -f',
+      note: 'Look for "certificate obtained successfully" and "Application startup complete". '
+          + 'Then press Ctrl-C, which stops watching the log rather than the app.',
     },
     {
       id: 'v-open',
       title: 'Open it',
       body: `Go to https://${D}. The first account you create is the owner, and registration `
-          + 'closes behind it.',
+          + 'closes behind it: a Community instance is single-user, so nobody can sign up on your '
+          + 'server afterwards.',
+      code: `docker compose ps   # all three should say running`,
     },
   ], [H, U, D])
 
-  const steps = where === 'local' ? LOCAL : VPS
+  const steps = where === 'windows' ? WINDOWS : where === 'macos' ? MACOS : VPS
   const after = steps.length
-  const dir = where === 'local' ? DIR : '~/entrystation'
+  const dir = where === 'windows' ? '$env:USERPROFILE\\entrystation' : '~/entrystation'
 
   return (
     <div className="home ins">
@@ -307,17 +446,23 @@ EOF`,
               certificate and no ssh, and pretending otherwise is what makes a
               download feel like a deployment. */}
           <div className="ins-where">
-            <button className={'ins-where-btn' + (where === 'local' ? ' ins-where-btn--on' : '')}
-                    onClick={() => setWhere('local')}>
+            <button className={'ins-where-btn' + (where === 'windows' ? ' ins-where-btn--on' : '')}
+                    onClick={() => setWhere('windows')}>
               <Laptop size={17} strokeWidth={1.9} />
-              <b>On your computer</b>
-              <span>Try it, or run it for yourself. No domain needed.</span>
+              <b>Windows</b>
+              <span>On your own PC. No domain needed.</span>
+            </button>
+            <button className={'ins-where-btn' + (where === 'macos' ? ' ins-where-btn--on' : '')}
+                    onClick={() => setWhere('macos')}>
+              <Apple size={17} strokeWidth={1.9} />
+              <b>macOS</b>
+              <span>On your own Mac. No domain needed.</span>
             </button>
             <button className={'ins-where-btn' + (where === 'vps' ? ' ins-where-btn--on' : '')}
                     onClick={() => setWhere('vps')}>
               <Server size={17} strokeWidth={1.9} />
-              <b>On a VPS</b>
-              <span>Ubuntu, your own domain, HTTPS, running around the clock.</span>
+              <b>Ubuntu VPS</b>
+              <span>Your own domain, HTTPS, running around the clock.</span>
             </button>
           </div>
 
@@ -349,10 +494,28 @@ EOF`,
             <div className="home-panel ins-pre">
               <h2>Before you start</h2>
               <ul className="home-ticks">
-                <li><Check size={15} /> A Mac, Windows or Linux machine with 8GB of memory</li>
-                <li><Check size={15} /> About 6GB of disk, most of it the browser image</li>
-                <li><Check size={15} /> An API key from OpenAI, Anthropic, DeepSeek or any other provider</li>
+                <li><Check size={15} /> {where === 'windows'
+                  ? 'Windows 10 or 11, 64-bit, with 8GB of memory'
+                  : 'macOS 13 or later, with 8GB of memory'}</li>
+                <li><Check size={15} /> About 6GB of free disk, most of it the browser</li>
+                <li><Check size={15} /> An API key from OpenAI, Anthropic, DeepSeek or any other
+                  provider. You can add it after installing.</li>
+                <li><Check size={15} /> No domain, no certificate, no server. It runs at
+                  http://localhost on this machine.</li>
               </ul>
+            </div>
+          )}
+
+          {where === 'vps' && (
+            <div className="ins-callout">
+              <b>You do not install a web server or a reverse proxy.</b>
+              <p>
+                Caddy is part of the stack and starts with it. It answers on 80 and 443, gets a
+                free certificate for your domain by itself, renews it by itself, and passes
+                requests to the app. There is no Caddyfile to write, no certbot to run, and no
+                nginx to configure. The only thing it needs from you is a domain that already
+                points at the server, and those two ports free.
+              </p>
             </div>
           )}
 
