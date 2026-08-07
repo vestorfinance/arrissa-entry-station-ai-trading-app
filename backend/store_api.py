@@ -662,6 +662,65 @@ def _safe_return(raw: str) -> str:
     return ""
 
 
+def _supersede_singles(instance: str, product: str, mode: str, keep_ref: str) -> list:
+    """Buying all-access ends the subscriptions it replaces.
+
+    Otherwise the bundle is bought and every individual module goes on billing
+    beside it — the customer pays twice for the same thing, every year, and the
+    only way they find out is a statement. That is not a subscription somebody
+    forgot to cancel; it is one this store kept charging after selling them its
+    replacement.
+
+    Only what the new product actually covers is cancelled, and only for this
+    instance. Never fatal: a bundle that has been paid for must not fail to
+    apply because Paystack was slow to answer."""
+    # What this product REPLACES, which is not what it grants. `_priced` returns
+    # the grant token — all-access grants "all-access", and ownership expands
+    # that at read time — so asking it what a bundle covers answers with the
+    # bundle's own name and nothing is ever superseded.
+    covered = set()
+    for b in _store.bundles():
+        if b["id"] == product:
+            covered = set(b.get("includes") or [])
+            break
+    if not covered:
+        return []                      # a single module supersedes nothing
+
+    import db
+    ended = []
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT reference, product, subscription_code, email FROM store_purchases "
+            "WHERE instance_id = %s AND status = 'paid' AND subscription_code IS NOT NULL "
+            "AND reference <> %s", (instance, keep_ref)).fetchall()
+
+    for r in rows:
+        # A bundle covers the singles inside it. It does not cover another
+        # bundle somebody also holds, and cancelling that would take away
+        # something they are still paying for separately.
+        if r["product"] == product or r["product"] not in covered:
+            continue
+        try:
+            subs = paystack.customer_subscriptions_by_code(r["subscription_code"], mode)
+            token = (subs or {}).get("email_token")
+            if not token:
+                print(f"[store] no email token for {r['subscription_code']}, cannot disable",
+                      flush=True)
+                continue
+            paystack.disable_subscription(r["subscription_code"], token, mode)
+            with db.connect() as conn:
+                conn.execute("UPDATE store_purchases SET status='superseded' WHERE reference=%s",
+                             (r["reference"],))
+                conn.commit()
+            ended.append(r["product"])
+        except Exception as e:
+            # Logged loudly: a subscription that should have stopped and did not
+            # is money leaving somebody's account for nothing.
+            print(f"[store] COULD NOT CANCEL {r['product']} ({r['subscription_code']}): {e}",
+                  flush=True)
+    return ended
+
+
 def _renewal_email(to, what, until, amount_kobo=None, kind="module", credits=None):
     """Tell them it renewed, before the statement does.
 
@@ -943,6 +1002,23 @@ def store_checkout_verify(reference: str = Query(...)):
     # an open redirect with a payment receipt for a disguise; a button the buyer
     # presses is the same journey without that. It also leaves the key on screen
     # long enough to copy, which was the point.
+    # The singles this product replaces stop billing. Done after the licence is
+    # granted, never before: cancelling first and then failing to grant would
+    # leave somebody with neither.
+    ended = _supersede_singles(row["instance_id"], row["product"], row["mode"], reference)
+    if ended:
+        print(f"[store] {row['product']} superseded: {', '.join(ended)}", flush=True)
+        try:
+            import mailer
+            mailer.send_email(
+                row["email"], f"Your {mailer.app_name()} subscriptions have been combined",
+                f"<p><strong>{row['product']}</strong> now covers "
+                f"{', '.join(ended)}.</p>"
+                f"<p>Those individual subscriptions have been cancelled, so you are not "
+                f"billed for them twice. Nothing you installed is affected.</p>")
+        except Exception as e:
+            print(f"[store] supersede email failed: {e}", flush=True)
+
     back = _safe_return(row.get("return_url") or "")
     if not back:
         dest = _store.normalise_instance(row["instance_id"])

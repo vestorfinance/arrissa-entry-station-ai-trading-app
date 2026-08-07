@@ -6918,3 +6918,4 @@ a.dv-card-title:hover { text-decoration: underline; }
   background: var(--accent); color: #fff;
   font-size: 30px;                 /* the glyph is sized in em, so this is the gutter */
 }
+.dt-hint { margin: -2px 0 0; font-size: 11.5px; }

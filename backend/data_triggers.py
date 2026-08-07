@@ -92,13 +92,37 @@ def _c_truth(cond, since):
     return out
 
 
+def _named(item, want: set) -> set:
+    """Which of the wanted instruments this story is about.
+
+    The news module tags every story with the instruments it concerns, so this
+    reads that judgement rather than searching the text: a story mentioning
+    "gold" in passing is not a story about XAUUSD, and the tagger has already
+    decided which it is."""
+    raw = item.get("instruments")
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw.replace("'", '"'))
+        except Exception:
+            raw = [x.strip(" []'\"") for x in raw.split(",")]
+    named = {str(x).upper() for x in (raw or [])}
+    return named & want
+
+
 def _c_news(cond, since):
+    """New stories, optionally only those about certain instruments.
+
+    The filter lives on the condition rather than in a separate kind. Choosing
+    between "a news story" and "a news story about something" before knowing
+    which you want is a decision the builder should not ask for — it is one
+    question with an optional answer, and an empty list means every story."""
     import registry
     p = registry.get("news")
     if not p:
         return []
     r = p.query(hours=6, limit=50)
     want = (cond.get("impact") or "any").lower()
+    symbols = set(_symbols(cond))
     out = []
     for a in (r.get("articles") or []):
         at = _parse(a.get("time"))
@@ -106,11 +130,24 @@ def _c_news(cond, since):
             continue
         if not _impact_ok(a, want):
             continue
-        out.append({"key": f"news:{a.get('url') or a.get('title')}",
-                    "what": "a new market news story",
-                    "text": (a.get("title") or "")[:400],
-                    "at": a.get("time"), "impact": a.get("impact"),
-                    "item": a})
+
+        hit = {"key": f"news:{a.get('url') or a.get('title')}",
+               "what": "a new market news story",
+               "text": (a.get("title") or "")[:400],
+               "at": a.get("time"), "impact": a.get("impact"),
+               "item": a}
+
+        if symbols:
+            # ANY of them, not all: three instruments named on a condition means
+            # "wake me for anything touching these", never "a story about all
+            # three at once", which almost nothing is.
+            named = _named(a, symbols)
+            if not named:
+                continue
+            hit["key"] = "sym" + hit["key"]
+            hit["what"] = f"news about {', '.join(sorted(named))}"
+            hit["symbols"] = sorted(named)
+        out.append(hit)
     return out
 
 
@@ -119,31 +156,15 @@ def _symbols(cond) -> list:
 
 
 def _c_news_symbols(cond, since):
-    """News that names one of these instruments.
+    """The old separate kind, now the same thing under its former name.
 
-    The news module already tags each story with the instruments it is about, so
-    this filters on that rather than searching the text — a story mentioning
-    "gold" in passing is not a story about XAUUSD, and the tagger has already
-    made that judgement once."""
-    want = set(_symbols(cond))
-    if not want:
+    Flows saved before the filter moved onto the news condition still say
+    `news_symbols`, and a saved flow must not stop firing because the builder
+    was tidied. It refuses an empty list, as it always did: that kind exists to
+    filter, and filtering on nothing was never what anyone meant by it."""
+    if not _symbols(cond):
         return []
-    out = []
-    for hit in _c_news(cond, since):
-        raw = hit["item"].get("instruments")
-        if isinstance(raw, str):
-            try:
-                raw = json.loads(raw.replace("'", '"'))
-            except Exception:
-                raw = [x.strip(" []'\"") for x in raw.split(",")]
-        named = {str(x).upper() for x in (raw or [])}
-        if named & want:
-            hit = dict(hit)
-            hit["key"] = "sym" + hit["key"]
-            hit["what"] = f"news about {', '.join(sorted(named & want))}"
-            hit["symbols"] = sorted(named & want)
-            out.append(hit)
-    return out
+    return _c_news(cond, since)
 
 
 def _c_before_event(cond, since, now):
@@ -246,9 +267,9 @@ KINDS = [
     {"kind": "truth", "label": "A new Truth Social post", "provider": "truth",
      "impacts": ["any", "high", "low"]},
     {"kind": "news", "label": "A new market news story", "provider": "news",
-     "impacts": IMPACTS_NEWS},
-    {"kind": "news_symbols", "label": "News about these instruments", "provider": "news",
-     "impacts": IMPACTS_NEWS},
+     "impacts": IMPACTS_NEWS, "symbols": True},
+    {"kind": "news_symbols", "label": "News about these instruments (same as above)",
+     "provider": "news", "impacts": IMPACTS_NEWS, "symbols": True, "legacy": True},
     {"kind": "before_event", "label": "Before an economic release", "provider": "calendar",
      "impacts": IMPACTS_CAL},
     {"kind": "after_event", "label": "After an economic release", "provider": "calendar",

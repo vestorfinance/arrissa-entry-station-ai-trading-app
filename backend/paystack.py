@@ -150,6 +150,18 @@ def customer_subscriptions(customer_code, mode=None):
     return (data.get("data") or []) if data.get("status") else []
 
 
+def customer_subscriptions_by_code(subscription_code, mode=None) -> dict:
+    """One subscription, fetched for its email_token.
+
+    Disabling needs the code AND a token Paystack issues per subscription, and
+    the token is not on anything we stored — so it is read back at the moment it
+    is needed rather than kept."""
+    r = requests.get(f"{BASE}/subscription/{subscription_code}", headers=_headers(mode),
+                     timeout=30)
+    data = r.json()
+    return (data.get("data") or {}) if data.get("status") else {}
+
+
 def disable_subscription(code, token, mode=None):
     r = requests.post(f"{BASE}/subscription/disable", headers=_headers(mode), timeout=30,
                       json={"code": code, "token": token})

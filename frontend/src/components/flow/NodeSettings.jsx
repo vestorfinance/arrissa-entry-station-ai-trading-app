@@ -321,7 +321,10 @@ function DataTriggerSettings({ values, set }) {
             <Dropdown
               value={c.kind}
               onChange={(v) => setC(i, { kind: v })}
-              options={kinds.map((k) => ({
+              /* The retired kind stays selectable only where a flow already
+                 uses it: removing it from the list would silently rewrite a
+                 saved condition to whatever sorted first. */
+              options={kinds.filter((k) => !k.legacy || k.kind === c.kind).map((k) => ({
                 value: k.kind,
                 label: k.available ? k.label : `${k.label} — needs its module`,
                 disabled: !k.available,
@@ -338,10 +341,20 @@ function DataTriggerSettings({ values, set }) {
             </p>
           )}
 
-          {c.kind === 'news_symbols' && (
-            <input className="input" value={c.symbols || ''}
-                   placeholder="XAUUSD, US30, EURUSD  —  or any"
-                   onChange={(e) => setC(i, { symbols: e.target.value })} />
+          {/* Offered by whichever conditions declare they take instruments,
+              rather than by name. Empty means every story; a list means any one
+              of them, which is what somebody naming three instruments wants. */}
+          {info(c.kind)?.symbols && (
+            <>
+              <input className="input" value={c.symbols || ''}
+                     placeholder="XAUUSD, GBPUSD, US30  —  leave empty for all news"
+                     onChange={(e) => setC(i, { symbols: e.target.value })} />
+              <p className="node-settings-note dt-hint">
+                {(c.symbols || '').trim()
+                  ? 'Fires on a story about ANY of these.'
+                  : 'Fires on every story. Name instruments to narrow it.'}
+              </p>
+            </>
           )}
 
           {timed(c.kind) && (
@@ -357,7 +370,7 @@ function DataTriggerSettings({ values, set }) {
             </div>
           )}
 
-          {(c.kind !== 'news_symbols') && (
+          {(
             <Dropdown value={c.impact || 'any'} onChange={(v) => setC(i, { impact: v })}
                       options={(info(c.kind)?.impacts || ['any', 'high', 'low'])
                         .map((v) => ({ value: v, label: IMPACT_LABEL[v] || v }))} />
