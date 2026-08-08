@@ -989,16 +989,16 @@ def get_instance_settings(user: dict = Depends(current_user)):
 @app.put("/api/instance/settings")
 def set_instance_settings(body: InstanceSettings, user: dict = Depends(current_user)):
     _require_self_operated()
-    import analysis_cache, watchlist
-    if body.app_name is not None:
-        # The plan called this "their own branding, free" and it had become the
-        # opposite: writable only through a console that no longer exists here.
-        name = body.app_name.strip()[:40] or "EntryStation"
-        with db.connect() as conn:
-            conn.execute("INSERT INTO admin_settings (id, app_name, updated_at) "
-                         "VALUES (1, %s, now()) ON CONFLICT (id) DO UPDATE SET "
-                         "app_name = EXCLUDED.app_name, updated_at = now()", (name,))
-            conn.commit()
+    import analysis_cache, watchlist, mailer
+    if body.app_name is not None and body.app_name.strip() != mailer.app_name():
+        # This endpoint is Community-only, and there the name is fixed: renaming
+        # is the first step of white-labelling, which is what the licence exists
+        # to prevent. Refused rather than quietly dropped, so nobody is told
+        # "Saved" about a change that did not happen. The real line is in
+        # `mailer.app_name`; this only stops a write that would look like it
+        # worked until the next page load.
+        raise HTTPException(403, f"The app name is fixed to {mailer.app_name()} on this "
+                                 f"edition and cannot be changed.")
     if body.analysis_window_seconds is not None or body.analysis_sharing is not None:
         cur = analysis_cache.settings()
         try:

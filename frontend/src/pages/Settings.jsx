@@ -92,7 +92,8 @@ function InstanceSettings() {
     setBusy(true); setErr(null); setMsg(null)
     try {
       const r = await api.saveInstanceSettings({
-        app_name: name,
+        // app_name is deliberately absent: it is fixed here, and sending it
+        // would earn a 403 that stops the settings beside it from saving.
         analysis_window_seconds: Number(win) || 0,
         analysis_sharing: share,
         watch_list_hours: hours,
@@ -114,14 +115,16 @@ function InstanceSettings() {
         {err && <div className="alert alert--danger">{err}</div>}
         {msg && <div className="alert alert--ok"><Check size={14} strokeWidth={2} /> {msg}</div>}
 
-        {/* The plan called this "their own branding, free". It was writable
-            only through a console that does not exist here. */}
+        {/* Shown, not editable. Renaming is the first step of white-labelling,
+            and the server refuses the write regardless — an input that silently
+            failed would be worse than no input. */}
         <label className="field">
           <span className="field-label">App name</span>
-          <input className="input" value={name} placeholder="EntryStation"
-                 onChange={(e) => setName(e.target.value)} />
+          <input className="input" value={name || 'EntryStation'} readOnly disabled />
         </label>
-        <p className="card-sub">Yours to name — it appears in the sidebar and on emails.</p>
+        <p className="card-sub">
+          Fixed on the Community edition. It appears in the sidebar and on emails.
+        </p>
 
         <label className="field" style={{ marginTop: 16 }}>
           <span className="field-label">Repeat analyses within (seconds)</span>

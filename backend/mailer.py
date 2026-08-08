@@ -17,7 +17,17 @@ SUPPORT_EMAIL = "arrissa.ai@gmail.com"
 
 
 def app_name():
-    """The brand name — admin-configurable (admin_settings.app_name), else default."""
+    """The brand name — admin-configurable (admin_settings.app_name), else default.
+
+    Fixed in Community. Renaming is the first step of white-labelling: strip the
+    name and the software becomes somebody else's product to sell on, which is
+    the one thing the licence exists to prevent. It is enforced HERE, at the
+    single point every caller reads, rather than at the endpoint that used to
+    write it — so a row edited straight in the database changes nothing either.
+    """
+    import edition
+    if edition.is_community():
+        return DEFAULT_APP_NAME
     try:
         with db.connect() as conn:
             row = conn.execute("SELECT app_name FROM admin_settings WHERE id = 1").fetchone()
