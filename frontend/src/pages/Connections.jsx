@@ -222,11 +222,15 @@ export default function Connections() {
                 </div>
                 <p className="conn-card-blurb">{t.blurb}</p>
                 <div className="conn-card-foot">
-                  {/* No "Get a key". It sent people to a sign-in page for an
-                      account they may not have, and on the kinds where it made
-                      sense the blurb already says where the key comes from.
-                      What is left is the thing that helps: opening an account
-                      when you do not have one. */}
+                  {/* Shown by whichever kinds declare a `docs` page. A kind
+                      with no key to fetch simply does not declare one, which is
+                      why TradeLocker has none: its site is a product page, not
+                      somewhere a credential comes from. */}
+                  {t.docs && (
+                    <a className="btn btn--ghost btn--sm" href={t.docs} target="_blank" rel="noreferrer">
+                      {t.docs_label || 'Get a key'} <ExternalLink size={12} />
+                    </a>
+                  )}
                   {/* For somebody who does not have the account yet. "Get a key"
                       pointing at a sign-in form is no help to a person with
                       nothing to sign in with — and only while they are not

@@ -194,7 +194,9 @@ TYPES = [
                        "disconnect": "/api/tradelocker/disconnect"},
         "blurb": "A TradeLocker login. The password is used once for tokens and never "
                  "stored. Every account under the login becomes available.",
-        "docs": "https://tradelocker.com",
+        # No `docs`, so no "Get a key" on this card. There is no key to get:
+        # tradelocker.com is a product page, and the credential is the login the
+        # BROKER issues — which is what signup_options is for.
         "fields": [
             {"key": "email", "label": "TradeLocker email", "required": True,
              "placeholder": "you@example.com"},
