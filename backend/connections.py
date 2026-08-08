@@ -125,7 +125,7 @@ TYPES = [
         "blurb": "Your Myfxbook login, for Retail Sentiment. The free account is enough — "
                  "it is read-only community positioning, never your own accounts.",
         "docs": "https://www.myfxbook.com/login",
-        "docs_label": "Create a free Myfxbook account",
+        "docs_label": "Create account",
         "fields": [
             {"key": "email", "label": "Myfxbook email", "required": True,
              "placeholder": "you@example.com"},
@@ -161,14 +161,14 @@ TYPES = [
         "blurb": "Your own Exness account. The password is used once to obtain a session "
                  "and never stored.",
         "docs": "https://my.exness.com/accounts/sign-in",
-        "docs_label": "Sign in to Exness",
+        "docs_label": "Sign in",
         # Where somebody with NO account goes. A broker connection is the one
         # kind that can be blocked by not having the underlying thing at all,
         # and "Get a key" pointing at a sign-in form is no use to a person who
         # has nothing to sign in with. Declared per kind so any broker can name
         # its own, and core never learns what an Exness is.
-        "signup_url": "https://one.exnessonelink.com/a/l5kqp6wwav",
-        "signup_label": "Open an Exness account",
+        "signup_url": "https://one.exnessonelink.com/a/entrystati",
+        "signup_label": "Create account",
         "fields": [
             {"key": "exness_email", "label": "Exness email", "required": True,
              "placeholder": "you@example.com"},
@@ -181,7 +181,7 @@ TYPES = [
         # TradeLocker is a platform, not a broker: an account is opened with a
         # broker who runs on it. So this kind names several, where Exness names
         # one, and the seam carries a list rather than a single URL.
-        "signup_label": "Open a TradeLocker account",
+        "signup_label": "Create account",
         "signup_options": [
             {"name": "GatesFX", "url": "https://secure.gatesfx.com/links/go/3646"},
             {"name": "HeroFX", "url": "https://secure.gatesfx.com/links/go/3646"},
