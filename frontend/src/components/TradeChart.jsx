@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createChart, CandlestickSeries, LineStyle } from 'lightweight-charts'
 import { LineChart as LineChartIcon, RefreshCw, Slash, Minus, Square, Ruler,
          ArrowUpRight, ArrowDownRight, Trash2, MousePointer2,
-         Maximize2, Minimize2 } from 'lucide-react'
+         Maximize2, Minimize2, ScanEye, Loader2 } from 'lucide-react'
 import * as api from '../services/api.js'
 import { attachDrawings, TOOLS } from './chartDrawings.js'
-import { register as registerChart } from './chartRegistry.js'
+import { register as registerChart, analysed as chartAnalysed } from './chartRegistry.js'
 
 // How long a chart streams before it auto-expires. After this it collapses to a
 // lightweight placeholder — no chart, no WebSocket — so old charts left in a
@@ -83,6 +83,7 @@ export default function TradeChart({ spec }) {
   const [full, setFull] = useState(false)        // the chart, filling the screen
   const [tool, setTool] = useState(null)         // the drawing tool in hand
   const [drawCount, setDrawCount] = useState(0)  // how many shapes are on this chart
+  const [seeing, setSeeing] = useState(false)    // a vision analysis of this chart is running
 
   // expired charts do no work: streaming, catch-up refetch and the chart itself
   // are all gated on `active`, which an expired chart can never be.
@@ -312,6 +313,31 @@ export default function TradeChart({ spec }) {
 
   if (candles.length === 0) return null
 
+  // ── "Analyse chart": a vision read of THIS picture ───────────────────────────
+  // Deliberately not routed through the assistant. Asked in words, "analyse the
+  // chart" is a sentence it can reasonably hear as "analyse this market", and it
+  // did. A button carries the chart it is attached to, so there is nothing left
+  // to interpret.
+  async function analyseThis() {
+    if (seeing) return
+    const canvas = chartRef.current?.takeScreenshot()
+    if (!canvas) return
+    setSeeing(true)
+    try {
+      const out = await api.analyseChart({
+        symbol: data.symbol, timeframe: data.timeframe, drawings: drawCount,
+        png: canvas.toDataURL('image/png'),
+      })
+      chartAnalysed({ ...out, symbol: data.symbol, timeframe: data.timeframe,
+                      drawings: drawCount })
+    } catch (e) {
+      chartAnalysed({ symbol: data.symbol, timeframe: data.timeframe,
+                      drawings: drawCount, error: e.message })
+    } finally {
+      setSeeing(false)
+    }
+  }
+
   // ── expired: a lightweight, clickable placeholder (no chart, no socket) ───────
   if (expired) {
     return (
@@ -373,6 +399,15 @@ export default function TradeChart({ spec }) {
             </span>
           )
         })()}
+        <button type="button" className="tchart-see-btn" onClick={analyseThis}
+                disabled={seeing}
+                title={drawCount
+                  ? `Read this chart — your ${drawCount} drawing${drawCount > 1 ? 's' : ''} included`
+                  : 'Read this chart exactly as it looks now'}>
+          {seeing ? <Loader2 size={14} strokeWidth={1.9} className="tchart-spin" />
+                  : <ScanEye size={14} strokeWidth={1.9} />}
+          <span>{seeing ? 'Reading…' : 'Analyse chart'}</span>
+        </button>
         <button type="button" className="tchart-full-btn"
                 title={full ? 'Exit full screen (Esc)' : 'Full screen'}
                 onClick={() => setFull((f) => !f)}>

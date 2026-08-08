@@ -80,6 +80,14 @@ export const chartSnapshot = ({ symbol, timeframe, drawings, png }) =>
     body: JSON.stringify({ symbol, timeframe, drawings, png }),
   })
 
+// Read the chart on screen right now. Straight to a vision model — not through
+// the assistant, which can hear "analyse the chart" as "analyse this market".
+export const analyseChart = ({ symbol, timeframe, drawings, png, question }) =>
+  req('/chart/analyse', {
+    method: 'POST',
+    body: JSON.stringify({ symbol, timeframe, drawings, png, question: question || '' }),
+  })
+
 // voice input — send recorded audio to Whisper, get the transcript back
 export async function transcribe(blob) {
   const token = localStorage.getItem('auth_token')

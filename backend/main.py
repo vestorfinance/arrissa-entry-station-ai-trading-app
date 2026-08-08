@@ -447,13 +447,8 @@ class ChartSnapshot(BaseModel):
     drawings: int = 0
 
 
-@app.post("/api/chart/snapshot")
-def put_chart_snapshot(body: ChartSnapshot, user=Depends(current_user)):
-    """The browser handing over what is on screen, drawings and all.
-
-    Kept as one row per user and replaced each time, because the question is
-    always "what am I looking at now" — a history of screenshots would be a
-    growing table nobody reads."""
+def _store_snapshot(user_id, body: "ChartSnapshot") -> bytes:
+    """Decode the PNG and keep it as the one picture this user is looking at."""
     import base64
     raw = body.png or ""
     if "," in raw[:64]:
@@ -471,9 +466,42 @@ def put_chart_snapshot(body: ChartSnapshot, user=Depends(current_user)):
             "VALUES (%s,%s,%s,%s,%s, now()) ON CONFLICT (user_id) DO UPDATE SET "
             "symbol=EXCLUDED.symbol, timeframe=EXCLUDED.timeframe, "
             "drawings=EXCLUDED.drawings, png=EXCLUDED.png, at=now()",
-            (user["id"], body.symbol[:32], body.timeframe[:16], int(body.drawings or 0), blob))
+            (user_id, body.symbol[:32], body.timeframe[:16], int(body.drawings or 0), blob))
         conn.commit()
-    return {"ok": True, "bytes": len(blob)}
+    return blob
+
+
+@app.post("/api/chart/snapshot")
+def put_chart_snapshot(body: ChartSnapshot, user=Depends(current_user)):
+    """The browser handing over what is on screen, drawings and all.
+
+    Kept as one row per user and replaced each time, because the question is
+    always "what am I looking at now" — a history of screenshots would be a
+    growing table nobody reads."""
+    return {"ok": True, "bytes": len(_store_snapshot(user["id"], body))}
+
+
+class ChartAnalyse(ChartSnapshot):
+    question: str = ""
+
+
+@app.post("/api/chart/analyse")
+def analyse_chart_now(body: ChartAnalyse, user=Depends(current_user)):
+    """Look at THIS chart. No agent, no tool choice, no ambiguity.
+
+    The button exists because "analyse the chart" is a sentence the assistant
+    can reasonably read as a request for market analysis, and it did — it ran
+    the analysis agent on the instrument instead of looking at the picture.
+    A button cannot be misread: it carries the chart it is attached to, and
+    goes straight to a model that can see. The chat tool is left exactly as it
+    was, for when somebody does ask in words."""
+    import chart_vision
+    png = _store_snapshot(user["id"], body)
+    out = chart_vision.analyse(user["id"], png, body.question or "")
+    if out.get("error"):
+        raise HTTPException(400, out["error"])
+    return {**out, "symbol": body.symbol, "timeframe": body.timeframe,
+            "drawings": int(body.drawings or 0)}
 
 
 @app.get("/api/trigger-sources")

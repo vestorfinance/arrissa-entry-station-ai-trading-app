@@ -65,3 +65,19 @@ export async function capture(api) {
     return null
   }
 }
+
+// ── the result of a chart analysis, on its way into the conversation ──────────
+// The button lives on the chart, the transcript lives in Dashboard, and the
+// floating ChartWindow is not even a descendant of the chat it belongs to — so
+// a window event rather than a prop threaded through three components that do
+// not otherwise care.
+const ANALYSED = 'entrystation:chart-analysed'
+
+export const analysed = (detail) =>
+  window.dispatchEvent(new CustomEvent(ANALYSED, { detail }))
+
+export function onAnalysed(fn) {
+  const h = (e) => fn(e.detail)
+  window.addEventListener(ANALYSED, h)
+  return () => window.removeEventListener(ANALYSED, h)
+}

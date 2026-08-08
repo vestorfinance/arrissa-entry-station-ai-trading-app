@@ -5249,6 +5249,26 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .tchart-tools-hint { font-size: 11px; color: var(--text-secondary); opacity: 0.8; }
 
+/* "Analyse chart" — a vision read of exactly this picture, drawings and all.
+   A labelled button rather than an icon: asked in words, "analyse the chart" is
+   a sentence the assistant can hear as "analyse this market", so the one control
+   that cannot be misread should say what it does. */
+.tchart-see-btn {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 10px;
+  border: none; border-radius: 999px;
+  background: var(--bg-tertiary); color: var(--text-secondary);
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+  cursor: pointer;
+}
+.tchart-see-btn:hover:not(:disabled) { color: var(--text-primary); }
+.tchart-see-btn:disabled { cursor: default; opacity: 0.75; }
+/* it has taken the auto margin, so the full-screen button just follows it */
+.tchart-see-btn + .tchart-full-btn { margin-left: 4px; }
+.tchart-spin { animation: tchart-spin 900ms linear infinite; }
+@keyframes tchart-spin { to { transform: rotate(360deg); } }
+
 /* Full-screen chart. An overlay, not the Fullscreen API: the chart sits inside a
    scrolling conversation, and the native call would take the whole document with
    it. The canvas grows to fill what is left after the head and the toolbar,

@@ -12,7 +12,7 @@ import { useBilling, billingChanged } from '../services/billing.js'
 import { useCapabilities, useModule } from '../services/capabilities.js'
 import { useActiveAccount, setActiveAccount } from '../services/activeAccount.js'
 import * as api from '../services/api.js'
-import { capture as captureChart } from '../components/chartRegistry.js'
+import { capture as captureChart, onAnalysed } from '../components/chartRegistry.js'
 import BrokerLogo from '../components/BrokerLogo.jsx'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -286,6 +286,33 @@ export default function Dashboard() {
       billingChanged()   // credits were spent → refresh the meter
     }
   }
+
+  // A chart read itself. It goes into the transcript as a real exchange — asked
+  // and answered — so the next question can refer to it ("so should I enter?")
+  // and the assistant has the reading in front of it. A result that only
+  // appeared on screen would be invisible to the very next turn.
+  useEffect(() => onAnalysed((out) => {
+    if (!out) return
+    const where = [out.symbol, out.timeframe].filter(Boolean).join(' ')
+    const drew = out.drawings
+      ? ` My ${out.drawings} drawing${out.drawings > 1 ? 's are' : ' is'} on it.`
+      : ''
+    const userMsg = { role: 'user', text: `Analyse the ${where} chart I am looking at.${drew}` }
+    // Which model actually looked, when it was not the one they chose. Said in
+    // the reply rather than swallowed — an analysis from a substitute model is
+    // a fact they are entitled to.
+    const note = (out.note || '').trim()
+    const reply = {
+      role: 'assistant', thinking: '', actions: [], memory: [], done: true,
+      text: out.error ? '' : ((out.analysis || '') + (note ? `\n\n*${note}*` : '')),
+      error: out.error || null,
+    }
+    // Appended from the ref, not inside a state updater: persisting is a side
+    // effect, and React calls updaters twice in development.
+    const next = [...messagesRef.current, userMsg, reply]
+    setMessages(next)
+    persist(next)
+  }), [])
 
   function stop() {
     abortRef.current?.abort()
