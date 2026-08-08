@@ -85,19 +85,49 @@ def pick(user_id, preferred=None):
                               f"a chart.")
 
 
+# What separates a reading from a description. The first version of this asked
+# the model to "say what the chart shows", and it did: an inventory of the levels
+# the person had drawn themselves, handed back with both outcomes listed and no
+# side taken. They can see their own lines. What they cannot get from looking is
+# somebody willing to be wrong about which way it goes.
+PROMPT = """You are looking at a screenshot of a trading chart from the user's own screen, \
+including any lines, zones or levels THEY drew on it.
+
+Give them a TRADE VERDICT. You are being asked to take a side, not to describe a picture.
+
+Start with exactly this, on its own line:
+
+**BUY** or **SELL** or **STAND ASIDE** — conviction: high / medium / low
+
+Then, briefly:
+- **Entry** — the price to get in at, and whether that is now or on a pullback to a level.
+- **Invalidation** — the price that proves this wrong. A verdict without one is not a trade.
+- **Target** — the first place to take money off, and the next one if it runs.
+- **Why** — three or four lines at most. Read the PRICE ACTION: who is winning, \
+where price got rejected and where it got accepted, whether highs and lows are rising or \
+falling, whether pushes are expanding or fading, where the obvious stops are sitting. \
+Say what their drawings get right or wrong.
+
+Rules:
+- COMMIT. "It could go either way", "wait for a break", "a decisive move will decide the \
+direction" — these are refusals dressed as analysis. If price breaks their level, you \
+already know which side you would take on that break, so say it now.
+- STAND ASIDE is a real verdict, but only when the chart genuinely offers nothing, and you \
+must say what you are waiting for. It is not the safe escape from having an opinion.
+- Do NOT inventory what is on the screen. They drew those levels. Listing them back is \
+telling somebody what they already know.
+- Read levels off the axis and quote real numbers. If the image is too unclear to read a \
+number, say so instead of inventing one.
+- Be direct and short. No preamble, no restating the question, no offer of further analysis \
+at the end."""
+
+
 def _messages(png_b64: str, question: str, provider: str):
     """The same request in each wire format. Anthropic nests the image
     differently from everyone else, and that is the whole difference."""
-    prompt = (
-        "You are looking at a screenshot of a trading chart taken from the user's own screen, "
-        "including any lines, zones or levels THEY drew on it. Their drawings are the point: "
-        "they are the analysis this person is already forming, so read them and respond to "
-        "them rather than ignoring them.\n\n"
-        "Say what the chart shows: structure, the levels that matter, what their drawings "
-        "imply, and whether the price action agrees with them. Be specific about levels you "
-        "can actually read off the axis. If something is unclear in the image, say so rather "
-        "than inventing it.\n\n"
-        f"What they asked: {question or 'Analyse this chart.'}"
+    prompt = PROMPT + (
+        f"\n\nThey also asked: {question}" if question else
+        "\n\nThey clicked Analyse chart, so the question is simply: what do I do here?"
     )
     if provider == "anthropic":
         return [{"role": "user", "content": [
@@ -111,8 +141,15 @@ def _messages(png_b64: str, question: str, provider: str):
     ]}]
 
 
+# Anthropic requires a ceiling, so it gets a generous one. The OpenAI-compatible
+# call gets none, for the reason agent.py already found the hard way: max_tokens
+# covers thinking as well as output, so any cap we pick is one a reasoning model
+# can exhaust mid-thought and return an empty string with no error at all.
+_ANTHROPIC_MAX_TOKENS = 4000
+
+
 def analyse(user_id, png_bytes: bytes, question: str = "", preferred=None) -> dict:
-    """Look at the picture and say what is on it."""
+    """Look at the picture and say which way to trade it."""
     import requests
     import ai_keys
 
@@ -129,7 +166,8 @@ def analyse(user_id, png_bytes: bytes, question: str = "", preferred=None) -> di
                 "https://api.anthropic.com/v1/messages", timeout=120,
                 headers={"x-api-key": key, "anthropic-version": "2023-06-01",
                          "content-type": "application/json"},
-                json={"model": model, "max_tokens": 1500, "messages": msgs})
+                json={"model": model, "max_tokens": _ANTHROPIC_MAX_TOKENS,
+                      "messages": msgs})
             data = r.json()
             if data.get("error"):
                 return {"error": data["error"].get("message") or "the model refused the image"}
@@ -139,7 +177,7 @@ def analyse(user_id, png_bytes: bytes, question: str = "", preferred=None) -> di
             r = requests.post(
                 f"{base}/chat/completions", timeout=120,
                 headers={"Authorization": f"Bearer {key}", "content-type": "application/json"},
-                json={"model": model, "max_tokens": 1500, "messages": msgs})
+                json={"model": model, "messages": msgs})
             data = r.json()
             if data.get("error"):
                 return {"error": (data["error"] or {}).get("message") or "the model refused the image"}
