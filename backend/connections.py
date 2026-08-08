@@ -184,7 +184,7 @@ TYPES = [
         "signup_label": "Create account",
         "signup_options": [
             {"name": "GatesFX", "url": "https://secure.gatesfx.com/links/go/3646"},
-            {"name": "HeroFX", "url": "https://secure.gatesfx.com/links/go/3646"},
+            {"name": "HeroFX", "url": "https://herofx.co/?partner_code=8138744"},
         ],
         "logo": "/logos/tradelocker.webp",
         "mark": "TL",
