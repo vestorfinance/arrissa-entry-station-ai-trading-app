@@ -440,6 +440,42 @@ def preview_params(body: ParamsPreview, user=Depends(current_user)):
             "count": (out.get("count") if isinstance(out, dict) else None)}
 
 
+class ChartSnapshot(BaseModel):
+    png: str                       # data URL or bare base64
+    symbol: str = ""
+    timeframe: str = ""
+    drawings: int = 0
+
+
+@app.post("/api/chart/snapshot")
+def put_chart_snapshot(body: ChartSnapshot, user=Depends(current_user)):
+    """The browser handing over what is on screen, drawings and all.
+
+    Kept as one row per user and replaced each time, because the question is
+    always "what am I looking at now" — a history of screenshots would be a
+    growing table nobody reads."""
+    import base64
+    raw = body.png or ""
+    if "," in raw[:64]:
+        raw = raw.split(",", 1)[1]         # strip a data: URL prefix
+    try:
+        blob = base64.b64decode(raw)
+    except Exception:
+        raise HTTPException(400, "that is not an image")
+    if len(blob) > 6_000_000:
+        raise HTTPException(413, "chart image too large")
+
+    with db.connect() as conn:
+        conn.execute(
+            "INSERT INTO chart_snapshots (user_id, symbol, timeframe, drawings, png, at) "
+            "VALUES (%s,%s,%s,%s,%s, now()) ON CONFLICT (user_id) DO UPDATE SET "
+            "symbol=EXCLUDED.symbol, timeframe=EXCLUDED.timeframe, "
+            "drawings=EXCLUDED.drawings, png=EXCLUDED.png, at=now()",
+            (user["id"], body.symbol[:32], body.timeframe[:16], int(body.drawings or 0), blob))
+        conn.commit()
+    return {"ok": True, "bytes": len(blob)}
+
+
 @app.get("/api/trigger-sources")
 def trigger_sources(user=Depends(current_user)):
     """Which data conditions this instance can offer.

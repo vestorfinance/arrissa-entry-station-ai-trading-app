@@ -219,6 +219,19 @@ ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS smtp_from     TEXT;
 -- it rather than to a hostname, so `localhost` — not unique, not reachable —
 -- stops being a dead end. See backend/instance.py.
 ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS instance_id TEXT;
+-- The chart the user is looking at, as a picture, WITH whatever they drew on it.
+-- One row per user, replaced each time: this is "what is on screen now", not a
+-- history. It has to be an image because the drawings live in the browser's
+-- localStorage and the server has never seen them — a server-side redraw would
+-- be the same candles and none of their reasoning.
+CREATE TABLE IF NOT EXISTS chart_snapshots (
+    user_id   UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    symbol    TEXT,
+    timeframe TEXT,
+    drawings  INTEGER,
+    png       BYTEA NOT NULL,
+    at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 -- Take entitled module updates without being asked. On unless turned off: the
 -- instances that most need a fix are the unattended ones.
 ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS auto_update BOOLEAN DEFAULT TRUE;

@@ -12,6 +12,7 @@ import { useBilling, billingChanged } from '../services/billing.js'
 import { useCapabilities, useModule } from '../services/capabilities.js'
 import { useActiveAccount, setActiveAccount } from '../services/activeAccount.js'
 import * as api from '../services/api.js'
+import { capture as captureChart } from '../components/chartRegistry.js'
 import BrokerLogo from '../components/BrokerLogo.jsx'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -242,6 +243,12 @@ export default function Dashboard() {
     render()
     setInput('')
     setBusy(true)
+
+    // If a chart is on screen, photograph it before the question goes out, so
+    // "analyse this chart" has the chart — their drawings included — to analyse.
+    // Awaited: the tool runs server-side during this same request, so a picture
+    // that arrives afterwards is a picture of the previous question.
+    await captureChart(api)
 
     const apiMessages = [...base, userMsg].map((m) => ({
       role: m.role,

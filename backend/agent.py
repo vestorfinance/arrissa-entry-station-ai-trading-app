@@ -99,6 +99,18 @@ TOOLS = [
         "seconds": {"type": "integer"}, "minutes": {"type": "integer"}, "hours": {"type": "integer"},
         "run_at": {"type": "string", "description": "Absolute ISO datetime instead of a relative delay."}},
       "required": ["account", "action", "params"]}},
+    {"name": "analyse_chart", "description": "LOOK at the chart the user currently has on "
+     "screen in this app, INCLUDING any trendlines, zones or levels they drew on it "
+     "themselves, and analyse it with a model that can see images. Use this whenever they "
+     "ask you to look at, read, check or analyse 'this chart', 'the chart', 'my drawings', "
+     "'my lines' or 'what I marked' — anything that refers to what is in front of them. It "
+     "reads a screenshot taken from their own screen, so it sees exactly what they see, "
+     "which market_data and candles cannot: those return numbers and know nothing about "
+     "what somebody drew. If no chart has been on screen it says so; show_chart first, then "
+     "call this.",
+     "input_schema": {"type": "object", "properties": {
+         "question": {"type": "string", "description": "What they want to know about the "
+                      "chart, in their own words. Pass it through rather than summarising."}}}},
     {"name": "show_chart", "description": "THE DEFAULT WAY TO SHOW A CHART IN THIS APP. Render a LIVE, INTERACTIVE candlestick chart inside the web app — it updates from the tick stream and marks the account's own open trades with entry, stop loss and take profit lines. It produces NO IMAGE FILE: it exists only inside this app's chat window, so it cannot be sent to a messaging app, attached, saved or shared, and there is no url for it. Use it when the user is in the app and wants something live to look at. If an image is what is wanted — to send, to keep, or because they are not in the app — draw one instead. After calling it, comment briefly on what the chart shows; do not re-list the candles as text.",
      "input_schema": {"type": "object", "properties": {
         "symbol": {"type": "string", "description": "e.g. 'gold', 'EURUSD', 'nasdaq'."},
@@ -675,6 +687,40 @@ def _create_analysis_agent(user_id, args):
     return {"ok": True, "id": str(r["id"]), "name": name, "status": status, "nodes": len(flow["nodes"])}
 
 
+def _analyse_chart(user_id, question: str) -> dict:
+    """Analyse the picture the browser last handed over.
+
+    The image is what was on THEIR screen — their drawings included — because
+    the drawings live in that page's localStorage and nothing here has ever seen
+    them. A server-side redraw would be the same candles without the reasoning
+    somebody drew on top, answered confidently."""
+    import chart_vision
+    import db
+
+    with db.connect() as conn:
+        row = conn.execute(
+            "SELECT symbol, timeframe, drawings, png, "
+            "       EXTRACT(EPOCH FROM (now() - at)) AS age FROM chart_snapshots "
+            "WHERE user_id = %s", (user_id,)).fetchone()
+    if not row:
+        return {"error": "No chart has been on screen. Show one with show_chart first, then "
+                         "ask again — this reads what is actually displayed."}
+    # Stale means they have navigated away, and analysing a chart they are no
+    # longer looking at is worse than saying so.
+    if (row["age"] or 0) > 900:
+        return {"error": "The last chart on screen was over 15 minutes ago. Show it again so "
+                         "this reads what is in front of you now."}
+
+    out = chart_vision.analyse(user_id, bytes(row["png"]), question)
+    if out.get("error"):
+        return out
+    return {**out, "symbol": row["symbol"], "timeframe": row["timeframe"],
+            "drawings": row["drawings"],
+            "note": (out.get("note") or "")
+                    + (f" {row['drawings']} drawing(s) of yours are in the image."
+                       if row["drawings"] else " There were no drawings on it.")}
+
+
 def execute_tool(name, args, user_id=None, ctx=None):
     _sess_token = None
     if user_id:
@@ -700,6 +746,8 @@ def execute_tool(name, args, user_id=None, ctx=None):
             return append_memory(user_id, args.get("note", ""))
         if name == "schedule_action":
             return _schedule_action(user_id, args)
+        if name == "analyse_chart":
+            return _analyse_chart(user_id, args.get("question") or "")
         if name == "show_chart":
             import market
             return market.chart(args["symbol"], timeframe=args.get("timeframe", "M15"),

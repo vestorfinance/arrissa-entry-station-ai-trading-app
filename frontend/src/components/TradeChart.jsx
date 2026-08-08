@@ -5,6 +5,7 @@ import { LineChart as LineChartIcon, RefreshCw, Slash, Minus, Square, Ruler,
          Maximize2, Minimize2 } from 'lucide-react'
 import * as api from '../services/api.js'
 import { attachDrawings, TOOLS } from './chartDrawings.js'
+import { register as registerChart } from './chartRegistry.js'
 
 // How long a chart streams before it auto-expires. After this it collapses to a
 // lightweight placeholder — no chart, no WebSocket — so old charts left in a
@@ -71,6 +72,7 @@ export default function TradeChart({ spec }) {
   const wasActive = useRef(false)       // to detect the transition back into view
   const drawRef = useRef(null)          // the drawing layer, while a chart exists
   const barsRef = useRef([])            // the bars as drawn, for hit-testing drawn trades
+  const regRef = useRef(null)           // this chart's entry in the registry
 
   const [data, setData] = useState(spec)     // current candles + trades (refreshed on focus)
   const [onScreen, setOnScreen] = useState(false)
@@ -205,6 +207,27 @@ export default function TradeChart({ spec }) {
       chart.remove(); chartRef.current = null; seriesRef.current = null
     }
   }, [data, expired])
+
+  // ── the assistant can be asked to LOOK at this chart ─────────────────────────
+  // Registered so the composer can photograph whichever chart is in front of
+  // the user when they ask. takeScreenshot() captures the library's own canvas,
+  // and the drawing layer paints into it through the primitives API, so their
+  // lines are in the picture — which is the entire point.
+  useEffect(() => {
+    if (!data?.symbol) return
+    const h = registerChart({
+      symbol: data.symbol,
+      timeframe: data.timeframe,
+      drawings: drawCount,
+      visible: active,
+      shot: () => chartRef.current?.takeScreenshot() || null,
+    })
+    regRef.current = h
+    return () => { h.remove(); regRef.current = null }
+  }, [data?.symbol, data?.timeframe])
+
+  useEffect(() => { regRef.current?.update({ drawings: drawCount, visible: active }) },
+           [drawCount, active])
 
   useEffect(() => { drawRef.current?.setTool(tool) }, [tool, data, expired])
 

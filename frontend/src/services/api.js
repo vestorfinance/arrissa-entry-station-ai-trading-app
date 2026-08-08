@@ -71,6 +71,15 @@ export const chartData = ({ symbol, timeframe, count, account }) =>
     ...(account ? { account: String(account) } : {}),
   })}`)
 
+// Hand over a picture of the chart on screen, drawings and all, so the
+// `analyse_chart` tool has something to look at. Posted just before the message
+// it belongs to — never stored longer than the next one.
+export const chartSnapshot = ({ symbol, timeframe, drawings, png }) =>
+  req('/chart/snapshot', {
+    method: 'POST',
+    body: JSON.stringify({ symbol, timeframe, drawings, png }),
+  })
+
 // voice input — send recorded audio to Whisper, get the transcript back
 export async function transcribe(blob) {
   const token = localStorage.getItem('auth_token')
