@@ -217,15 +217,30 @@ docker compose exec -T db pg_dump -U entrystation entrystation > ~/entrystation-
 cp .env ~/entrystation-env-backup`,
     code: `cd ~/entrystation
 
-# containers, networks, and the volumes: database, modules, browser session
+# 1. containers, networks, AND the volumes: database, modules, browser session.
+#    This must run from inside the folder, while docker-compose.yml still
+#    exists. Delete the folder first and nothing can remove them afterwards.
 docker compose down -v --remove-orphans
 
-# the code, and .env with it
+# 2. prove it. Both commands must print NOTHING but their headers.
+docker volume ls | grep entrystation
+docker ps -a | grep entrystation
+
+# 3. if step 2 listed any volume, remove it by name:
+#    docker volume rm entrystation_pgdata entrystation_data entrystation_web \\
+#                     entrystation_caddy_data entrystation_caddy_config
+
+# 4. only now the folder, and .env with it
 cd ~ && rm -rf ~/entrystation
 
-# the images it built and the build cache, which is most of the disk
+# 5. the images and build cache, which is most of the disk
 docker image prune -af
 docker builder prune -af`,
+    after2: 'Step 2 is the one that matters. A volume is named after the FOLDER — '
+          + 'entrystation_pgdata — so if one survives and you reinstall to the same '
+          + 'folder, Docker hands the new install the old database and it looks like the '
+          + 'uninstall did nothing. Nothing warns you, because from Docker\u2019s side '
+          + 'reusing a volume that already exists is exactly right.',
     after: 'On a server, also remove its block from /etc/caddy/Caddyfile and reload '
          + '(sudo systemctl reload caddy), or Caddy keeps answering for a domain that now '
          + 'proxies to nothing.',
@@ -695,6 +710,7 @@ curl -s -o /dev/null -w "site %{http_code}\n" https://${D}`,
                   {t.before && <p className="ins-note">{t.before}</p>}
                   {t.backup && <Code>{t.backup}</Code>}
                   {t.code && <Code>{t.code}</Code>}
+                  {t.after2 && <p className="ins-warn"><AlertTriangle size={15} /><span>{t.after2}</span></p>}
                   {t.after && <p className="ins-note">{t.after}</p>}
                 </details>
               ))}
