@@ -62,6 +62,8 @@ export default function Connections() {
   // table, because their password is used once and never stored. So whether one
   // is connected has to be ASKED, per kind, from the endpoint it named.
   const [managedState, setManagedState] = useState({})
+  // Which kind's "open an account" choices are being shown.
+  const [brokers, setBrokers] = useState(null)
 
   const load = useCallback(() => {
     api.listConnections().then((data) => {
@@ -235,6 +237,15 @@ export default function Connections() {
                       {t.signup_label || 'Open an account'} <ExternalLink size={12} />
                     </a>
                   )}
+                  {/* Several ways to open one. TradeLocker is a PLATFORM, not a
+                      broker: the account is opened with a broker who runs on
+                      it, so there is a choice to make and a single link would
+                      have to pick for them. */}
+                  {t.signup_options?.length > 0 && !isOn && (
+                    <button className="btn btn--ghost btn--sm" onClick={() => setBrokers(t)}>
+                      {t.signup_label || 'Open an account'} <ExternalLink size={12} />
+                    </button>
+                  )}
                   {t.managed_by && isOn && (
                     <button className="btn btn--danger btn--sm"
                             onClick={() => disconnectManaged(t)}>
@@ -377,6 +388,36 @@ export default function Connections() {
             onError={setErr} />
         )}
       </div>
+      {brokers && (
+        <div className="modal-overlay" {...backdrop(() => setBrokers(null))}>
+          <div className="modal conn-brokers" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-title">{brokers.signup_label || 'Open an account'}</span>
+              <button className="btn btn--ghost btn--icon btn--sm" style={{ marginLeft: 'auto' }}
+                      onClick={() => setBrokers(null)} title="Close">
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <p className="conn-brokers-lead">
+              {brokers.name} is the platform your account runs on, not the broker who holds it.
+              Open an account with one of these and connect it here with the login they give you.
+            </p>
+            <div className="conn-brokers-list">
+              {brokers.signup_options.map((o) => (
+                <a key={o.name} className="conn-broker" href={o.url}
+                   target="_blank" rel="noreferrer" onClick={() => setBrokers(null)}>
+                  <span className="conn-broker-name">{o.name}</span>
+                  <ExternalLink size={14} />
+                </a>
+              ))}
+            </div>
+            <p className="conn-brokers-note">
+              Already have one? Close this and press Connect.
+            </p>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   )
 }
