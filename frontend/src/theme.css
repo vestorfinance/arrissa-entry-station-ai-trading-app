@@ -7045,3 +7045,96 @@ a.dv-card-title:hover { text-decoration: underline; }
   font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .alert-retry:hover { background: rgba(255,255,255,0.2); }
+
+/* ── quick ticket on the Live panel ─────────────────────────────────────────── */
+.live-ticket-sym { display: flex; align-items: center; gap: 7px; margin: 10px 0 6px; }
+.tk-sym {
+  flex: 1; min-width: 0; height: 30px; padding: 0 10px;
+  border: none; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--text-primary);
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0.02em;
+}
+.live-ticket { display: grid; grid-template-columns: 1fr 76px 1fr; gap: 7px; align-items: center; }
+.tk-btn {
+  height: 34px; border: none; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  color: #fff; cursor: pointer;
+}
+.tk-btn:disabled { opacity: 0.55; cursor: default; }
+.tk-btn--sell { background: #ef4444; }
+.tk-btn--sell:hover:not(:disabled) { background: #dc2626; }
+.tk-btn--buy { background: #22c55e; }
+.tk-btn--buy:hover:not(:disabled) { background: #16a34a; }
+.tk-lots {
+  height: 34px; width: 100%; padding: 0 8px; text-align: center;
+  border: none; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--text-primary);
+  font-size: 13px; font-weight: 600;
+}
+.live-ticket-msg { font-size: 11.5px; color: var(--text-secondary); margin: 7px 2px 0; }
+
+/* ── the risk check modal ────────────────────────────────────────────────────
+   Its own overlay above everything, including the floating Live card. */
+.rk-backdrop {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.rk-modal {
+  width: min(520px, 100%); max-height: 88vh; overflow: auto;
+  border-radius: var(--radius-lg, 18px);
+  background: var(--card-bg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  padding: 18px 18px 14px;
+}
+.rk-head { display: flex; align-items: flex-start; gap: 11px; }
+.rk-head > svg { flex: none; color: var(--tone-warn, #fbbf24); margin-top: 2px; }
+.rk-head-main { flex: 1; min-width: 0; }
+.rk-title { font-size: 15px; font-weight: 650; margin: 0; }
+.rk-sub {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 0;
+}
+.rk-side { font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.04em; }
+.rk-side--buy { color: #22c55e; }
+.rk-side--sell { color: #ef4444; }
+.rk-x {
+  flex: none; display: inline-flex; padding: 3px; border: none;
+  border-radius: var(--radius-pill); background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+}
+.rk-x:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
+.rk-body { margin-top: 14px; }
+.rk-issue {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 12px; border-radius: 12px; margin-bottom: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  font-size: 12.5px; line-height: 1.5;
+}
+.rk-issue--warn { background: rgba(251, 191, 36, 0.12); }
+.rk-issue b { font-size: 12.5px; font-weight: 650; }
+.rk-issue span { color: var(--text-secondary); }
+.rk-msg { font-size: 13px; line-height: 1.55; margin: 12px 0 0; }
+.rk-msg--wait { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); }
+.rk-spin { animation: tchart-spin 900ms linear infinite; }
+.rk-sug {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+  background: var(--surface-2, var(--input-bg)); font-size: 12.5px; font-weight: 600;
+}
+.rk-sug i { font-style: normal; color: var(--text-secondary); font-weight: 500; margin-right: 6px; }
+.rk-reply { display: flex; gap: 7px; margin-top: 12px; }
+.rk-input { flex: 1; min-width: 0; height: 34px; font-size: 12.5px; }
+.rk-send {
+  flex: none; width: 34px; height: 34px; display: inline-flex;
+  align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--text-primary); cursor: pointer;
+}
+.rk-send:disabled { opacity: 0.5; cursor: default; }
+.rk-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-top: 16px; flex-wrap: wrap;
+}
+.rk-foot-right { display: flex; gap: 8px; flex-wrap: wrap; }

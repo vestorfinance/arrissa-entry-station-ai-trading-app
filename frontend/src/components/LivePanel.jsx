@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import InstrumentFlag from './InstrumentFlag.jsx'
+import RiskModal from './RiskModal.jsx'
 import { Briefcase, X, Trash2, Scale, XCircle, AlertTriangle, CandlestickChart } from 'lucide-react'
 import * as api from '../services/api.js'
 import { useModule } from '../services/capabilities.js'
@@ -28,6 +29,12 @@ export default function LivePanel() {
   const [errMsg, setErrMsg] = useState(null)   // what the broker actually said
   const [pos, setPos] = useState(() => readJSON('arrissa.live.pos', null))  // {left, top} once dragged
   const [expanded, setExpanded] = useState(null)   // position_id whose actions are shown
+  // the quick ticket: SELL | lots | BUY, and the risk check it may raise
+  const [tradeSymbol, setTradeSymbol] = useState('')
+  const [lots, setLots] = useState('0.01')
+  const [ticketBusy, setTicketBusy] = useState(false)
+  const [gate, setGate] = useState(null)      // ctx for RiskModal
+  const [ticketMsg, setTicketMsg] = useState(null)
   const [busy, setBusy] = useState({})             // {position_id|'all': true} while acting
   const [err, setErr] = useState(null)
   const [confirm, setConfirm] = useState(null)     // {position_id, label} pending close
@@ -228,6 +235,46 @@ export default function LivePanel() {
     doClose(confirm.position_id)
     setConfirm(null)
   }
+  // A trade from the panel goes: check → (usually) straight out. The modal only
+  // appears when the check found something, which is the whole point of doing
+  // the arithmetic server-side before any model is involved.
+  async function submit(side) {
+    const symbol = tradeSymbol.trim() || snap?.positions?.[0]?.symbol
+    const volume = Number(lots)
+    if (!symbol || !volume || volume <= 0 || ticketBusy) return
+    setTicketBusy(true)
+    setTicketMsg(null)
+    try {
+      const ctx = await api.tradePrecheck({ symbol, side, volume, account: active })
+      const advisory = ctx.suggestion?.advisory ? ctx.suggestion : null
+      if (ctx.ok && !(ctx.suggestion && !ctx.suggestion.advisory)) {
+        // Straight through — but WITH the stop and target the engine sized to
+        // their own rule. "Through the risk settings" should mean the trade
+        // carries them, not merely that it was measured against them.
+        await place({ symbol, side, volume, override: false,
+                      sl: advisory?.sl, tp: advisory?.tp })
+      } else {
+        setGate(ctx)
+      }
+    } catch (e) {
+      setTicketMsg(e.message)
+    } finally {
+      setTicketBusy(false)
+    }
+  }
+
+  async function place({ symbol, side, volume, sl, tp, override }) {
+    const sym = symbol || gate?.trade?.symbol
+    const sd = side || gate?.trade?.side
+    const r = await api.tradeExecute({
+      symbol: sym, side: sd, volume, sl, tp, account: active, override: !!override,
+    })
+    setTicketMsg(`${sd} ${volume} ${sym} placed.`)
+    setTimeout(() => setTicketMsg(null), 6000)
+    return r
+  }
+
+
   function openChart(symbol) {
     const id = `${active}:${symbol}`
     setCharts((cs) => (cs.some((c) => c.id === id) ? cs : cs.concat({ id, symbol, account: active })))
@@ -334,6 +381,27 @@ export default function LivePanel() {
 
           {err && <div className="live-status" style={{ color: 'var(--danger)' }}>{err}</div>}
 
+          {/* Quick ticket: SELL left, size middle, BUY right. The symbol sits
+              above rather than in that row, so the three controls stay the shape
+              they were asked for — and a ticket needs to know what it is buying. */}
+          <div className="live-ticket-sym">
+            <InstrumentFlag symbol={tradeSymbol || snap?.positions?.[0]?.symbol} size="sm" />
+            <input className="tk-sym" placeholder={snap?.positions?.[0]?.symbol || 'Symbol'}
+                   value={tradeSymbol}
+                   onChange={(e) => setTradeSymbol(e.target.value.toUpperCase())}
+                   aria-label="Symbol" />
+          </div>
+          <div className="live-ticket">
+            <button className="tk-btn tk-btn--sell" disabled={ticketBusy}
+                    onClick={() => submit('sell')}>Sell</button>
+            <input className="tk-lots" value={lots} inputMode="decimal"
+                   onChange={(e) => setLots(e.target.value.replace(/[^\d.]/g, ''))}
+                   aria-label="Lot size" />
+            <button className="tk-btn tk-btn--buy" disabled={ticketBusy}
+                    onClick={() => submit('buy')}>Buy</button>
+          </div>
+          {ticketMsg && <p className="live-ticket-msg">{ticketMsg}</p>}
+
           {snap && snap.positions.length > 0 && (
             <div className="live-foot">
               <button className="live-mini-btn" disabled={busy.all} onClick={() => doBreakEven(null)}>
@@ -346,6 +414,17 @@ export default function LivePanel() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Its own modal, deliberately not hung off the Live card: it is a decision
+          about money, and it must survive the panel being dragged or scrolled. */}
+      {gate && (
+        <RiskModal
+          ctx={gate}
+          onClose={() => setGate(null)}
+          onPlace={({ volume, sl, tp, override }) =>
+            place({ symbol: gate.trade.symbol, side: gate.trade.side, volume, sl, tp, override })}
+        />
       )}
 
       {confirm && (

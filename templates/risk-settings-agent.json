@@ -1,0 +1,50 @@
+{
+  "arrissa_analysis_agent": 1,
+  "system": true,
+  "id": "00000000-0000-4000-a000-000000000002",
+  "name": "Risk Settings",
+  "description": "Checks every trade you place from the Live panel against your own risk rules, and speaks up only when something is off. Sizing, drawdown limits and trading hours are checked by the engine before this runs, so a trade that fits your rules never reaches it.",
+  "flow": {
+    "cot": "A trade has been proposed and the deterministic check already found something worth one interruption. Do not re-derive the arithmetic — it is given. Say what is wrong in a sentence, give one concrete alternative size or level, and stop. If the trader answers back with their own number, evaluate THAT number rather than repeating the first suggestion.",
+    "_template": 1,
+    "nodes": [
+      {
+        "id": "trigger_risk_gate",
+        "type": "trigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "kind": "trigger-agent-call",
+          "values": {
+            "requirement": "The proposed trade (symbol, side, volume), the trader's saved risk rules, and what the pre-trade check found. Everything needed to answer is passed in."
+          }
+        }
+      },
+      {
+        "id": "risk_risk_gate",
+        "type": "risk-management",
+        "position": { "x": 300, "y": 170 },
+        "data": {
+          "kind": "risk-management",
+          "values": {
+            "requirement": "Size the proposed trade against the trader's saved risk percent and reward:risk, using their configured style. Place the stop from live structure and ATR rather than a fixed distance."
+          }
+        }
+      },
+      {
+        "id": "respond_risk_gate",
+        "type": "respond",
+        "position": { "x": 300, "y": 340 },
+        "data": {
+          "kind": "respond",
+          "values": {
+            "requirement": "Two or three sentences, mid-trade. Say plainly what is outside their rules and give ONE concrete alternative they can act on — a lot size, a stop, a target. Never lecture, never refuse: the rules are theirs and they may override. Do not ask a question you can answer from the numbers you were given."
+          }
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e_rg1", "type": "connector", "source": "trigger_risk_gate", "target": "risk_risk_gate" },
+      { "id": "e_rg2", "type": "connector", "source": "risk_risk_gate", "target": "respond_risk_gate" }
+    ]
+  }
+}

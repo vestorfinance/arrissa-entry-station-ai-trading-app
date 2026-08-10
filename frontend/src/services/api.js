@@ -165,6 +165,17 @@ export const getPrefs = () => req('/prefs')
 export const setPrefs = (patch) =>
   req('/prefs', { method: 'PUT', body: JSON.stringify(patch) })
 
+// Quick ticket from the Live panel. precheck is deterministic and cheap, so the
+// usual answer ("fine") costs one fast round trip and no model at all.
+export const tradePrecheck = (body) =>
+  req('/trade/precheck', { method: 'POST', body: JSON.stringify(body) })
+
+export const tradeAdvise = (ctx, message = '') =>
+  req('/trade/advise', { method: 'POST', body: JSON.stringify({ ctx, message }) })
+
+export const tradeExecute = (body) =>
+  req('/trade/execute', { method: 'POST', body: JSON.stringify(body) })
+
 // Market alerts — things that happened, for the bottom-right toasts. `since` is
 // the `now` the server handed back last time, so nothing is missed or repeated.
 export const marketAlerts = (since = '') =>

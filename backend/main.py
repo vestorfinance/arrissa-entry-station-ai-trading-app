@@ -139,6 +139,11 @@ def _startup():
         market_alerts.start()
     except Exception as _e:
         print(f"[market-alerts] not started: {_e!r}", flush=True)
+    try:
+        import risk_gate
+        risk_gate.seed()        # the Risk Settings system agent
+    except Exception as _e:
+        print(f"[risk-gate] not seeded: {_e!r}", flush=True)
     start_scheduler()  # background thread that executes scheduled orders/actions
     try:
         import daily_scan
@@ -1891,6 +1896,63 @@ def _clean_hours(hours):
     return out
 
 
+class TradeCheck(BaseModel):
+    symbol: str
+    side: str                      # buy | sell
+    volume: float
+    account: str = ""
+    sl: float | None = None
+    tp: float | None = None
+
+
+class TradeAdvise(BaseModel):
+    ctx: dict
+    message: str = ""
+
+
+class TradeGo(TradeCheck):
+    override: bool = False         # they saw the warning and chose to proceed
+
+
+@app.post("/api/trade/precheck")
+def trade_precheck(body: TradeCheck, user: dict = Depends(current_user)):
+    """Does this trade fit the trader's own rules? Deterministic and cheap —
+    no model runs here, because the common answer is yes and that answer has to
+    arrive at the speed of a button."""
+    import risk_gate
+    return risk_gate.check(user["id"], body.account, body.symbol, body.side,
+                           body.volume, sl=body.sl, tp=body.tp)
+
+
+@app.post("/api/trade/advise")
+def trade_advise(body: TradeAdvise, user: dict = Depends(current_user)):
+    """The Risk Settings agent's reply — only reached once the check already
+    found something, or when the trader answers back in the modal."""
+    import risk_gate
+    return risk_gate.advise(user["id"], body.ctx or {}, body.message or "")
+
+
+@app.post("/api/trade/execute")
+def trade_execute(body: TradeGo, user: dict = Depends(current_user)):
+    """Place it. Re-checks server-side unless the trader explicitly overrode.
+
+    The frontend already asked, but a check that only exists in the browser is
+    not a check — this endpoint is reachable on its own, and `override` has to
+    be a deliberate flag rather than the absence of one."""
+    import risk_gate
+    import trading_api
+    if not body.override:
+        gate = risk_gate.check(user["id"], body.account, body.symbol, body.side,
+                               body.volume, sl=body.sl, tp=body.tp)
+        if not gate["ok"]:
+            raise HTTPException(409, "; ".join(i["title"] for i in gate["issues"]
+                                               if i["severity"] == "block"))
+    t = trading_api.trader(account=body.account) if body.account else trading_api.trader()
+    res = t.place_order(body.symbol, float(body.volume), body.side,
+                        sl=body.sl or 0, tp=body.tp or 0)
+    return {"ok": True, "result": res}
+
+
 @app.get("/api/risk-settings")
 def get_risk_settings(user: dict = Depends(current_user)):
     with db.connect() as conn:
@@ -2050,7 +2112,21 @@ def update_analysis_agent(agent_id: str, body: AgentUpdate, user: dict = Depends
 
 @app.delete("/api/analysis-agents/{agent_id}")
 def delete_analysis_agent(agent_id: str, user: dict = Depends(current_user)):
+    """System agents cannot be deleted.
+
+    They are part of the app rather than something the user built: the watch
+    list and the risk gate are seeded, re-seeded on upgrade, and other features
+    call them by a fixed id. Deleting one does not remove a feature, it breaks
+    it — and it would come back on the next boot anyway, which is a worse
+    experience than being told no."""
     with db.connect() as conn:
+        row = conn.execute(
+            "SELECT name, is_system FROM analysis_agents WHERE id = %s AND user_id = %s",
+            (agent_id, user["id"])).fetchone()
+        if row and row["is_system"]:
+            raise HTTPException(
+                409, f"“{row['name']}” is a system agent and cannot be deleted. "
+                     f"You can disable it, or edit what it does.")
         conn.execute("DELETE FROM analysis_agents WHERE id = %s AND user_id = %s",
                      (agent_id, user["id"]))
         conn.commit()
