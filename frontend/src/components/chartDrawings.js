@@ -93,6 +93,7 @@ export function attachDrawings(chart, series,
                                { initial = [], onChange = () => {}, onToolDone = () => {},
                                  trades = [], lastPrice = () => null,
                                  onTradeLevel = () => {},
+                                 proposal = null,
                                  bars = () => [] } = {}) {
   let shapes = normalise(initial)
   let tool = null            // the armed tool, if any
@@ -448,6 +449,24 @@ export function attachDrawings(chart, series,
 
   function autoPositions() {
     const out = []
+    // A trade that does not exist yet, drawn exactly like one that does so the
+    // levels can be seen against the candles and moved by hand. It reuses the
+    // whole live-position path — same shape, same handles, same drag — and is
+    // told apart only by its id, which is what routes the change back to the
+    // caller instead of to the broker.
+    if (proposal && proposal.entry) {
+      const p = liveEdit && liveEdit.position_id === '_proposal' ? liveEdit : null
+      const lastBar = bars()[bars().length - 1]
+      out.push({
+        id: 'auto-_proposal', kind: 'position', side: proposal.side,
+        position_id: '_proposal', live: true,
+        entry: proposal.entry,
+        sl: p && p.sl != null ? p.sl : (proposal.sl ?? null),
+        tp: p && p.tp != null ? p.tp : (proposal.tp ?? null),
+        pts: [{ time: lastBar ? lastBar.time : null, logical: null, price: proposal.entry },
+              { time: null, logical: null, price: null }],
+      })
+    }
     for (const t of trades || []) {
       const entry = t.open_price?.price
       if (!entry) continue
@@ -808,11 +827,14 @@ export function attachDrawings(chart, series,
     getTool: () => tool,
     setTrades(next) {
       // Fresh truth from the broker replaces any pending drag, whether it was
-      // accepted or refused — either way the trade now says what it says.
+      // accepted or refused — either way the trade now says what it says. A
+      // PROPOSAL is not the broker's, so a tick arriving must not undo a level
+      // somebody just dragged.
       trades = next || []
-      liveEdit = null
+      if (!liveEdit || liveEdit.position_id !== '_proposal') liveEdit = null
       requestUpdate()
     },
+    setProposal(next) { proposal = next || null; liveEdit = null; requestUpdate() },
     // A refused change: drop the override so the line returns to where the
     // broker still has it, rather than lying about a level that was not set.
     revertLive() { liveEdit = null; requestUpdate() },

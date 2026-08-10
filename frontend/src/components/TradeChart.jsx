@@ -65,7 +65,7 @@ const COLORS = {
   grid: 'rgba(255,255,255,0.05)',
 }
 
-export default function TradeChart({ spec }) {
+export default function TradeChart({ spec, proposal = null, onProposalChange = null }) {
   const holder = useRef(null)
   const chartRef = useRef(null)
   const seriesRef = useRef(null)
@@ -196,9 +196,16 @@ export default function TradeChart({ spec }) {
       // tracks price without the drawing layer needing its own feed.
       lastPrice: () => lastRef.current?.close ?? null,
       bars: () => barsRef.current,       // to see whether a drawn trade already finished
+      proposal,
       // Dragging a live trade's stop or target and letting go IS the
       // instruction — the line is where the level will be.
       onTradeLevel: async ({ position_id, sl, tp }) => {
+        // A proposed trade has no ticket to modify — the change belongs to
+        // whoever is composing it, not to the broker.
+        if (position_id === '_proposal') {
+          onProposalChange?.({ ...(sl != null ? { sl } : {}), ...(tp != null ? { tp } : {}) })
+          return
+        }
         const acct = data.account || spec.account
         if (!acct) return
         try {
@@ -252,6 +259,9 @@ export default function TradeChart({ spec }) {
 
   useEffect(() => { regRef.current?.update({ drawings: drawCount, visible: active }) },
            [drawCount, active])
+
+  useEffect(() => { drawRef.current?.setProposal(proposal) },
+           [proposal?.entry, proposal?.sl, proposal?.tp, proposal?.side])
 
   useEffect(() => { drawRef.current?.setTool(tool) }, [tool, data, expired])
 

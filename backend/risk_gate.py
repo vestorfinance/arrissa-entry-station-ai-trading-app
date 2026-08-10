@@ -227,7 +227,26 @@ def check(user_id, account, symbol, side, volume, *, sl=None, tp=None) -> dict:
                    # which is the number being shown.
                    "currency": (plan.get("account_currency") or "")}
 
+    # Everything the browser needs to turn MONEY into a PRICE by itself.
+    # Money and distance are linear in each other, so with the per-price-unit
+    # value the modal can retarget a stop as fast as somebody types — a round
+    # trip per keystroke would make editing an amount feel broken.
+    pricing = None
+    try:
+        entry_px = float((plan or {}).get("entry") or trader.price(
+            symbol, "ask" if str(side).lower().startswith("buy") else "bid"))
+        pv = trader.point_value(symbol, 1.0, entry_px)
+        pricing = {"entry": entry_px,
+                   "money_per_price_unit": pv.get("money_per_price_unit"),
+                   "point_size": pv.get("point_size"),
+                   "digits": pv.get("digits"),
+                   "currency": (plan or {}).get("account_currency") or "",
+                   "exact": pv.get("exact", True)}
+    except Exception:
+        pricing = None
+
     return {
+        "pricing": pricing,
         "ok": not blocking,
         "issues": issues,
         "suggestion": suggestion,
