@@ -17,7 +17,7 @@ import { ask, promptForAlert } from '../services/askAgent.js'
 const POS_KEY = 'arrissa.potus.pos'
 const SEEN_KEY = 'arrissa.potus.seen'      // the last post id dismissed
 const POLL_MS = 60000
-const WAVE_MS = 45000                      // how long it keeps pulsing after arriving
+const WAVE_MS = 12000                      // how long it pulses; the dot stays after
 
 const readJSON = (k, fb) => {
   try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb } catch { return fb }
@@ -132,13 +132,15 @@ export default function TruthPill() {
   }
 
   return (
-    <div className={'potus' + (openCard ? ' potus--open' : '') + (waving ? ' potus--wave' : '')}
+    <div className={'potus' + (openCard ? ' potus--open' : '')
+                    + (waving ? ' potus--wave' : '')
+                    + (post.post_id !== dismissed ? ' potus--unread' : '')}
          ref={cardRef} style={style} onMouseDown={onDragStart}>
       <button className="potus-face"
               title={openCard ? 'Hide the post' : 'A market-moving post'}
               onClick={() => { if (!dragged.current) setOpenCard((v) => !v) }}>
-        {/* Three rings, offset in time, so it reads as a wave leaving the pill
-            rather than one border blinking. */}
+        {/* One ring animates; the others are shape kept in reserve. A pulse
+            beside live prices has to be noticeable, not insistent. */}
         <span className="potus-ring" /><span className="potus-ring" /><span className="potus-ring" />
         <img src="/img/potus.jpg" alt="" draggable="false" />
       </button>

@@ -7371,20 +7371,31 @@ a.dv-card-title:hover { text-decoration: underline; }
   width: 100%; height: 100%; border-radius: 50%; display: block; object-fit: cover;
   position: relative; z-index: 2;
 }
-/* the waves: rings leaving the pill, staggered so it reads as a pulse */
+/* One slow, soft ring — not three racing ones. The pill has to be noticeable
+   from the corner of an eye, not compete with the chart somebody is reading;
+   a loud animation beside live prices is something you end up closing. The
+   second and third rings are kept in the markup and simply not animated, so the
+   shape is there if this is ever dialled back up. */
 .potus-ring {
   position: absolute; inset: 0; border-radius: 50%;
-  border: 2px solid #f87171; opacity: 0; z-index: 1;
+  border: 1.5px solid #f87171; opacity: 0; z-index: 1;
 }
-.potus--wave .potus-ring { animation: potusWave 2.1s ease-out infinite; }
-.potus--wave .potus-ring:nth-child(2) { animation-delay: 0.7s; }
-.potus--wave .potus-ring:nth-child(3) { animation-delay: 1.4s; }
+.potus--wave .potus-ring:first-child { animation: potusWave 3.2s ease-out infinite; }
 @keyframes potusWave {
-  0%   { transform: scale(1);   opacity: 0.85; }
-  100% { transform: scale(2.1); opacity: 0; }
+  0%   { transform: scale(1);    opacity: 0.42; }
+  70%  { opacity: 0.10; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+/* A quiet mark that stays put once the ring has finished: the post is still
+   unread, and that is worth saying without moving. */
+.potus--wave .potus-face::after,
+.potus--unread .potus-face::after {
+  content: ''; position: absolute; top: 1px; right: 1px; z-index: 3;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #f87171; box-shadow: 0 0 0 2px var(--card-bg);
 }
 @media (prefers-reduced-motion: reduce) {
-  .potus--wave .potus-ring { animation: none; opacity: 0.5; transform: scale(1.25); }
+  .potus--wave .potus-ring:first-child { animation: none; opacity: 0.35; transform: scale(1.2); }
 }
 
 .potus-card {
