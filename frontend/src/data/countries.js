@@ -1,5 +1,7 @@
 // Country list for the signup phone/country picker.
-// Flags are GitHub circle-flags (HatScripts/circle-flags) SVGs via CDN — NO emoji.
+// Flags are round SVGs served from our OWN /flags — NO emoji, and no CDN: a CDN
+// makes every flag depend on someone else's repository staying reachable, which
+// a self-hosted box behind a firewall is not.
 // Each entry: [ISO-3166 alpha-2, name, dial code].
 const RAW = [
   ['AF', 'Afghanistan', '93'], ['AL', 'Albania', '355'], ['DZ', 'Algeria', '213'],
@@ -70,8 +72,7 @@ const RAW = [
   ['YE', 'Yemen', '967'], ['ZM', 'Zambia', '260'], ['ZW', 'Zimbabwe', '263'],
 ]
 
-export const flagUrl = (code) =>
-  `https://cdn.jsdelivr.net/gh/HatScripts/circle-flags/flags/${(code || '').toLowerCase()}.svg`
+export { flagUrl } from './flags.js'
 
 export const COUNTRIES = RAW
   .map(([code, name, dial]) => ({ code, name, dial }))

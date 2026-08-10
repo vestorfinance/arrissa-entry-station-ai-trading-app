@@ -528,3 +528,23 @@ CREATE INDEX IF NOT EXISTS idx_analysis_runs_analysis_id ON analysis_runs(analys
 -- (through the Analysis API or the app), while only its owner can edit it.
 ALTER TABLE analysis_agents ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_analysis_agents_public ON analysis_agents(is_public) WHERE is_public;
+
+-- Market alerts: things that HAPPEN and are worth interrupting somebody for, as
+-- opposed to notifications.py, which is a standing list of setup problems.
+-- `key` is a natural id from the source (a post id, an event name + its time),
+-- so the same happening can never be recorded twice however often the worker
+-- runs or restarts mid-pass.
+CREATE TABLE IF NOT EXISTS market_alerts (
+    key        TEXT PRIMARY KEY,
+    kind       TEXT NOT NULL,               -- truth | news | calendar_soon | calendar_out
+    title      TEXT NOT NULL,
+    body       TEXT,
+    at         TIMESTAMPTZ,                 -- when the EVENT happened
+    impact     TEXT,
+    country    TEXT,                        -- ISO-3166 alpha-2, for the flag
+    symbols    JSONB NOT NULL DEFAULT '[]', -- instruments, for their flags
+    url        TEXT,
+    sound      TEXT NOT NULL DEFAULT 'notice',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()   -- when WE saw it (the watermark)
+);
+CREATE INDEX IF NOT EXISTS idx_market_alerts_created ON market_alerts(created_at DESC);

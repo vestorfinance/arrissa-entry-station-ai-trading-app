@@ -132,6 +132,13 @@ def _startup():
         data_triggers.start()
     except Exception as _e:
         print(f"[data-trigger] not started: {_e!r}", flush=True)
+    # The same happenings, delivered to a screen instead of to an agent: a toast
+    # with a sound when something market-moving lands.
+    try:
+        import market_alerts
+        market_alerts.start()
+    except Exception as _e:
+        print(f"[market-alerts] not started: {_e!r}", flush=True)
     start_scheduler()  # background thread that executes scheduled orders/actions
     try:
         import daily_scan
@@ -502,6 +509,23 @@ def analyse_chart_now(body: ChartAnalyse, user=Depends(current_user)):
         raise HTTPException(400, out["error"])
     return {**out, "symbol": body.symbol, "timeframe": body.timeframe,
             "drawings": int(body.drawings or 0)}
+
+
+@app.get("/api/market-alerts")
+def get_market_alerts(since: str = "", limit: int = 30, user=Depends(current_user)):
+    """What has happened since this client last looked.
+
+    The watermark is the CLIENT's — it sends back the `now` from its previous
+    call — so a browser opened an hour later still receives what it missed
+    rather than only what arrives while it happens to be watching."""
+    import market_alerts
+    return market_alerts.since(since or None, limit)
+
+
+@app.get("/api/market-alerts/status")
+def market_alerts_status(user=Depends(current_user)):
+    import market_alerts
+    return market_alerts.status()
 
 
 @app.get("/api/trigger-sources")

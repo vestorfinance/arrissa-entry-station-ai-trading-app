@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import InstrumentFlag from './InstrumentFlag.jsx'
 import { Briefcase, X, Trash2, Scale, XCircle, AlertTriangle, CandlestickChart } from 'lucide-react'
 import * as api from '../services/api.js'
 import { useModule } from '../services/capabilities.js'
@@ -295,7 +296,10 @@ export default function LivePanel() {
                   <div key={p.position_id}>
                     <div className={'live-row live-row--trade' + (isOpen ? ' live-row--open' : '')}
                          onClick={() => setExpanded(isOpen ? null : p.position_id)}>
-                      <span className="live-sym">{p.symbol}</span>
+                      <span className="live-sym">
+                        <InstrumentFlag symbol={p.symbol} size="sm" />
+                        {p.symbol}
+                      </span>
                       <span className={'live-side live-side--' + p.side}>{p.side}</span>
                       <span>{p.volume}</span>
                       <span className={'live-right ' + pnl(p.profit)}>{money(p.profit)}</span>

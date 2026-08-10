@@ -6954,3 +6954,71 @@ a.dv-card-title:hover { text-decoration: underline; }
 .conn-broker:hover { background: var(--bg-tertiary); }
 .conn-broker-name { flex: 1; font-size: 14.5px; font-weight: 600; }
 .conn-brokers-note { margin: 14px 0 0; font-size: 12.5px; color: var(--text-secondary); }
+
+/* The flag shares the symbol's grid CELL rather than taking one of its own —
+   .live-row is a five-column grid, and a sixth child shifts every column out
+   from under the header. */
+.live-sym { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+
+/* ── market alerts ───────────────────────────────────────────────────────────
+   Things that HAPPEN, as opposed to the HMR toasts' standing conditions. Bottom
+   RIGHT so the two can never fight for the same corner, and frosted the same way
+   so they read as one family. */
+.ma-wrap {
+  position: fixed; right: 16px; bottom: 16px; z-index: 300;
+  display: flex; flex-direction: column-reverse; gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+}
+.ma-toast {
+  padding: 11px 13px; border-radius: 14px;
+  background: var(--card-bg);
+  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  animation: maIn 0.25s ease;
+}
+@keyframes maIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Market-moving gets a wash, so the difference between "worth knowing" and
+   "worth stopping for" is visible before the words are read. */
+.ma-toast--hot {
+  background: rgba(239, 68, 68, 0.12);
+  background: linear-gradient(rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.15)),
+              color-mix(in srgb, var(--card-bg) 70%, transparent);
+}
+.ma-head { display: flex; align-items: center; gap: 8px; }
+.ma-head > svg { flex: none; color: var(--text-secondary); }
+.ma-toast--hot .ma-head > svg { color: #f87171; }
+.ma-title {
+  flex: 1; min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.3;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.ma-body {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 5px 0 0;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+}
+.ma-x {
+  flex: none; display: inline-flex; padding: 2px; border-radius: var(--radius-pill);
+  color: var(--text-secondary); background: transparent; border: none; cursor: pointer;
+}
+.ma-x:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
+.ma-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+.ma-link { font-size: 11.5px; color: var(--text-secondary); text-decoration: none; }
+.ma-link:hover { color: var(--text-primary); }
+.ma-mute {
+  display: inline-flex; padding: 3px; border: none; border-radius: var(--radius-pill);
+  color: var(--text-secondary); background: transparent; cursor: pointer;
+}
+.ma-mute:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
+
+/* ── flags, wherever an instrument or a country is named ─────────────────────
+   Round marks at text size. A pair overlaps its two flags slightly so it reads
+   as ONE instrument rather than two countries standing next to each other. */
+.ma-flags, .inst-flags { display: inline-flex; align-items: center; flex: none; }
+.ma-flag, .inst-flag {
+  width: 16px; height: 16px; border-radius: 50%; display: block;
+  box-shadow: 0 0 0 1.5px var(--card-bg);
+}
+.ma-flag + .ma-flag, .inst-flag + .inst-flag { margin-left: -5px; }
+.inst-flags--sm .inst-flag { width: 13px; height: 13px; }
+.inst-flags--lg .inst-flag { width: 20px; height: 20px; }

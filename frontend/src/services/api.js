@@ -165,6 +165,11 @@ export const getPrefs = () => req('/prefs')
 export const setPrefs = (patch) =>
   req('/prefs', { method: 'PUT', body: JSON.stringify(patch) })
 
+// Market alerts — things that happened, for the bottom-right toasts. `since` is
+// the `now` the server handed back last time, so nothing is missed or repeated.
+export const marketAlerts = (since = '') =>
+  req(`/market-alerts${since ? `?since=${encodeURIComponent(since)}` : ''}`)
+
 // HMR (High Margin Requirement) notifications for the bottom-left notifier
 export const getHmrAlerts = () => req('/hmr/alerts')
 

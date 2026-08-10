@@ -6,6 +6,7 @@ import { LineChart as LineChartIcon, RefreshCw, Slash, Minus, Square, Ruler,
 import * as api from '../services/api.js'
 import { attachDrawings, TOOLS } from './chartDrawings.js'
 import { register as registerChart, analysed as chartAnalysed } from './chartRegistry.js'
+import InstrumentFlag from './InstrumentFlag.jsx'
 
 // How long a chart streams before it auto-expires. After this it collapses to a
 // lightweight placeholder — no chart, no WebSocket — so old charts left in a
@@ -347,7 +348,7 @@ export default function TradeChart({ spec }) {
            title="Click to reload this chart for another 5 minutes"
            style={{ cursor: 'pointer' }}>
         <div className="tchart-head">
-          <LineChartIcon size={14} strokeWidth={1.75} style={{ opacity: 0.6 }} />
+          <InstrumentFlag symbol={data.symbol} />
           <span className="tchart-sym">{data.symbol}</span>
           <span className="tchart-tf">{data.timeframe}</span>
           <span className="pill pill--muted">expired</span>
@@ -372,6 +373,7 @@ export default function TradeChart({ spec }) {
   return (
     <div className={'tchart' + (full ? ' tchart--full' : '')}>
       <div className="tchart-head">
+        <InstrumentFlag symbol={data.symbol} />
         <span className="tchart-sym">{data.symbol}</span>
         <span className="tchart-tf">{data.timeframe}</span>
         <span className={`pill ${live ? 'pill--ok' : 'pill--muted'}`}

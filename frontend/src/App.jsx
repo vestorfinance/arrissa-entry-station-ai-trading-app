@@ -84,6 +84,7 @@ function BillingOnlyWhereItApplies() {
 import Accounts from './pages/Accounts.jsx'
 import RiskSettings from './pages/RiskSettings.jsx'
 import HmrNotifier from './components/HmrNotifier.jsx'
+import MarketAlerts from './components/MarketAlerts.jsx'
 import Memory from './pages/Memory.jsx'
 import OrdersGuide from './pages/OrdersGuide.jsx'
 import OrderManagementGuide from './pages/OrderManagementGuide.jsx'
@@ -324,6 +325,7 @@ export default function App() {
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
     <HmrNotifier />
+    <MarketAlerts />
     </>
   )
 }

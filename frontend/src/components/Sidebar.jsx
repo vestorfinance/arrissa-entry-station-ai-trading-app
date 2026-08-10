@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import InstrumentFlag from './InstrumentFlag.jsx'
+import { detectSymbol } from '../data/flags.js'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Settings, BookOpen, Boxes, CalendarClock, SlidersHorizontal, Wallet,
@@ -204,6 +206,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggleCollaps
               onClick={() => openChat(c.id)}
               title={c.title}
             >
+              <InstrumentFlag symbol={detectSymbol(c.title)} size="sm" />
               <span className="history-title">{c.title}</span>
               <span className="history-del" onClick={(e) => removeChat(e, c.id)} title="Delete">
                 <Trash2 size={14} strokeWidth={1.75} />
