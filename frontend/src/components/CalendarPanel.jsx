@@ -49,7 +49,7 @@ export default function CalendarPanel() {
     if (!open) return
     let dead = false
     setLoading(true); setErr(null)
-    api.calendarDay(window_.since, window_.until)
+    api.calendarDay(window_.since, window_.until, 'high')
       .then((r) => { if (!dead) setEvents(r.events || []) })
       .catch((e) => { if (!dead) { setErr(e.message); setEvents([]) } })
       .finally(() => { if (!dead) setLoading(false) })
@@ -101,7 +101,9 @@ export default function CalendarPanel() {
           ) : err ? (
             <p className="cal-empty">{err}</p>
           ) : !events?.length ? (
-            <p className="cal-empty">Nothing scheduled {offset === 0 ? 'today' : 'that day'}.</p>
+            <p className="cal-empty">
+              No high-impact releases {offset === 0 ? 'today' : 'that day'}.
+            </p>
           ) : (
             <ul className="cal-list">
               {events.map((e, i) => {
@@ -132,7 +134,10 @@ export default function CalendarPanel() {
               })}
             </ul>
           )}
-          <div className="cal-foot"><span>actual</span><span>forecast</span><span>previous</span></div>
+          <div className="cal-foot">
+            <span className="cal-foot-note">High impact only</span>
+            <span>actual</span><span>forecast</span><span>previous</span>
+          </div>
         </div>
       )}
     </div>

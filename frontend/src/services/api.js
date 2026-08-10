@@ -167,8 +167,9 @@ export const setPrefs = (patch) =>
 
 // A day of economic releases. The window is computed in the browser and sent
 // explicitly, because a "day" begins and ends in the reader's own timezone.
-export const calendarDay = (since, until) =>
-  req(`/calendar/day?since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`)
+export const calendarDay = (since, until, impact = 'high') =>
+  req(`/calendar/day?since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`
+      + `&impact=${encodeURIComponent(impact)}`)
 
 // The bell's own view of market alerts: server-side, so history survives a
 // closed browser — the worker runs whether or not anyone is watching.

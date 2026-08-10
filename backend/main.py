@@ -528,7 +528,8 @@ def get_market_alerts(since: str = "", limit: int = 30, user=Depends(current_use
 
 
 @app.get("/api/calendar/day")
-def calendar_day(since: str = "", until: str = "", user=Depends(current_user)):
+def calendar_day(since: str = "", until: str = "", impact: str = "high",
+                 user=Depends(current_user)):
     """A day's economic releases, for the navbar calendar.
 
     The window arrives as an explicit since/until from the browser rather than a
@@ -542,7 +543,11 @@ def calendar_day(since: str = "", until: str = "", user=Depends(current_user)):
         raise HTTPException(404, "The Economic Calendar module is not installed here.")
     if not since or not until:
         raise HTTPException(400, "since and until are required")
-    res = p.query(since=since, until=until, limit=300, order="asc")
+    # High impact by default. The full list is mostly releases nobody trades, and
+    # a calendar you have to scan past is one you stop opening. `impact=any`
+    # turns the filter off for anyone who does want everything.
+    imp = None if str(impact).lower() in ("any", "all", "") else impact
+    res = p.query(since=since, until=until, impact=imp, limit=300, order="asc")
     if isinstance(res, dict) and res.get("error"):
         raise HTTPException(400, res["error"])
     return res
