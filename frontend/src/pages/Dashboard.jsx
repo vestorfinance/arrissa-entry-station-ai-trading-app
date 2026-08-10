@@ -275,7 +275,13 @@ export default function Dashboard() {
         controller.signal,
       )
     } catch (e) {
-      if (e.name !== 'AbortError') assistant.error = e.message
+      if (e.name !== 'AbortError') {
+        assistant.error = e.message
+        // Keep what they typed so a dropped connection costs a click, not the
+        // message. Losing somebody's question because the server restarted is
+        // the part that actually stings.
+        if (e.code === 'stream_dropped') assistant.retry = text
+      }
     } finally {
       assistant.done = true
       const finalMsgs = [...base, userMsg, { ...assistant, actions: assistant.actions.slice() }]
@@ -642,7 +648,7 @@ export default function Dashboard() {
             <div className="chat-scroll" ref={scrollRef}>
               <div className="chat-thread">
                 {messages.map((m, i) => (
-                  <Message key={i} m={m} busy={busy && i === messages.length - 1} onOption={send} />
+                  <Message key={i} m={m} busy={busy && i === messages.length - 1} onOption={send} onRetry={send} />
                 ))}
               </div>
             </div>
@@ -701,7 +707,7 @@ function TradeCard({ trade, onPlace }) {
   )
 }
 
-function Message({ m, busy, onOption }) {
+function Message({ m, busy, onOption, onRetry }) {
   if (m.role === 'user') {
     return (
       <div className="msg msg--user">
@@ -736,7 +742,14 @@ function Message({ m, busy, onOption }) {
         </div>
       )}
 
-      {m.error && <div className="alert alert--danger" style={{ marginTop: 8 }}>{m.error}</div>}
+      {m.error && (
+        <div className="alert alert--danger" style={{ marginTop: 8 }}>
+          <span>{m.error}</span>
+          {m.retry && onRetry && (
+            <button className="alert-retry" onClick={() => onRetry(m.retry)}>Send it again</button>
+          )}
+        </div>
+      )}
 
       {m.memory && m.memory.length > 0 && (
         <div className="msg-memory">

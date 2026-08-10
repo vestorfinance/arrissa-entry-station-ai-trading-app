@@ -425,9 +425,26 @@ export async function agentChat({ model, messages, accounts }, onEvent, signal) 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
+  let started = false
   while (true) {
-    const { done, value } = await reader.read()
+    let done, value
+    try {
+      ({ done, value } = await reader.read())
+    } catch (e) {
+      // The stream died after the response began. Almost always the backend
+      // going away underneath it — a deploy, a restart, a dropped connection —
+      // and "network error" tells the user nothing about what to do next.
+      if (e.name === 'AbortError') throw e
+      const err = new Error(
+        started
+          ? 'The connection to the server dropped part-way through this run. '
+            + 'The server was probably restarted. Nothing was lost — send it again.'
+          : 'Could not reach the server. Check your connection and try again.')
+      err.code = 'stream_dropped'
+      throw err
+    }
     if (done) break
+    started = true
     // SSE frames are separated by a blank line; sse_starlette emits CRLF (\r\n\r\n),
     // so normalise line endings before splitting.
     buf += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
