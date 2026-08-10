@@ -7003,7 +7003,11 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .ma-x:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
 .ma-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
-.ma-link { font-size: 11.5px; color: var(--text-secondary); text-decoration: none; }
+.ma-link {
+  font-size: 11.5px; font-weight: 600; color: var(--text-secondary);
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  text-decoration: none;
+}
 .ma-link:hover { color: var(--text-primary); }
 .ma-mute {
   display: inline-flex; padding: 3px; border: none; border-radius: var(--radius-pill);
@@ -7162,6 +7166,8 @@ a.dv-card-title:hover { text-decoration: underline; }
 .notif-when { white-space: nowrap; }
 .notif-open {
   display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  font-size: 11px; font-weight: 600;
   color: var(--text-secondary); text-decoration: none;
 }
 .notif-open:hover { color: var(--text-primary); }

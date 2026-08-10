@@ -13,6 +13,7 @@ import { useCapabilities, useModule } from '../services/capabilities.js'
 import { useActiveAccount, setActiveAccount } from '../services/activeAccount.js'
 import * as api from '../services/api.js'
 import { capture as captureChart, onAnalysed } from '../components/chartRegistry.js'
+import { takePending, onAsk } from '../services/askAgent.js'
 import BrokerLogo from '../components/BrokerLogo.jsx'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -319,6 +320,27 @@ export default function Dashboard() {
     setMessages(next)
     persist(next)
   }), [])
+
+  // A question handed over from somewhere else — "Analyse this" on an alert.
+  //
+  // Parked rather than sent straight away: that click usually NAVIGATES here, so
+  // this component is still mounting when the ask happens, and it cannot send
+  // anything until a model is loaded and nothing else is in flight. So it is
+  // held and drained by the effect below, which is also what makes it survive
+  // arriving before either is true.
+  const askedRef = useRef(null)
+  useEffect(() => {
+    const first = takePending()
+    if (first) askedRef.current = first
+    return onAsk(() => { askedRef.current = takePending() || askedRef.current })
+  }, [])
+
+  useEffect(() => {
+    if (!askedRef.current || !model || busy || locked) return
+    const text = askedRef.current
+    askedRef.current = null
+    send(text)
+  }, [model, busy, locked])
 
   function stop() {
     abortRef.current?.abort()

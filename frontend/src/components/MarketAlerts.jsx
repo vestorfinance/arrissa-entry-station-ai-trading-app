@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
 import { flagsFor, countryFlag } from '../data/flags.js'
 import { alertsChanged } from '../services/alertBus.js'
+import { ask, promptForAlert } from '../services/askAgent.js'
+import { useNavigate } from 'react-router-dom'
 
 // Toasts for things that HAPPEN: a market-moving Truth post, a high-impact news
 // story, a big economic release five minutes out, and that release printing.
@@ -77,6 +79,7 @@ function Flags({ alert }) {
 
 export default function MarketAlerts() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [toasts, setToasts] = useState([])
   const [muted, setMuted] = useState(() => localStorage.getItem(MUTE_KEY) === '1')
   const sinceRef = useRef(localStorage.getItem(SEEN_KEY) || '')
@@ -143,9 +146,11 @@ export default function MarketAlerts() {
             </div>
             {a.body ? <p className="ma-body">{a.body}</p> : null}
             <div className="ma-foot">
-              {a.url
-                ? <a className="ma-link" href={a.url} target="_blank" rel="noreferrer">Read it</a>
-                : <span />}
+              <button className="ma-link" onClick={() => {
+                remove(a.key)
+                navigate('/dashboard')
+                ask(promptForAlert(a))
+              }}>Analyse this</button>
               <button
                 className="ma-mute"
                 title={muted ? 'Alert sounds are off' : 'Alert sounds are on'}

@@ -4,6 +4,7 @@ import { Bell, ExternalLink, Check, AlertTriangle, Info, ArrowRight,
          Newspaper, CalendarClock, Megaphone, BarChart3, X } from 'lucide-react'
 import InstrumentFlag from './InstrumentFlag.jsx'
 import { onAlertsChanged } from '../services/alertBus.js'
+import { ask, promptForAlert } from '../services/askAgent.js'
 import { countryFlag } from '../data/flags.js'
 import * as api from '../services/api.js'
 
@@ -136,11 +137,15 @@ export default function Notifications() {
                       {a.body && <p>{a.body}</p>}
                       <div className="notif-alert-foot">
                         <span className="notif-when">{ago(a.created_at)}</span>
-                        {a.url && (
-                          <a className="notif-open" href={a.url} target="_blank" rel="noreferrer">
-                            Read it <ExternalLink size={11} />
-                          </a>
-                        )}
+                        {/* Not a link out. The useful thing to do with a story
+                            is ask what it means for a position right now. */}
+                        <button className="notif-open" onClick={() => {
+                          setOpen(false)
+                          navigate('/dashboard')
+                          ask(promptForAlert(a))
+                        }}>
+                          Analyse this <ArrowRight size={11} strokeWidth={2.2} />
+                        </button>
                       </div>
                     </div>
                     <button className="notif-clear" title="Dismiss"
