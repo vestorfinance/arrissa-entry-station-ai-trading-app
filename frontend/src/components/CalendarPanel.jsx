@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CalendarDays, ChevronLeft, ChevronRight, Loader2, X, GripHorizontal } from 'lucide-react'
 import * as api from '../services/api.js'
 import { currencyFlag } from '../data/flags.js'
@@ -14,6 +15,13 @@ import { useModule } from '../services/capabilities.js'
 // The window is computed HERE and sent as an explicit since/until, because a
 // "day" begins and ends in the reader's own timezone — a server picking that
 // boundary would put releases either side of midnight on the wrong day.
+//
+// The card is PORTALLED to <body>. The topbar it lives in has a backdrop-filter,
+// and a backdrop-filter makes an element the containing block for its
+// position:fixed descendants — so the card was being placed against the TOPBAR
+// while the drag maths used viewport coordinates, and it slid away from the
+// cursor. Nothing inside a filtered ancestor can be positioned against the
+// viewport, so it has to leave.
 
 const POS_KEY = 'arrissa.cal.pos'
 // How long before a release it starts flashing, and how long it may keep
@@ -170,7 +178,7 @@ export default function CalendarPanel() {
         <CalendarDays size={18} strokeWidth={1.9} />
       </button>
 
-      {open && (
+      {open && createPortal((
         <div className={'cal-panel' + (pos && !mobile ? ' cal-panel--moved' : '')}
              ref={cardRef} style={style}>
           <div className="cal-head" onMouseDown={onDragStart}>
@@ -236,7 +244,7 @@ export default function CalendarPanel() {
             <span>actual</span><span>forecast</span><span>previous</span>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   )
 }

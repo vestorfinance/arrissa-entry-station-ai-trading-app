@@ -165,6 +165,10 @@ export const getPrefs = () => req('/prefs')
 export const setPrefs = (patch) =>
   req('/prefs', { method: 'PUT', body: JSON.stringify(patch) })
 
+// The latest market-moving Truth Social post, for the floating pill.
+export const truthLatest = (hours = 24, impact = 'high', limit = 1) =>
+  req(`/truth/latest?hours=${hours}&impact=${encodeURIComponent(impact)}&limit=${limit}`)
+
 // A day of economic releases. The window is computed in the browser and sent
 // explicitly, because a "day" begins and ends in the reader's own timezone.
 export const calendarDay = (since, until, impact = 'high') =>

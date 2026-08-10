@@ -527,6 +527,25 @@ def get_market_alerts(since: str = "", limit: int = 30, user=Depends(current_use
     return market_alerts.since(since or None, limit)
 
 
+@app.get("/api/truth/latest")
+def truth_latest(hours: int = 24, impact: str = "high", limit: int = 5,
+                 user=Depends(current_user)):
+    """The most recent Truth Social posts, market-moving ones by default.
+
+    Through the registry, because Truth Social is a module and core may not
+    import one. 404 rather than an empty list when it is absent, so the caller
+    can tell "not installed" from "nothing to say"."""
+    import registry
+    p = registry.get("truth")
+    if not p:
+        raise HTTPException(404, "The Truth Social module is not installed here.")
+    imp = None if str(impact).lower() in ("any", "all", "") else impact
+    res = p.query(user="trump", hours=hours, limit=limit, impact=imp)
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
 @app.get("/api/calendar/day")
 def calendar_day(since: str = "", until: str = "", impact: str = "high",
                  user=Depends(current_user)):
