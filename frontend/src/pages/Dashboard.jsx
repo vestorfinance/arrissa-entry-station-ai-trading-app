@@ -328,19 +328,22 @@ export default function Dashboard() {
   // anything until a model is loaded and nothing else is in flight. So it is
   // held and drained by the effect below, which is also what makes it survive
   // arriving before either is true.
-  const askedRef = useRef(null)
+  // STATE, not a ref. A ref was the bug: the bell lives in the navbar, so the
+  // click usually happens while this page is already mounted — nothing
+  // navigates, no state changes, and an effect keyed on a ref never re-runs. The
+  // question sat there and was never sent.
+  const [asked, setAsked] = useState(null)
   useEffect(() => {
     const first = takePending()
-    if (first) askedRef.current = first
-    return onAsk(() => { askedRef.current = takePending() || askedRef.current })
+    if (first) setAsked(first)
+    return onAsk(() => setAsked(takePending()))
   }, [])
 
   useEffect(() => {
-    if (!askedRef.current || !model || busy || locked) return
-    const text = askedRef.current
-    askedRef.current = null
-    send(text)
-  }, [model, busy, locked])
+    if (!asked || !model || busy) return
+    setAsked(null)
+    send(asked)
+  }, [asked, model, busy])
 
   function stop() {
     abortRef.current?.abort()
