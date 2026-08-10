@@ -527,6 +527,27 @@ def get_market_alerts(since: str = "", limit: int = 30, user=Depends(current_use
     return market_alerts.since(since or None, limit)
 
 
+@app.get("/api/market-alerts/feed")
+def market_alerts_feed(limit: int = 40, user=Depends(current_user)):
+    """What the bell shows: outstanding alerts and the unread count. Served from
+    the database, so history survives a closed browser — the worker keeps
+    running whether or not anybody is watching."""
+    import market_alerts
+    return market_alerts.feed(user["id"], limit)
+
+
+@app.post("/api/market-alerts/seen")
+def market_alerts_seen(user=Depends(current_user)):
+    import market_alerts
+    return market_alerts.mark_seen(user["id"])
+
+
+@app.post("/api/market-alerts/dismiss")
+def market_alerts_dismiss(key: str = "", user=Depends(current_user)):
+    import market_alerts
+    return market_alerts.dismiss(user["id"], key or None)
+
+
 @app.get("/api/market-alerts/status")
 def market_alerts_status(user=Depends(current_user)):
     import market_alerts

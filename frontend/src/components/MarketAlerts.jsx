@@ -3,6 +3,7 @@ import { Newspaper, CalendarClock, Megaphone, BarChart3, X, Volume2, VolumeX } f
 import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
 import { flagsFor, countryFlag } from '../data/flags.js'
+import { alertsChanged } from '../services/alertBus.js'
 
 // Toasts for things that HAPPEN: a market-moving Truth post, a high-impact news
 // story, a big economic release five minutes out, and that release printing.
@@ -82,9 +83,16 @@ export default function MarketAlerts() {
   const timers = useRef({})
   const chime = useChime(muted)
 
+  // Auto-hide just takes the toast off screen; it stays in the bell. Pressing X
+  // is the deliberate "I am done with this", so that one clears it for good.
   const remove = (key) => {
     setToasts((ts) => ts.filter((t) => t.key !== key))
     if (timers.current[key]) { clearTimeout(timers.current[key]); delete timers.current[key] }
+  }
+
+  const dismiss = (key) => {
+    remove(key)
+    api.marketAlertDismiss(key).then(alertsChanged).catch(() => {})
   }
 
   useEffect(() => {
@@ -129,7 +137,7 @@ export default function MarketAlerts() {
               <Icon size={15} strokeWidth={1.9} />
               <Flags alert={a} />
               <span className="ma-title">{a.title}</span>
-              <button className="ma-x" onClick={() => remove(a.key)} title="Dismiss">
+              <button className="ma-x" onClick={() => dismiss(a.key)} title="Dismiss">
                 <X size={14} strokeWidth={2} />
               </button>
             </div>

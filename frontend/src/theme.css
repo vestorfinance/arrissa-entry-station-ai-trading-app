@@ -7138,3 +7138,32 @@ a.dv-card-title:hover { text-decoration: underline; }
   gap: 10px; margin-top: 16px; flex-wrap: wrap;
 }
 .rk-foot-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── market alerts inside the bell ──────────────────────────────────────────
+   The history the toasts cannot be: a toast is gone in twenty seconds and the
+   browser is often not open when the thing happens, since the worker runs
+   server-side regardless. */
+.notif-list--alerts { border-bottom: 1px solid var(--border, rgba(255,255,255,0.07)); }
+.notif-alert { position: relative; align-items: flex-start; }
+.notif-alert--new { background: color-mix(in srgb, var(--accent, #60a5fa) 8%, transparent); }
+.notif-alert-foot {
+  display: flex; align-items: center; gap: 12px; margin-top: 5px;
+  font-size: 11px; color: var(--text-secondary);
+}
+.notif-when { white-space: nowrap; }
+.notif-open {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--text-secondary); text-decoration: none;
+}
+.notif-open:hover { color: var(--text-primary); }
+.notif-clear {
+  flex: none; align-self: flex-start;
+  display: inline-flex; padding: 3px; border: none; border-radius: var(--radius-pill);
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.notif-clear:hover { color: var(--text-primary); background: rgba(255,255,255,0.09); }
+.notif-clear-all {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+}
+.notif-clear-all:hover { color: var(--text-primary); }

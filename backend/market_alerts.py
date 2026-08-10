@@ -272,3 +272,70 @@ def start():
 
 def stop():
     _stop.set()
+
+
+# ── per-user state: what is unread, and what has been cleared ────────────────
+# The alerts are global — one row per happening — so "have I seen this" cannot
+# live on them. Seen and dismissed are deliberately different: opening the bell
+# marks everything seen (the badge clears) without throwing anything away, and
+# history stays readable. Dismissing is the explicit "I am done with this one".
+
+def feed(user_id, limit=40) -> dict:
+    """The bell's contents: recent alerts this user has not cleared, plus how
+    many arrived since they last looked.
+
+    Reads from the database, not from anything the browser kept, so the history
+    is there after a restart, a new device, or a browser that was closed all
+    night while the worker kept running."""
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT a.key, a.kind, a.title, a.body, a.at, a.impact, a.country, "
+            "       a.symbols, a.url, a.sound, a.created_at "
+            "FROM market_alerts a "
+            "LEFT JOIN market_alert_reads r ON r.key = a.key AND r.user_id = %s "
+            "WHERE r.key IS NULL "
+            "ORDER BY a.created_at DESC LIMIT %s", (user_id, max(1, min(limit, 100)))).fetchall()
+        seen = conn.execute("SELECT seen_at FROM market_alert_seen WHERE user_id = %s",
+                            (user_id,)).fetchone()
+        watermark = seen["seen_at"] if seen else None
+    out = []
+    unread = 0
+    for r in rows:
+        fresh = watermark is None or r["created_at"] > watermark
+        if fresh:
+            unread += 1
+        out.append({"key": r["key"], "kind": r["kind"], "title": r["title"],
+                    "body": r["body"], "at": r["at"].isoformat() if r["at"] else None,
+                    "impact": r["impact"], "country": r["country"],
+                    "symbols": r["symbols"] or [], "url": r["url"],
+                    "sound": r["sound"] or "notice", "unread": fresh,
+                    "created_at": r["created_at"].isoformat()})
+    return {"alerts": out, "unread": unread}
+
+
+def mark_seen(user_id) -> dict:
+    """Opening the bell. Clears the badge, keeps the list."""
+    with db.connect() as conn:
+        conn.execute(
+            "INSERT INTO market_alert_seen (user_id, seen_at) VALUES (%s, now()) "
+            "ON CONFLICT (user_id) DO UPDATE SET seen_at = now()", (user_id,))
+        conn.commit()
+    return {"ok": True}
+
+
+def dismiss(user_id, key=None) -> dict:
+    """Clear one alert, or every one currently showing.
+
+    Per user: one person clearing an alert must not remove it from anybody
+    else's bell, and the alert row itself stays until it ages out."""
+    with db.connect() as conn:
+        if key:
+            conn.execute(
+                "INSERT INTO market_alert_reads (user_id, key) VALUES (%s, %s) "
+                "ON CONFLICT DO NOTHING", (user_id, key))
+        else:
+            conn.execute(
+                "INSERT INTO market_alert_reads (user_id, key) "
+                "SELECT %s, key FROM market_alerts ON CONFLICT DO NOTHING", (user_id,))
+        conn.commit()
+    return {"ok": True}

@@ -548,3 +548,19 @@ CREATE TABLE IF NOT EXISTS market_alerts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()   -- when WE saw it (the watermark)
 );
 CREATE INDEX IF NOT EXISTS idx_market_alerts_created ON market_alerts(created_at DESC);
+
+-- Whose alert is still outstanding. The alerts themselves are global (one row
+-- per happening); what differs per person is whether THEY have seen or cleared
+-- it, which is why this is a join table rather than a column on market_alerts.
+CREATE TABLE IF NOT EXISTS market_alert_reads (
+    user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    key          TEXT NOT NULL REFERENCES market_alerts(key) ON DELETE CASCADE,
+    dismissed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, key)
+);
+-- The watermark for the unread COUNT, separate from dismissing: opening the bell
+-- marks everything seen without clearing it, so history stays readable.
+CREATE TABLE IF NOT EXISTS market_alert_seen (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

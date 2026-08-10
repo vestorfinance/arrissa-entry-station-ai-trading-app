@@ -165,6 +165,13 @@ export const getPrefs = () => req('/prefs')
 export const setPrefs = (patch) =>
   req('/prefs', { method: 'PUT', body: JSON.stringify(patch) })
 
+// The bell's own view of market alerts: server-side, so history survives a
+// closed browser — the worker runs whether or not anyone is watching.
+export const marketAlertFeed = (limit = 40) => req(`/market-alerts/feed?limit=${limit}`)
+export const marketAlertsSeen = () => req('/market-alerts/seen', { method: 'POST' })
+export const marketAlertDismiss = (key = '') =>
+  req(`/market-alerts/dismiss${key ? `?key=${encodeURIComponent(key)}` : ''}`, { method: 'POST' })
+
 // Quick ticket from the Live panel. precheck is deterministic and cheap, so the
 // usual answer ("fine") costs one fast round trip and no model at all.
 export const tradePrecheck = (body) =>
