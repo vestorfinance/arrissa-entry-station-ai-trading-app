@@ -245,22 +245,13 @@ export default function LivePanel() {
     setTicketBusy(true)
     setTicketMsg(null)
     try {
+      // ALWAYS confirm. A trade opened from this card is one click away from
+      // real money and cannot be taken back, so it always gets a look at what it
+      // risks and what it makes first — even when nothing is wrong with it. The
+      // check still runs before the modal, so it opens already knowing the
+      // answer and costs no extra wait.
       const ctx = await api.tradePrecheck({ symbol, side, volume, account: active })
-      const advisory = ctx.suggestion?.advisory ? ctx.suggestion : null
-      // Straight through only when there is NOTHING to say. A warning still
-      // earns the one interruption — being outside your own trading hours, or a
-      // trade the engine could not check, is not "all well" just because it is
-      // not fatal. `ok` stays about BLOCKING, which is what the server enforces.
-      const quiet = ctx.ok && !ctx.issues?.length && !(ctx.suggestion && !ctx.suggestion.advisory)
-      if (quiet) {
-        // Straight through — but WITH the stop and target the engine sized to
-        // their own rule. "Through the risk settings" should mean the trade
-        // carries them, not merely that it was measured against them.
-        await place({ symbol, side, volume, override: false,
-                      sl: advisory?.sl, tp: advisory?.tp })
-      } else {
-        setGate(ctx)
-      }
+      setGate(ctx)
     } catch (e) {
       setTicketMsg(e.message)
     } finally {

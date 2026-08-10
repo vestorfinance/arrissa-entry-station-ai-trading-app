@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ShieldAlert, X, Send, Loader2 } from 'lucide-react'
+import { ShieldAlert, ShieldCheck, X, Send, Loader2 } from 'lucide-react'
 import * as api from '../services/api.js'
 import InstrumentFlag from './InstrumentFlag.jsx'
 
@@ -31,6 +31,12 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
   useEffect(() => {
     if (asked.current || !ctx) return
     asked.current = true
+    // A model is asked only when there is something to say. Confirming a trade
+    // that fits the rules is a look at the numbers, not a conversation — putting
+    // a call in that path would put latency and cost on every single click.
+    const worthAsking = (ctx.issues || []).length > 0
+      || (ctx.suggestion && !ctx.suggestion.advisory)
+    if (!worthAsking) return
     setThinking(true)
     api.tradeAdvise(ctx, '')
       .then((r) => {
@@ -53,6 +59,10 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
   // With nothing blocking, proceeding is not an override — it is just placing
   // the trade, and the button should not imply they are breaking their own rule.
   const proceedLabel = blocking.length ? 'Place anyway' : 'Place'
+  // A suggestion only becomes a CHOICE when it differs from what they typed. An
+  // advisory one carries their own volume, so offering "Accept 0.1" beside
+  // "Place 0.1" would be two buttons that do the same thing.
+  const alt = sug && sug.volume && Number(sug.volume) !== Number(t.volume) ? sug : null
 
   async function sendReply(e) {
     e?.preventDefault()
@@ -85,9 +95,12 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
     <div className="rk-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="rk-modal" role="dialog" aria-modal="true">
         <div className="rk-head">
-          <ShieldAlert size={17} strokeWidth={1.9} />
+          {(ctx.issues || []).length ? <ShieldAlert size={17} strokeWidth={1.9} />
+                                     : <ShieldCheck size={17} strokeWidth={1.9} />}
           <div className="rk-head-main">
-            <h3 className="rk-title">Check this trade</h3>
+            <h3 className="rk-title">{blocking.length ? 'Check this trade'
+              : (ctx.issues || []).length ? 'One thing to know'
+              : 'Confirm this trade'}</h3>
             <p className="rk-sub">
               <InstrumentFlag symbol={t.symbol} size="sm" />
               <span className={'rk-side rk-side--' + t.side}>{t.side}</span>
@@ -164,18 +177,28 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
         <div className="rk-foot">
           <button className="btn btn--ghost" onClick={onClose} disabled={placing}>Cancel</button>
           <div className="rk-foot-right">
-            {/* Their rules, their call. Overriding is a first-class option, not
-                something to be talked out of. */}
-            <button className="btn btn--ghost" disabled={placing}
-                    onClick={() => place(t.volume, t.sl, t.tp)}>
-              {proceedLabel} ({t.volume})
-            </button>
-            {sug?.volume ? (
+            {alt ? (
+              <>
+                {/* Their rules, their call. Overriding is a first-class option,
+                    not something to be talked out of. */}
+                <button className="btn btn--ghost" disabled={placing}
+                        onClick={() => place(t.volume, t.sl, t.tp)}>
+                  {proceedLabel} ({t.volume})
+                </button>
+                <button className="btn btn--primary" disabled={placing}
+                        onClick={() => place(alt.volume, alt.sl, alt.tp)}>
+                  {placing ? 'Placing…' : `Accept ${alt.volume}`}
+                </button>
+              </>
+            ) : (
+              /* Nothing to argue with: one button, and it carries the stop and
+                 target the engine sized to their rule. */
               <button className="btn btn--primary" disabled={placing}
-                      onClick={() => place(sug.volume, sug.sl, sug.tp)}>
-                {placing ? 'Placing…' : `Accept ${sug.volume}`}
+                      onClick={() => place(t.volume, sug?.sl ?? t.sl, sug?.tp ?? t.tp)}>
+                {placing ? 'Placing…'
+                  : `${t.side === 'sell' ? 'Sell' : 'Buy'} ${t.volume} ${t.symbol}`}
               </button>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
