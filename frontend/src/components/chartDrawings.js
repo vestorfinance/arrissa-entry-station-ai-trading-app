@@ -92,6 +92,7 @@ const digitsFor = (v) => (Math.abs(v) >= 1000 ? 2 : Math.abs(v) >= 10 ? 3 : 5)
 export function attachDrawings(chart, series,
                                { initial = [], onChange = () => {}, onToolDone = () => {},
                                  trades = [], lastPrice = () => null,
+                                 onTradeLevel = () => {},
                                  bars = () => [] } = {}) {
   let shapes = normalise(initial)
   let tool = null            // the armed tool, if any
@@ -294,7 +295,12 @@ export function attachDrawings(chart, series,
     // it is drawing a position nobody is in.
     const done = outcomeOf(s, isLong)
     const endPrice = done ? done.price : lastPrice()
-    const endX = Math.min(done && done.x != null ? done.x : x1, x1)
+    // The tracking line shows where price ACTUALLY went, so it stops at the last
+    // bar — the box may now run on to the right edge, but price has not been
+    // there yet and a diagonal drawn into empty space claims it has.
+    const lastBar = bars()[bars().length - 1]
+    const nowX = (lastBar ? xOf({ time: lastBar.time, logical: null }) : null) ?? x1
+    const endX = Math.min(done && done.x != null ? done.x : nowX, x1)
     const yC = priceY(endPrice)
     if (endPrice != null && yC != null) {
       const moved = isLong ? endPrice - entry : entry - endPrice
@@ -435,20 +441,38 @@ export function attachDrawings(chart, series,
   series.attachPrimitive(primitive)
 
   // ── the account's own open trades, drawn without being asked ───────────────
+  // While a real trade's stop or target is being dragged, the new price lives
+  // here rather than in the trade: the trade is the broker's, and it must not
+  // appear moved until the broker has agreed. Cleared when fresh trades arrive.
+  let liveEdit = null       // { position_id, sl?, tp? }
+
   function autoPositions() {
     const out = []
     for (const t of trades || []) {
       const entry = t.open_price?.price
       if (!entry) continue
-      const time = openedAt(t.opened_at)
       const last = bars()[bars().length - 1]
+      // Where the trade STARTED. An unreadable open time used to fall through to
+      // the canvas's left edge, which painted the risk and reward bands back
+      // across every bar that happened before the trade existed. Anchoring to
+      // the latest bar instead keeps the picture forward-looking: worst case it
+      // starts at "now", never in a past it was not part of.
+      const time = openedAt(t.opened_at) ?? (last ? last.time : null)
+      const edit = liveEdit && String(liveEdit.position_id) === String(t.position_id)
+        ? liveEdit : null
       out.push({
         id: `auto-${t.position_id}`, kind: 'position', side: t.side,
-        entry, sl: t.sl?.price ?? null, tp: t.tp?.price ?? null,
-        // It runs from the bar it was opened on to the bar price is on NOW —
-        // which is exactly as far as an open trade has actually got.
+        position_id: t.position_id, live: true,
+        entry,
+        sl: edit && edit.sl != null ? edit.sl : (t.sl?.price ?? null),
+        tp: edit && edit.tp != null ? edit.tp : (t.tp?.price ?? null),
+        // It runs from the bar it was opened on to the RIGHT EDGE. A live trade
+        // is about what happens next, so its stop and target belong in the empty
+        // space ahead of price — not stopped at the last bar, and never trailing
+        // off to the left. A null right point is what drawPosition reads as
+        // "extend to the edge".
         pts: [{ time, logical: null, price: entry },
-              { time: last ? last.time : null, logical: null, price: entry }],
+              { time: null, logical: null, price: null }],
       })
     }
     return out
@@ -471,6 +495,20 @@ export function attachDrawings(chart, series,
     if (!s) return null
     for (const h of handlesOf(s)) {
       if (Math.abs(x - h.x) <= GRAB && Math.abs(y - h.y) <= GRAB) return h.key
+    }
+    return null
+  }
+
+  // A real trade's stop or target, under the cursor. Entry is deliberately not
+  // grabbable: an open position's entry is a fact, not a setting.
+  function liveHandleAt(x, y) {
+    for (const s of autoPositions()) {
+      for (const key of ['sl', 'tp']) {
+        const yy = priceY(s[key])
+        if (s[key] != null && yy != null && Math.abs(y - yy) <= GRAB) {
+          return { id: s.id, position_id: s.position_id, key, from: s[key] }
+        }
+      }
     }
     return null
   }
@@ -625,6 +663,16 @@ export function attachDrawings(chart, series,
       take(ev)
       return
     }
+    // A live trade's own stop/target is grabbed before any drawing, because it
+    // is the thing physically under the cursor and the one with consequences.
+    const lh = liveHandleAt(x, y)
+    if (lh) {
+      drag = { live: true, position_id: lh.position_id, handle: lh.key, from: lh.from }
+      liveEdit = { position_id: lh.position_id, [lh.key]: lh.from }
+      take(ev)
+      return
+    }
+
     const hit = shapeAt(x, y)
     if (hit !== selected) { selected = hit; requestUpdate() }
     if (hit) {
@@ -643,6 +691,7 @@ export function attachDrawings(chart, series,
       const p = localPoint(ev)
       el.style.cursor = tool ? 'crosshair'
         : handleAt(p.x, p.y) ? 'nwse-resize'
+        : liveHandleAt(p.x, p.y) ? 'ns-resize'
         : shapeAt(p.x, p.y) ? 'move' : ''
       return
     }
@@ -653,6 +702,8 @@ export function attachDrawings(chart, series,
 
     if (draft) {
       extendDraft(pt)
+    } else if (drag.live) {
+      liveEdit = { position_id: drag.position_id, [drag.handle]: pt.price }
     } else if (drag.handle) {
       const s = shapes.find((sh) => sh.id === drag.id)
       if (s) moveHandle(s, drag.handle, pt)
@@ -698,6 +749,15 @@ export function attachDrawings(chart, series,
       el.style.cursor = ''
       onToolDone()
       requestUpdate()
+    } else if (drag && drag.live) {
+      // Letting go IS the instruction. The override stays on screen until the
+      // caller comes back with fresh trades, so the line does not snap to the
+      // old price for the second it takes the broker to answer.
+      const { position_id, handle } = drag
+      const price = liveEdit && liveEdit[handle]
+      drag = null
+      requestUpdate()
+      if (price != null) onTradeLevel({ position_id, [handle]: price })
     } else if (drag) {
       drag = null
       onChange(strip(shapes))
@@ -730,7 +790,16 @@ export function attachDrawings(chart, series,
   return {
     setTool(next) { tool = next; draft = null; el.style.cursor = next ? 'crosshair' : ''; requestUpdate() },
     getTool: () => tool,
-    setTrades(next) { trades = next || []; requestUpdate() },
+    setTrades(next) {
+      // Fresh truth from the broker replaces any pending drag, whether it was
+      // accepted or refused — either way the trade now says what it says.
+      trades = next || []
+      liveEdit = null
+      requestUpdate()
+    },
+    // A refused change: drop the override so the line returns to where the
+    // broker still has it, rather than lying about a level that was not set.
+    revertLive() { liveEdit = null; requestUpdate() },
     deleteSelected() {
       if (!selected) return false
       shapes = shapes.filter((s) => s.id !== selected)

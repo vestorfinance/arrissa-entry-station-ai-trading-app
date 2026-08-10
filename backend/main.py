@@ -2520,6 +2520,45 @@ def break_even_positions(body: PositionAction, user: dict = Depends(current_user
         raise HTTPException(400, str(e))
 
 
+class LevelChange(BaseModel):
+    account: int
+    position_id: str
+    sl: float | None = None
+    tp: float | None = None
+
+
+@app.post("/api/positions/levels")
+def set_position_levels(body: LevelChange, user: dict = Depends(current_user)):
+    """Move a live position's stop or target to an exact price.
+
+    Reached by DRAGGING the SL or TP line on the chart, which is the most direct
+    expression of the intent there is: the line is where the level will be, and
+    letting go is the instruction. Only the level that moved is sent — a null
+    means "leave that one alone", not "clear it"."""
+    import user_session
+    if body.sl is None and body.tp is None:
+        raise HTTPException(400, "nothing to change")
+    try:
+        with user_session.as_user(user["id"]):
+            t = _trading_api.trader(body.account)
+            # The broker's modify takes BOTH levels and writes both, so the one
+            # that did not move has to be sent back unchanged. Passing None or 0
+            # for it would clear it — dragging a target would silently remove the
+            # stop, which is the worst possible outcome for this gesture.
+            cur = next((p for p in (t.positions() or [])
+                        if str(p.get("position_id")) == str(body.position_id)), None)
+            if not cur:
+                raise HTTPException(404, "that position is no longer open")
+            sl = body.sl if body.sl is not None else (cur.get("sl") or 0)
+            tp = body.tp if body.tp is not None else (cur.get("tp") or 0)
+            res = t.modify_position(body.position_id, sl=sl, tp=tp)
+        return {"ok": True, "result": res, "sl": sl, "tp": tp}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 # ── live positions WebSocket (real-time, tick-driven) ──────────────────────────
 _LIVE_STREAMS = {}   # (user_id, account) -> stop Event; ensures one poller per account
 

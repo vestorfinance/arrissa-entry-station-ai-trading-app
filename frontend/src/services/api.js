@@ -172,6 +172,13 @@ export const marketAlertsSeen = () => req('/market-alerts/seen', { method: 'POST
 export const marketAlertDismiss = (key = '') =>
   req(`/market-alerts/dismiss${key ? `?key=${encodeURIComponent(key)}` : ''}`, { method: 'POST' })
 
+// Move a live position's stop or target to an exact price — the chart's drag.
+export const setPositionLevels = ({ account, position_id, sl, tp }) =>
+  req('/positions/levels', {
+    method: 'POST',
+    body: JSON.stringify({ account, position_id, sl: sl ?? null, tp: tp ?? null }),
+  })
+
 // Quick ticket from the Live panel. precheck is deterministic and cheap, so the
 // usual answer ("fine") costs one fast round trip and no model at all.
 export const tradePrecheck = (body) =>

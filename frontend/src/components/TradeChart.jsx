@@ -85,6 +85,7 @@ export default function TradeChart({ spec }) {
   const [tool, setTool] = useState(null)         // the drawing tool in hand
   const [drawCount, setDrawCount] = useState(0)  // how many shapes are on this chart
   const [seeing, setSeeing] = useState(false)    // a vision analysis of this chart is running
+  const [levelErr, setLevelErr] = useState(null) // the broker refused a dragged SL/TP
 
   // expired charts do no work: streaming, catch-up refetch and the chart itself
   // are all gated on `active`, which an expired chart can never be.
@@ -195,6 +196,27 @@ export default function TradeChart({ spec }) {
       // tracks price without the drawing layer needing its own feed.
       lastPrice: () => lastRef.current?.close ?? null,
       bars: () => barsRef.current,       // to see whether a drawn trade already finished
+      // Dragging a live trade's stop or target and letting go IS the
+      // instruction — the line is where the level will be.
+      onTradeLevel: async ({ position_id, sl, tp }) => {
+        const acct = data.account || spec.account
+        if (!acct) return
+        try {
+          await api.setPositionLevels({ account: acct, position_id, sl, tp })
+          // Re-read rather than trust the local number: the broker may snap it
+          // to a tick, refuse it for being too near price, or have moved it.
+          const fresh = await api.chartData({
+            symbol: data.symbol, timeframe: data.timeframe,
+            count: data.candles?.length || 150, account: acct,
+          })
+          if (fresh?.candles?.length) setData(fresh)
+          else layer.revertLive()
+        } catch (e) {
+          layer.revertLive()
+          setLevelErr(e.message)
+          setTimeout(() => setLevelErr(null), 6000)
+        }
+      },
     })
     drawRef.current = layer
     setDrawCount(layer.count())
@@ -437,6 +459,7 @@ export default function TradeChart({ spec }) {
         )}
       </div>
       <div className="tchart-canvas" ref={holder} />
+      {levelErr && <p className="tchart-note tchart-note--err">{levelErr}</p>}
       {offRange.length > 0 && (
         <p className="tchart-note">Outside the visible range: {offRange.join(' · ')}</p>
       )}
