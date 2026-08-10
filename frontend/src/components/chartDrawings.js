@@ -451,13 +451,29 @@ export function attachDrawings(chart, series,
     for (const t of trades || []) {
       const entry = t.open_price?.price
       if (!entry) continue
-      const last = bars()[bars().length - 1]
-      // Where the trade STARTED. An unreadable open time used to fall through to
-      // the canvas's left edge, which painted the risk and reward bands back
-      // across every bar that happened before the trade existed. Anchoring to
-      // the latest bar instead keeps the picture forward-looking: worst case it
-      // starts at "now", never in a past it was not part of.
-      const time = openedAt(t.opened_at) ?? (last ? last.time : null)
+      const list = bars()
+      const last = list[list.length - 1]
+      // Where the trade STARTED — snapped to the BAR that contains it.
+      //
+      // This is the whole bug: timeToCoordinate() answers null for any time that
+      // is not exactly a bar's own timestamp, and a trade opens mid-bar (12:03,
+      // not the 12:00 the M15 candle is stamped with). So the entry never
+      // resolved, x fell through to the canvas's left edge, and the risk and
+      // reward bands painted backwards across bars from before the trade
+      // existed. Snapping to the containing bar gives a time the axis can
+      // actually place, and the logical index is carried too so it still lands
+      // if the axis refuses the time.
+      const opened = openedAt(t.opened_at)
+      let time = last ? last.time : null
+      let logical = null
+      if (opened != null && list.length) {
+        let i = -1
+        for (let k = list.length - 1; k >= 0; k--) {
+          if (list[k].time <= opened) { i = k; break }
+        }
+        if (i >= 0) { time = list[i].time; logical = i }
+        else { time = list[0].time; logical = 0 }   // opened before the window
+      }
       const edit = liveEdit && String(liveEdit.position_id) === String(t.position_id)
         ? liveEdit : null
       out.push({
@@ -471,7 +487,7 @@ export function attachDrawings(chart, series,
         // space ahead of price — not stopped at the last bar, and never trailing
         // off to the left. A null right point is what drawPosition reads as
         // "extend to the edge".
-        pts: [{ time, logical: null, price: entry },
+        pts: [{ time, logical, price: entry },
               { time: null, logical: null, price: null }],
       })
     }
