@@ -45,6 +45,24 @@ def settings_for(user_id, account="") -> dict:
 
 
 
+def _money_at(level, vol, planned):
+    """What that level is worth in cash AT THIS VOLUME.
+
+    The engine prices its plan at the size IT chose, so the number attached to a
+    stop is only true for that size. Money scales linearly with lots, so the
+    trader's own volume is a ratio away — and showing the plan's figure next to a
+    different lot count would be quietly wrong in the one place it matters."""
+    if not isinstance(level, dict) or not planned:
+        return None
+    m = level.get("money")
+    if m in (None, ""):
+        return None
+    try:
+        return round(abs(float(m)) * float(vol) / float(planned), 2)
+    except Exception:
+        return None
+
+
 def _level(v):
     """The engine returns sl/tp as a rich dict (price, distance, money, basis).
     Everything downstream — the modal, the order — wants the PRICE. Passing the
@@ -178,11 +196,15 @@ def check(user_id, account, symbol, side, volume, *, sl=None, tp=None) -> dict:
                 })
                 suggestion = {"volume": want,
                               "sl": _level(plan.get("sl")), "tp": _level(plan.get("tp")),
+                              "risk_money": _money_at(plan.get("sl"), want, want),
+                              "reward_money": _money_at(plan.get("tp"), want, want),
                               "reason": f"{want} lots keeps this trade at your {float(risk_pct):.2f}%."}
             elif want > 0 and not sl:
                 # Not an issue — a free improvement. Offered, never enforced.
                 suggestion = {"volume": float(volume),
                               "sl": _level(plan.get("sl")), "tp": _level(plan.get("tp")),
+                              "risk_money": _money_at(plan.get("sl"), volume, want),
+                              "reward_money": _money_at(plan.get("tp"), volume, want),
                               "reason": "Stop and target from structure, sized to your rule.",
                               "advisory": True}
         except Exception as e:
@@ -192,10 +214,24 @@ def check(user_id, account, symbol, side, volume, *, sl=None, tp=None) -> dict:
                                      f"The trade is not blocked, but it is unchecked."})
 
     blocking = [i for i in issues if i["severity"] == "block"]
+    # What the trade in front of them is worth either way, at THEIR size — the
+    # question anybody actually has before pressing the button.
+    outcome = None
+    if plan:
+        want = float(plan.get("volume") or 0)
+        outcome = {"risk_money": _money_at(plan.get("sl"), volume, want),
+                   "reward_money": _money_at(plan.get("tp"), volume, want),
+                   "sl": _level(plan.get("sl")), "tp": _level(plan.get("tp")),
+                   # From the PLAN, not the balance: balance() has no currency
+                   # field, and the plan states the one its money is quoted in,
+                   # which is the number being shown.
+                   "currency": (plan.get("account_currency") or "")}
+
     return {
         "ok": not blocking,
         "issues": issues,
         "suggestion": suggestion,
+        "outcome": outcome,
         "plan": plan,
         "settings": {"risk_pct": risk_pct, "reward_rr": rr, "style": style,
                      "basis": basis, "has_rules": bool(cfg)},

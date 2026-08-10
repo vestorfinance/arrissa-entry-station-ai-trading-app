@@ -13,6 +13,10 @@ import InstrumentFlag from './InstrumentFlag.jsx'
 // Its own modal rather than something hanging off the Live card: it is a
 // decision about money, it must survive the panel being dragged or scrolled,
 // and a popover pinned to a floating card can end up half off-screen.
+const money = (n) =>
+  n == null ? '—' : Number(n).toLocaleString(undefined,
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 export default function RiskModal({ ctx, onClose, onPlace }) {
   const [msg, setMsg] = useState(null)         // the agent's reply
   const [sug, setSug] = useState(ctx?.suggestion || null)
@@ -115,11 +119,31 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
             <p className="rk-msg">{msg}</p>
           ) : null}
 
+          {/* The question anybody actually has before pressing the button. */}
+          {ctx.outcome && (ctx.outcome.risk_money != null || ctx.outcome.reward_money != null) ? (
+            <div className="rk-outcome">
+              <div className="rk-out rk-out--loss">
+                <i>If your stop is hit</i>
+                <b>−{money(ctx.outcome.risk_money)} {ctx.outcome.currency}</b>
+                {ctx.outcome.sl ? <em>at {ctx.outcome.sl}</em> : null}
+              </div>
+              <div className="rk-out rk-out--win">
+                <i>If your target is hit</i>
+                <b>+{money(ctx.outcome.reward_money)} {ctx.outcome.currency}</b>
+                {ctx.outcome.tp ? <em>at {ctx.outcome.tp}</em> : null}
+              </div>
+            </div>
+          ) : null}
+
           {sug && (sug.volume || sug.sl || sug.tp) ? (
             <div className="rk-sug">
               {sug.volume ? <span><i>Size</i> {sug.volume} lots</span> : null}
               {sug.sl ? <span><i>Stop</i> {sug.sl}</span> : null}
               {sug.tp ? <span><i>Target</i> {sug.tp}</span> : null}
+              {sug.risk_money != null
+                ? <span><i>Risks</i> {money(sug.risk_money)} {ctx.outcome?.currency}</span> : null}
+              {sug.reward_money != null
+                ? <span><i>Makes</i> {money(sug.reward_money)} {ctx.outcome?.currency}</span> : null}
             </div>
           ) : null}
 
