@@ -7260,7 +7260,10 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .cal-btn:hover { background: var(--surface-2); color: var(--text-primary); }
 .cal-panel {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  /* Fixed, not absolute: once it can be dragged it must be placed against the
+     VIEWPORT, and it has to sit above the app rather than inside the header's
+     stacking context. */
+  position: fixed; top: calc(var(--topbar-h) + 8px); right: 12px; z-index: 320;
   width: min(460px, calc(100vw - 32px));
   border-radius: var(--radius-card);
   background: var(--card-bg);
@@ -7271,7 +7274,16 @@ a.dv-card-title:hover { text-decoration: underline; }
 .cal-head {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 12px; border-bottom: 1px solid var(--border, rgba(255,255,255,0.07));
+  cursor: grab; user-select: none;
 }
+.cal-head:active { cursor: grabbing; }
+.cal-grip { flex: none; color: var(--text-secondary); opacity: 0.5; margin-right: auto; }
+.cal-x {
+  flex: none; margin-left: auto; display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border: none; border-radius: var(--radius-pill);
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.cal-x:hover { background: var(--surface-2); color: var(--text-primary); }
 .cal-nav, .cal-day {
   border: none; background: transparent; color: var(--text-secondary); cursor: pointer;
   border-radius: var(--radius-pill);
@@ -7316,8 +7328,24 @@ a.dv-card-title:hover { text-decoration: underline; }
 }
 .cal-foot span { min-width: 34px; text-align: right; opacity: 0.7; }
 .cal-foot .cal-foot-note { margin-right: auto; min-width: 0; text-align: left; opacity: 0.8; }
+/* A release that is imminent pulses until its number lands. The animation is on
+   the BACKGROUND only — moving the row itself would make the figures hard to
+   read at the exact moment somebody is trying to read them. */
+.cal-item--due { animation: calDue 1.15s ease-in-out infinite; }
+@keyframes calDue {
+  0%, 100% { background: color-mix(in srgb, #fbbf24 10%, transparent); }
+  50%      { background: color-mix(in srgb, #fbbf24 34%, transparent); }
+}
+.cal-item--due .cal-time { color: var(--text-primary); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  /* Still marked, just not moving. */
+  .cal-item--due { animation: none; background: color-mix(in srgb, #fbbf24 22%, transparent); }
+}
+
 @media (max-width: 860px) {
-  .cal-panel { position: fixed; top: calc(var(--topbar-h) + env(safe-area-inset-top) + 6px);
+  .cal-panel { top: calc(var(--topbar-h) + env(safe-area-inset-top) + 6px);
                right: 8px; left: 8px; width: auto; }
+  .cal-head { cursor: default; }
+  .cal-grip { display: none; }
   .cal-item { grid-template-columns: 40px 8px 18px minmax(0, 1fr) auto; gap: 6px; }
 }
