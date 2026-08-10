@@ -247,7 +247,12 @@ export default function LivePanel() {
     try {
       const ctx = await api.tradePrecheck({ symbol, side, volume, account: active })
       const advisory = ctx.suggestion?.advisory ? ctx.suggestion : null
-      if (ctx.ok && !(ctx.suggestion && !ctx.suggestion.advisory)) {
+      // Straight through only when there is NOTHING to say. A warning still
+      // earns the one interruption — being outside your own trading hours, or a
+      // trade the engine could not check, is not "all well" just because it is
+      // not fatal. `ok` stays about BLOCKING, which is what the server enforces.
+      const quiet = ctx.ok && !ctx.issues?.length && !(ctx.suggestion && !ctx.suggestion.advisory)
+      if (quiet) {
         // Straight through — but WITH the stop and target the engine sized to
         // their own rule. "Through the risk settings" should mean the trade
         // carries them, not merely that it was measured against them.
@@ -384,6 +389,7 @@ export default function LivePanel() {
           {/* Quick ticket: SELL left, size middle, BUY right. The symbol sits
               above rather than in that row, so the three controls stay the shape
               they were asked for — and a ticket needs to know what it is buying. */}
+          <div className="live-ticket-wrap">
           <div className="live-ticket-sym">
             <InstrumentFlag symbol={tradeSymbol || snap?.positions?.[0]?.symbol} size="sm" />
             <input className="tk-sym" placeholder={snap?.positions?.[0]?.symbol || 'Symbol'}
@@ -401,6 +407,7 @@ export default function LivePanel() {
                     onClick={() => submit('buy')}>Buy</button>
           </div>
           {ticketMsg && <p className="live-ticket-msg">{ticketMsg}</p>}
+          </div>
 
           {snap && snap.positions.length > 0 && (
             <div className="live-foot">

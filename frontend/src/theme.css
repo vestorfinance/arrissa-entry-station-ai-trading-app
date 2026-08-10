@@ -7047,6 +7047,13 @@ a.dv-card-title:hover { text-decoration: underline; }
 .alert-retry:hover { background: rgba(255,255,255,0.2); }
 
 /* ── quick ticket on the Live panel ─────────────────────────────────────────── */
+/* The ticket is inset to the same gutter as the rest of the card. As a direct
+   child with no padding it ran edge to edge, so the Buy and Sell buttons met the
+   card's rounded bottom corners and looked clipped rather than placed. The
+   bottom padding is on the WRAPPER because the footer below it only renders when
+   there are open positions — without it the buttons touch the corner whenever
+   the account is flat. */
+.live-ticket-wrap { padding: 0 12px 12px; }
 .live-ticket-sym { display: flex; align-items: center; gap: 7px; margin: 10px 0 6px; }
 .tk-sym {
   flex: 1; min-width: 0; height: 30px; padding: 0 10px;
@@ -7072,6 +7079,8 @@ a.dv-card-title:hover { text-decoration: underline; }
   font-size: 13px; font-weight: 600;
 }
 .live-ticket-msg { font-size: 11.5px; color: var(--text-secondary); margin: 7px 2px 0; }
+/* the footer already has its own gutter, so it must not double up */
+.live-ticket-wrap + .live-foot { padding-top: 0; }
 
 /* ── the risk check modal ────────────────────────────────────────────────────
    Its own overlay above everything, including the floating Live card. */

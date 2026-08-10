@@ -46,6 +46,9 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
   if (!ctx) return null
   const t = ctx.trade || {}
   const blocking = (ctx.issues || []).filter((i) => i.severity === 'block')
+  // With nothing blocking, proceeding is not an override — it is just placing
+  // the trade, and the button should not imply they are breaking their own rule.
+  const proceedLabel = blocking.length ? 'Place anyway' : 'Place'
 
   async function sendReply(e) {
     e?.preventDefault()
@@ -141,7 +144,7 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
                 something to be talked out of. */}
             <button className="btn btn--ghost" disabled={placing}
                     onClick={() => place(t.volume, t.sl, t.tp)}>
-              Place anyway ({t.volume})
+              {proceedLabel} ({t.volume})
             </button>
             {sug?.volume ? (
               <button className="btn btn--primary" disabled={placing}

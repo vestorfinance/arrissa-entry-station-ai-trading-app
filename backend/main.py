@@ -1921,9 +1921,17 @@ class TradeCheck(BaseModel):
     symbol: str
     side: str                      # buy | sell
     volume: float
-    account: str = ""
+    # An account number arrives as a NUMBER from the panel and as a string from
+    # anything that stores it as text. Declaring it `str` alone rejected the
+    # first with "Input should be a valid string", which reads as a bug in the
+    # trade rather than in the type — so it accepts both and is normalised once.
+    account: str | int = ""
     sl: float | None = None
     tp: float | None = None
+
+    @property
+    def acct(self) -> str:
+        return str(self.account or "")
 
 
 class TradeAdvise(BaseModel):
@@ -1941,8 +1949,13 @@ def trade_precheck(body: TradeCheck, user: dict = Depends(current_user)):
     no model runs here, because the common answer is yes and that answer has to
     arrive at the speed of a button."""
     import risk_gate
-    return risk_gate.check(user["id"], body.account, body.symbol, body.side,
-                           body.volume, sl=body.sl, tp=body.tp)
+    import user_session
+    # Bound to THIS user's broker session. There is no global middleware doing
+    # it — every endpoint that touches a broker binds explicitly — and without
+    # it the call falls through to whatever session happens to be ambient.
+    with user_session.as_user(user["id"]):
+        return risk_gate.check(user["id"], body.acct, body.symbol, body.side,
+                               body.volume, sl=body.sl, tp=body.tp)
 
 
 @app.post("/api/trade/advise")
@@ -1962,15 +1975,17 @@ def trade_execute(body: TradeGo, user: dict = Depends(current_user)):
     be a deliberate flag rather than the absence of one."""
     import risk_gate
     import trading_api
-    if not body.override:
-        gate = risk_gate.check(user["id"], body.account, body.symbol, body.side,
-                               body.volume, sl=body.sl, tp=body.tp)
-        if not gate["ok"]:
-            raise HTTPException(409, "; ".join(i["title"] for i in gate["issues"]
-                                               if i["severity"] == "block"))
-    t = trading_api.trader(account=body.account) if body.account else trading_api.trader()
-    res = t.place_order(body.symbol, float(body.volume), body.side,
-                        sl=body.sl or 0, tp=body.tp or 0)
+    import user_session
+    with user_session.as_user(user["id"]):
+        if not body.override:
+            gate = risk_gate.check(user["id"], body.acct, body.symbol, body.side,
+                                   body.volume, sl=body.sl, tp=body.tp)
+            if not gate["ok"]:
+                raise HTTPException(409, "; ".join(i["title"] for i in gate["issues"]
+                                                   if i["severity"] == "block"))
+        t = trading_api.trader(account=body.acct) if body.acct else trading_api.trader()
+        res = t.place_order(body.symbol, float(body.volume), body.side,
+                            sl=body.sl or 0, tp=body.tp or 0)
     return {"ok": True, "result": res}
 
 
