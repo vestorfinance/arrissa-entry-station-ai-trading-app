@@ -165,6 +165,11 @@ export const getPrefs = () => req('/prefs')
 export const setPrefs = (patch) =>
   req('/prefs', { method: 'PUT', body: JSON.stringify(patch) })
 
+// A day of economic releases. The window is computed in the browser and sent
+// explicitly, because a "day" begins and ends in the reader's own timezone.
+export const calendarDay = (since, until) =>
+  req(`/calendar/day?since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`)
+
 // The bell's own view of market alerts: server-side, so history survives a
 // closed browser — the worker runs whether or not anyone is watching.
 export const marketAlertFeed = (limit = 40) => req(`/market-alerts/feed?limit=${limit}`)

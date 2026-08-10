@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import * as api from '../services/api.js'
 import { useModule } from '../services/capabilities.js'
 import Notifications from './Notifications.jsx'
+import CalendarPanel from './CalendarPanel.jsx'
 
 export default function Topbar({ title, titleExtra = null, onMenu }) {
   const hasExness = useModule('exness')
@@ -57,6 +58,7 @@ export default function Topbar({ title, titleExtra = null, onMenu }) {
       <div className="topbar-right">
         {/* Before the account, not after it: it is the only thing up here that
             can be waiting on you. */}
+        <CalendarPanel />
         <Notifications />
         <span className="topbar-user" title={displayName}>
           <span className="topbar-avatar" aria-hidden="true">{initials}</span>
