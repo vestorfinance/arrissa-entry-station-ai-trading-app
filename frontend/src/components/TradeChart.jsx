@@ -12,6 +12,9 @@ import InstrumentFlag from './InstrumentFlag.jsx'
 // lightweight placeholder — no chart, no WebSocket — so old charts left in a
 // conversation stop costing the market-data server anything. Clicking the
 // placeholder brings it back to life for another full window.
+// How many bars of empty space to leave on the right.
+const RIGHT_PAD = 12
+
 const LIFETIME_MS = 5 * 60 * 1000
 
 // Drawings belong to an instrument, not to a message: a line drawn on the H1
@@ -74,6 +77,7 @@ export default function TradeChart({ spec, proposal = null, onProposalChange = n
   const drawRef = useRef(null)          // the drawing layer, while a chart exists
   const barsRef = useRef([])            // the bars as drawn, for hit-testing drawn trades
   const regRef = useRef(null)           // this chart's entry in the registry
+  const viewRef = useRef(null)          // the visible range, kept across rebuilds
 
   const [data, setData] = useState(spec)     // current candles + trades (refreshed on focus)
   const [onScreen, setOnScreen] = useState(false)
@@ -133,7 +137,10 @@ export default function TradeChart({ spec, proposal = null, onProposalChange = n
       layout: { background: { color: 'transparent' }, textColor: COLORS.text, fontSize: 11 },
       grid: { vertLines: { color: COLORS.grid }, horzLines: { color: COLORS.grid } },
       rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+      // Bars stop short of the right edge, so a live trade's stop and target —
+      // which run forward from the entry — have somewhere to be drawn.
+      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false,
+                   rightOffset: RIGHT_PAD, shiftVisibleRangeOnNewBar: false },
       crosshair: { mode: 0 },
       handleScale: { axisPressedMouseMove: false },
       height: 320,
@@ -151,7 +158,25 @@ export default function TradeChart({ spec, proposal = null, onProposalChange = n
     }))
     series.setData(bars)
     barsRef.current = bars
-    chart.timeScale().fitContent()
+
+    // Where the user was looking, restored across a rebuild.
+    //
+    // This effect re-runs on every data refresh — a catch-up fetch, a new spec
+    // object from the parent — and each run creates a NEW chart. fitContent()
+    // then snapped the view back to the right, which is what made a pan spring
+    // back the moment anything updated. The range is remembered instead, and
+    // only a genuinely different instrument starts fresh.
+    const ts = chart.timeScale()
+    const key = `${data.symbol}:${data.timeframe}`
+    if (viewRef.current && viewRef.current.key === key) {
+      try { ts.setVisibleLogicalRange(viewRef.current.range) } catch { ts.fitContent() }
+    } else {
+      ts.fitContent()
+      ts.scrollToPosition(RIGHT_PAD, false)   // indent from the right
+      viewRef.current = null
+    }
+    const onRange = (r) => { if (r) viewRef.current = { key, range: r } }
+    ts.subscribeVisibleLogicalRangeChange(onRange)
 
     const line = (price, color, style, title) =>
       series.createPriceLine({ price, color, lineWidth: 1, lineStyle: style,
@@ -233,6 +258,7 @@ export default function TradeChart({ spec, proposal = null, onProposalChange = n
     lastRef.current = bars[bars.length - 1]
 
     return () => {
+      try { chart.timeScale().unsubscribeVisibleLogicalRangeChange(onRange) } catch { /* gone */ }
       layer.destroy()
       drawRef.current = null
       chart.remove(); chartRef.current = null; seriesRef.current = null

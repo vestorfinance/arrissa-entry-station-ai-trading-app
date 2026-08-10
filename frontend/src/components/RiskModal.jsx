@@ -94,6 +94,13 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
     return () => { dead = true }
   }, [t.symbol, t.account])
 
+  // A NEW object here would rebuild the chart on every keystroke — the spec is
+  // an effect dependency downstream, and typing an amount would tear the canvas
+  // down and put it back, losing wherever the user had panned to.
+  const chartSpec = useMemo(
+    () => (chart ? { ...chart, account: t.account } : null),
+    [chart, t.account])
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -257,7 +264,7 @@ export default function RiskModal({ ctx, onClose, onPlace }) {
         {chart && (
           <div className="rk-chart">
             <TradeChart
-              spec={{ ...chart, account: t.account }}
+              spec={chartSpec}
               proposal={{ side: t.side, entry: pricing?.entry, sl: levels.sl, tp: levels.tp }}
               onProposalChange={(next) => {
                 setTyping({ sl: null, tp: null })

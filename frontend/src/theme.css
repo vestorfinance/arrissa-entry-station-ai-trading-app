@@ -2798,7 +2798,12 @@ a.dv-card-title:hover { text-decoration: underline; }
 .tchart-trade { font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .tchart-trade--buy { color: var(--tone-ok); }
 .tchart-trade--sell { color: var(--tone-bad); }
-.tchart-canvas { width: 100%; height: 320px; }
+/* The canvas fills whatever height it is given rather than a fixed 320px, so a
+   chart in a tall container uses the room instead of leaving the reader to
+   scroll. The min-height keeps it usable inside a short one. */
+.tchart-canvas { width: 100%; height: 320px; min-height: 200px; }
+.tchart--fill { display: flex; flex-direction: column; height: 100%; }
+.tchart--fill .tchart-canvas { flex: 1; height: auto; }
 .tchart-note {
   margin-top: 8px;
   font-size: 11.5px;
@@ -7220,7 +7225,8 @@ a.dv-card-title:hover { text-decoration: underline; }
 .rk-modal--wide { width: min(1020px, 100%); display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 18px; }
 .rk-main { min-width: 0; }
 .rk-chart { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.rk-chart .tchart { margin: 0; }
+.rk-chart .tchart { margin: 0; height: 100%; display: flex; flex-direction: column; }
+.rk-chart .tchart-canvas { flex: 1; height: auto; min-height: 320px; }
 .rk-chart-hint { font-size: 11px; color: var(--text-secondary); margin: 8px 2px 0; }
 @media (max-width: 979px) { .rk-modal--wide { grid-template-columns: 1fr; } .rk-chart { display: none; } }
 
