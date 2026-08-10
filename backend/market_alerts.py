@@ -72,7 +72,12 @@ def _emit(key, kind, title, body, *, at=None, impact=None, country=None,
         conn.execute(
             "INSERT INTO market_alerts (key, kind, title, body, at, impact, country, "
             "                           symbols, url, sound) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (key) DO NOTHING",
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+            # Not DO NOTHING: alerts already stored while the body was being read
+            # from the wrong key would keep their empty one for ever. This fills
+            # a missing body in on the next pass and touches nothing else.
+            "ON CONFLICT (key) DO UPDATE SET body = EXCLUDED.body "
+            "WHERE market_alerts.body IS NULL OR market_alerts.body = ''",
             (key[:200], kind, title[:300], (body or "")[:1200], at or _now(),
              impact, country, json.dumps(list(symbols or [])), url, sound))
         conn.commit()
@@ -122,9 +127,13 @@ def _news_alerts():
             except Exception:
                 raw = [x.strip(" []'\"") for x in raw.split(",")]
         syms = [str(x).upper() for x in (raw or [])][:6]
+        # `description` is what the news module actually calls it. Reading only
+        # summary/text left every news alert with an empty body — which is the
+        # half the agent needs, since a headline alone is rarely enough to say
+        # what is tradable.
         _emit(f"news:{a.get('id') or a.get('url') or a.get('title')}", "news",
               (a.get("title") or "Market news")[:200],
-              (a.get("summary") or a.get("text") or "")[:500],
+              (a.get("description") or a.get("summary") or a.get("text") or "")[:800],
               at=_parse(a.get("time")), impact=imp, symbols=syms,
               url=a.get("url"), sound="alert")
 

@@ -784,7 +784,13 @@ button.nav-item.nav-item--active:hover { background: var(--accent-hover); }
   display: flex;
   align-items: center;
   gap: 14px;
+  /* Never shrinks. Flex items shrink by default, so on a narrow screen a long
+     title squeezed this side down and the bell was clipped out of the header
+     entirely — it was never hidden by a rule, just crushed. The title gives way
+     instead; it already ellipsises. */
+  flex: none;
 }
+.topbar-left { flex: 1 1 auto; }
 .topbar-user {
   display: inline-flex;
   align-items: center;
@@ -4293,6 +4299,14 @@ a.dv-card-title:hover { text-decoration: underline; }
   /* on mobile the account badge, user avatar/name and logout move into the drawer */
   .acct-switch, .acct-switch-ghost, .topbar-user, .topbar-logout { display: none; }
   .topbar-right { gap: 8px; }
+  /* Anchored to the viewport rather than the bell: at this width a panel hung
+     off a button near the right edge can end up half off-screen. */
+  .notif-panel {
+    position: fixed;
+    top: calc(var(--topbar-h) + env(safe-area-inset-top) + 6px);
+    right: 8px; left: 8px; width: auto;
+  }
+  .notif-list { max-height: 68vh; }
 
   /* account + logout at the bottom of the mobile drawer */
   .sidebar-user {
