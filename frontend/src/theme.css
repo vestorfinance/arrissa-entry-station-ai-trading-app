@@ -7436,3 +7436,18 @@ a.dv-card-title:hover { text-decoration: underline; }
   .potus-face { width: 46px; height: 46px; }
   .potus-card { width: min(280px, calc(100vw - 80px)); }
 }
+
+/* ── spacing inside a documented endpoint ────────────────────────────────────
+   The URL, the curl and the Run button had no margins at all: with one example
+   per endpoint they were separated by the surrounding blocks, but as soon as a
+   second runnable example appeared they sat flush against each other. Scoped to
+   the example wrapper so .code-block keeps its existing look everywhere else. */
+.endpoint-example { margin-top: 22px; }
+.endpoint-example:first-of-type { margin-top: 18px; }
+.endpoint-example .field-label { margin-bottom: 8px; font-weight: 600; }
+.endpoint-example-hint { margin: -4px 0 10px; font-size: 12px; line-height: 1.5; }
+.endpoint-example .code-block + .code-block { margin-top: 8px; }
+.endpoint-example .endpoint-run { margin-top: 12px; }
+.endpoint-example .response { margin-top: 14px; }
+/* a long URL should wrap rather than push the copy button off the card */
+.endpoint-example .code-text { overflow-wrap: anywhere; }

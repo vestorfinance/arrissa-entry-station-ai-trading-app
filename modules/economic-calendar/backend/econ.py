@@ -178,6 +178,13 @@ def _window_raw(range=None, hours=0, days=0, since=None, until=None):
     # but rows the middleware then deletes.
     import pretend_time
     now = pretend_time.now()
+    # `last-N-unit` is understood by every data API, so "the last three weeks"
+    # is the same request here as anywhere else. Checked before the named
+    # presets so it cannot be shadowed by one.
+    import time_range
+    _last = time_range.parse(range)
+    if _last:
+        return now - _last, None
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     r = (range or "").strip().lower()
     if r in ("today", "day"):

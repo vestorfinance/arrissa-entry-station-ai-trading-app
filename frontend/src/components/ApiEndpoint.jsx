@@ -20,7 +20,13 @@ export function buildUrl(base, ep, apiKey, extra) {
   ;(ep.params || []).forEach((p) => {
     if (p.example) q.set(p.name, p.example)
   })
-  Object.entries(extra || {}).forEach(([k, v]) => q.set(k, v))
+  // An empty value REMOVES the parameter rather than sending it blank, so an
+  // example can drop a filter it supersedes — `range=last-6-hours` alongside
+  // the default `hours=6` would be two conflicting windows in one URL.
+  Object.entries(extra || {}).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === '') q.delete(k)
+    else q.set(k, v)
+  })
   const qs = q.toString()
   return `${base}${ep.path}${qs ? '?' + decodeURIComponent(qs) : ''}`
 }

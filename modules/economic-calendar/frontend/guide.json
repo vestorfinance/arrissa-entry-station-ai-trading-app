@@ -41,7 +41,7 @@
           "name": "range",
           "example": "today",
           "level": "optional",
-          "desc": "today | tomorrow | this_week."
+          "desc": "Named preset (today, yesterday, this_week) or last-<N>-<unit> — last-30-minutes, last-6-hours, last-3-days, last-2-weeks, last-6-months, last-1-years. Months and years are 30 and 365 days; use since/until when the boundary must be exact."
         },
         {
           "name": "hours",
@@ -75,6 +75,15 @@
         }
       ],
       "examples": [
+        {
+          "label": "By range — the last 6 hours",
+          "hint": "last-<N>-<unit> works on every data API: seconds, minutes, hours, days, weeks, months or years.",
+          "params": {
+            "range": "last-6-hours",
+            "hours": "",
+            "days": ""
+          }
+        },
         {
           "label": "Point in time — as of 25 Aug 2026, 13:12 UTC",
           "hint": "Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked and pretend_pending set.",
@@ -123,6 +132,13 @@
         }
       ],
       "examples": [
+        {
+          "label": "By range — the last 6 hours",
+          "hint": "last-<N>-<unit> works on every data API: seconds, minutes, hours, days, weeks, months or years.",
+          "params": {
+            "range": "last-6-hours"
+          }
+        },
         {
           "label": "Point in time — as of 25 Aug 2026, 13:12 UTC",
           "hint": "Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked and pretend_pending set.",
