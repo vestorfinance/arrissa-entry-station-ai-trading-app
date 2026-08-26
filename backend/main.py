@@ -43,7 +43,7 @@ app.include_router(analysis_alias)
 # When the Exness JWT/refresh token has expired, return a clean JSON 401 the UI can
 # handle ("reconnect your account") instead of a raw 500 HTML page that breaks
 # `response.json()` on the frontend.
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 import brokers as _brokers
 
 
@@ -214,6 +214,63 @@ try:
     app.include_router(modules_router)
 except Exception as _e:
     print(f"[modules] manager API unavailable: {_e!r}", flush=True)
+
+@app.middleware("http")
+async def _pretend_time(request, call_next):
+    """`?pretend_date=2026-08-25&pretend_time=13:12` — answer as of that moment.
+
+    Middleware rather than a parameter on each endpoint, for two reasons. The
+    data APIs live partly in MODULES, and core may not import a module, so it
+    cannot reach into them to add a parameter. And a rule applied in twelve
+    places is a rule that will be applied twelve slightly different ways —
+    replay is only trustworthy if every endpoint hides exactly the same things.
+
+    The body is rewritten on the way out rather than trusting each source to
+    filter itself. Anything that had not happened is removed; anything that was
+    merely SCHEDULED survives with its outcome blanked, because it was genuinely
+    known in advance. See pretend_time.py for why that distinction matters.
+    """
+    import pretend_time
+
+    date_s = request.query_params.get("pretend_date")
+    time_s = request.query_params.get("pretend_time")
+    if not date_s:
+        return await call_next(request)
+
+    try:
+        moment = pretend_time.parse(date_s, time_s)
+    except ValueError as e:
+        return JSONResponse(status_code=400,
+                            content={"detail": f"{e}", "error": "bad_pretend_time"})
+
+    token = pretend_time.set_now(moment)
+    try:
+        response = await call_next(request)
+
+        ctype = response.headers.get("content-type", "")
+        if not ctype.startswith("application/json"):
+            return response
+
+        body = b"".join([chunk async for chunk in response.body_iterator])
+        try:
+            data = json.loads(body)
+        except Exception:
+            # Not JSON we can reason about; hand it back untouched rather than
+            # corrupting it.
+            return Response(content=body, status_code=response.status_code,
+                            headers=dict(response.headers), media_type=ctype)
+
+        pruned = pretend_time.prune(data, moment)
+        if isinstance(pruned, dict):
+            # Say so in the payload. A reader must never be unsure whether they
+            # are looking at now or at a replay.
+            pruned["pretend_time"] = {"as_of": moment.isoformat(), "utc": True}
+        out = JSONResponse(content=pruned, status_code=response.status_code)
+        out.headers["X-Pretend-Time"] = moment.isoformat()
+        return out
+    finally:
+        pretend_time.reset(token)
+
 
 @app.middleware("http")
 async def _count_inflight(request, call_next):

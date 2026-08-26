@@ -105,7 +105,8 @@ def _latest_release(p) -> dict:
     are the explicit pair, and `released=True` is the module's own test for "the
     actual is in"."""
     from datetime import datetime, timedelta, timezone
-    now = datetime.now(timezone.utc)
+    import pretend_time
+    now = pretend_time.now()
     iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Widen until something is found: a quiet weekend is not an empty calendar.

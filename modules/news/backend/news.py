@@ -279,10 +279,20 @@ def _parse_when(value):
 
 
 def _window(range=None, minutes=0, hours=0, days=0, since=None, until=None):
+    import pretend_time
+    return pretend_time.cap(*_window_raw(range, minutes, hours, days, since, until))
+
+
+def _window_raw(range=None, minutes=0, hours=0, days=0, since=None, until=None):
     """News looks BACKWARD: hours/days mean 'the last N', not 'the next N'."""
     if since or until:
         return _parse_when(since), _parse_when(until)
-    now = datetime.now(timezone.utc)
+    # Windows are measured from pretend_time.now(), which is the real clock
+    # unless the request asked to be answered as of some past moment. A
+    # replay measuring "the last six hours" from TODAY would return nothing
+    # but rows the middleware then deletes.
+    import pretend_time
+    now = pretend_time.now()
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     r = (range or "").strip().lower()
     if r in ("today", "day"):

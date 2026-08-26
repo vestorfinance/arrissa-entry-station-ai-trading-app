@@ -158,11 +158,26 @@ def _parse_when(value):
 
 
 def _window(range=None, hours=0, days=0, since=None, until=None):
+    # DELIBERATELY not capped at the pretended moment, unlike news and
+    # posts. A calendar looks FORWARD: an event due at 15:30 was on it days
+    # beforehand, and someone replaying 13:12 was entitled to see it coming.
+    # Cutting the window here would hide the schedule itself and misrepresent
+    # the past. What must not leak is the OUTCOME, and the response filter
+    # blanks that instead.
+    return _window_raw(range, hours, days, since, until)
+
+
+def _window_raw(range=None, hours=0, days=0, since=None, until=None):
     """Resolve the requested time window to (from, to), either side nullable."""
     if since or until:
         return _parse_when(since), _parse_when(until)
 
-    now = datetime.now(timezone.utc)
+    # Windows are measured from pretend_time.now(), which is the real clock
+    # unless the request asked to be answered as of some past moment. A
+    # replay measuring "the last six hours" from TODAY would return nothing
+    # but rows the middleware then deletes.
+    import pretend_time
+    now = pretend_time.now()
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     r = (range or "").strip().lower()
     if r in ("today", "day"):

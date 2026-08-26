@@ -49,3 +49,6 @@ research-har/          # captured HAR sessions — reference material, not shipp
 .signing.key
 signing.key
 *.signing.key
+
+# Truth Social account credentials — a password in plain text. Never committed.
+.truth_social_auth
