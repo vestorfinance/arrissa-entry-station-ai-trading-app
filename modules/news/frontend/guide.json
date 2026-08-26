@@ -216,6 +216,18 @@
           "example": "",
           "level": "optional",
           "desc": "desc (newest first, default) or asc."
+        },
+        {
+          "name": "pretend_date",
+          "example": "",
+          "level": "optional",
+          "desc": "Answer as if the request were made on this UTC date — e.g. ?pretend_date=2026-08-25&pretend_time=13:12. For backtests and agent reruns that must not see the outcome. Left off, you get the present."
+        },
+        {
+          "name": "pretend_time",
+          "example": "",
+          "level": "optional",
+          "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
         }
       ]
     },
@@ -242,6 +254,18 @@
           "example": "10",
           "level": "optional",
           "desc": "How many (default 10)."
+        },
+        {
+          "name": "pretend_date",
+          "example": "",
+          "level": "optional",
+          "desc": "Answer as if the request were made on this UTC date — e.g. ?pretend_date=2026-08-25&pretend_time=13:12. For backtests and agent reruns that must not see the outcome. Left off, you get the present."
+        },
+        {
+          "name": "pretend_time",
+          "example": "",
+          "level": "optional",
+          "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
         }
       ]
     },
@@ -292,6 +316,18 @@
           "example": "",
           "level": "optional",
           "desc": "false to skip the comparison and just measure the one window."
+        },
+        {
+          "name": "pretend_date",
+          "example": "",
+          "level": "optional",
+          "desc": "Answer as if the request were made on this UTC date — e.g. ?pretend_date=2026-08-25&pretend_time=13:12. For backtests and agent reruns that must not see the outcome. Left off, you get the present."
+        },
+        {
+          "name": "pretend_time",
+          "example": "",
+          "level": "optional",
+          "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
         }
       ]
     },
@@ -306,7 +342,8 @@
   "notes": [
     "The impact score is computed from the article, not supplied by the source. Two outlets covering the same release will score alike; a market-moving headline and a colour piece will not.",
     "Instrument tags are earned, not guessed from the title alone — an article about the Fed is tagged for the dollar pairs and the indices it actually moves.",
-    "\"Is today busier?\" is answered by the SUM of impact scores, and the comparison window is the same LENGTH as the one you asked for, ending where it begins. Comparing today against a fixed 24 hours would call every morning quiet."
+    "\"Is today busier?\" is answered by the SUM of impact scores, and the comparison window is the same LENGTH as the one you asked for, ending where it begins. Comparing today against a fixed 24 hours would call every morning quiet.",
+    "Any read here accepts pretend_date and pretend_time (UTC) and answers as of that moment: ?pretend_date=2026-08-25&pretend_time=13:12. Anything published later is hidden. Anything merely SCHEDULED for later survives with its actual blanked and pretend_pending set — the schedule was known in advance, the number was not. Responses carry X-Pretend-Time so a replay is never mistaken for the present."
   ],
   "actions": [
     {

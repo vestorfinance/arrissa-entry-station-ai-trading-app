@@ -9,6 +9,17 @@ import * as api from '../services/api.js'
 const R = 'required'
 const O = 'optional'
 
+// Replay. Every read below accepts these: the API answers as of that UTC moment,
+// hiding anything published later. A scheduled release still shows — it WAS known
+// — but its actual is blanked until the moment it printed.
+const PRETEND = [
+  { name: 'pretend_date', example: '', level: O,
+    desc: 'Answer as if the request were made on this UTC date — e.g. ?pretend_date=2026-08-25&pretend_time=13:12. For backtests and agent reruns that must not see the outcome.' },
+  { name: 'pretend_time', example: '', level: O,
+    desc: 'UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day.' },
+]
+
+
 const EXAMPLE_MESSAGE = 'Analyse BTCUSD for a scalper to enter immediately'
 
 // The signal each run distils down to — documented field by field.
@@ -146,7 +157,8 @@ export default function AnalysisApiGuide() {
         { name: 'message', example: EXAMPLE_MESSAGE, level: R, desc: 'What to analyse, in plain language.' },
         { name: 'model', example: '', level: O, desc: 'arrissa-chat (default) | arrissa-pro for sharper reasoning.' },
         { name: 'include', example: '', level: O, desc: 'trace = also return every node’s full result.' },
-      ],
+            ...PRETEND,
+    ],
     },
     {
       id: 'analysis-agents',
@@ -165,7 +177,8 @@ export default function AnalysisApiGuide() {
         { name: 'slot', example: '', level: O, desc: 'Which run of that day: 00:00 or 06:00.' },
         { name: 'days', example: '', level: O, desc: 'Return the last N days of runs instead of one.' },
         { name: 'include', example: '', level: O, desc: 'assessment = the agent’s full write-up for each instrument (several KB each).' },
-      ],
+            ...PRETEND,
+    ],
     },
     {
       id: 'watch-list-status',
@@ -183,7 +196,8 @@ export default function AnalysisApiGuide() {
         { name: 'date', example: '', level: O, desc: 'YYYY-MM-DD — a past day’s scan. Omit for the latest.' },
         { name: 'days', example: '', level: O, desc: 'Return the last N scans instead of one (max 90).' },
         { name: 'include', example: '', level: O, desc: 'features and/or macro — the per-symbol measurements and the context the picks were made from.' },
-      ],
+            ...PRETEND,
+    ],
     },
     {
       id: 'daily-scan-status',

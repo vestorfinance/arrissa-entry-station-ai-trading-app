@@ -6,6 +6,17 @@ import { ApiEndpoint, buildUrl } from '../components/ApiEndpoint.jsx'
 import * as api from '../services/api.js'
 
 const O = 'optional'
+
+// Replay. Every read below accepts these: the API answers as of that UTC moment,
+// hiding anything published later. A scheduled release still shows — it WAS known
+// — but its actual is blanked until the moment it printed.
+const PRETEND = [
+  { name: 'pretend_date', example: '', level: O,
+    desc: 'Answer as if the request were made on this UTC date — e.g. ?pretend_date=2026-08-25&pretend_time=13:12. For backtests and agent reruns that must not see the outcome.' },
+  { name: 'pretend_time', example: '', level: O,
+    desc: 'UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day.' },
+]
+
 const R = 'required'
 
 const ENDPOINTS = [
@@ -19,6 +30,7 @@ const ENDPOINTS = [
       { name: 'timeframe', example: 'M15', level: O, desc: 'M1 | M5 | M15 | M30 | H1 | H4 | D1 (default M15). The read is timeframe-specific: H4 tells you about swing positioning, M5 about intraday.' },
       { name: 'count', example: '200', level: O, desc: 'Candles to reconstruct from, 40–1000 (default 200). More candles reach further back; recent swings always weigh more.' },
       { name: 'compare', example: 'true', level: O, desc: "Also return Myfxbook's real retail positioning for the same symbol, and the gap between them." },
+          ...PRETEND,
     ],
   },
 ]
