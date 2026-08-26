@@ -73,6 +73,16 @@
           "level": "optional",
           "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
         }
+      ],
+      "examples": [
+        {
+          "label": "Point in time — as of 25 Aug 2026, 13:12 UTC",
+          "hint": "Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked and pretend_pending set.",
+          "params": {
+            "pretend_date": "2026-08-25",
+            "pretend_time": "13:12"
+          }
+        }
       ]
     },
     {
@@ -110,6 +120,16 @@
           "example": "",
           "level": "optional",
           "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
+        }
+      ],
+      "examples": [
+        {
+          "label": "Point in time — as of 25 Aug 2026, 13:12 UTC",
+          "hint": "Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked and pretend_pending set.",
+          "params": {
+            "pretend_date": "2026-08-25",
+            "pretend_time": "13:12"
+          }
         }
       ]
     },

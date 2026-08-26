@@ -103,7 +103,7 @@ export default function ModuleGuide({ guide: given }) {
         ))}
 
         {(guide.endpoints || []).map((ep) => (
-          <ApiEndpoint key={ep.id || ep.path} ep={ep} url={buildUrl(base, ep, apiKey)} />
+          <ApiEndpoint key={ep.id || ep.path} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
         ))}
 
         {!!(guide.notes || []).length && (

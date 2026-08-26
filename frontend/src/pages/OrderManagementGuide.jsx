@@ -91,7 +91,7 @@ export default function OrderManagementGuide() {
           <div key={group} className="guide-group">
             <h2 className="guide-group-title">{group}</h2>
             {ENDPOINTS.filter((e) => e.group === group).map((ep) => (
-              <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} />
+              <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
             ))}
           </div>
         ))}

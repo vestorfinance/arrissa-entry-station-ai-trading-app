@@ -32,6 +32,11 @@ const ENDPOINTS = [
       { name: 'compare', example: 'true', level: O, desc: "Also return Myfxbook's real retail positioning for the same symbol, and the gap between them." },
           ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
   },
 ]
 
@@ -95,7 +100,7 @@ export default function ArtificialSentimentGuide() {
         <TryIt apiKey={apiKey} base={base} />
 
         {ENDPOINTS.map((ep) => (
-          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} />
+          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
         ))}
 
         <div className="card">

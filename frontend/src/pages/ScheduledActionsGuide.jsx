@@ -108,7 +108,7 @@ export default function ScheduledActionsGuide() {
         <ActionScheduler apiKey={apiKey} base={base} />
 
         {ENDPOINTS.map((ep) => (
-          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} />
+          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
         ))}
       </div>
     </DashboardLayout>

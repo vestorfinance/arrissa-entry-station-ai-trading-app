@@ -159,6 +159,11 @@ export default function AnalysisApiGuide() {
         { name: 'include', example: '', level: O, desc: 'trace = also return every node’s full result.' },
             ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
     },
     {
       id: 'analysis-agents',
@@ -179,6 +184,11 @@ export default function AnalysisApiGuide() {
         { name: 'include', example: '', level: O, desc: 'assessment = the agent’s full write-up for each instrument (several KB each).' },
             ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
     },
     {
       id: 'watch-list-status',
@@ -198,6 +208,11 @@ export default function AnalysisApiGuide() {
         { name: 'include', example: '', level: O, desc: 'features and/or macro — the per-symbol measurements and the context the picks were made from.' },
             ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
     },
     {
       id: 'daily-scan-status',
@@ -333,7 +348,7 @@ export default function AnalysisApiGuide() {
         <DailyScanCard apiKey={apiKey} base={base} />
 
         {endpoints.map((ep) => (
-          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} />
+          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
         ))}
 
         <section className="card">

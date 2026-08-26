@@ -7,24 +7,32 @@ import { Copy, Check, Play, ExternalLink } from 'lucide-react'
 // module may expose, like connecting a broker — take the session bearer token
 // instead, and say so with `auth: "session"`. Putting a key on those would build
 // a URL that cannot work and a Run button that always 401s.
-export function buildUrl(base, ep, apiKey) {
+//
+// An endpoint may also carry `examples`: extra, fully runnable URLs for the
+// things a parameter table describes but cannot demonstrate. A point-in-time
+// replay is the case this was added for — the parameters could be listed, but
+// only actually running one shows what it does to the answer. They are kept
+// SEPARATE from the primary URL on purpose: putting them in the main example
+// would mean everyone who copied it got historical data by accident.
+export function buildUrl(base, ep, apiKey, extra) {
   const q = new URLSearchParams()
   if (ep.auth !== 'session') q.set('api_key', apiKey || 'YOUR_API_KEY')
   ;(ep.params || []).forEach((p) => {
     if (p.example) q.set(p.name, p.example)
   })
+  Object.entries(extra || {}).forEach(([k, v]) => q.set(k, v))
   const qs = q.toString()
   return `${base}${ep.path}${qs ? '?' + decodeURIComponent(qs) : ''}`
 }
 
-export function ApiEndpoint({ ep, url }) {
+export function ApiEndpoint({ ep, url, base, apiKey }) {
   const [copied, setCopied] = useState('')
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState(null)
+  const [runningUrl, setRunningUrl] = useState('')
+  const [results, setResults] = useState({})
   const session = ep.auth === 'session'
-  const curl = session
-    ? `curl -H "Authorization: Bearer YOUR_TOKEN" "${url}"`
-    : `curl "${url}"`
+
+  const asCurl = (u) =>
+    session ? `curl -H "Authorization: Bearer YOUR_TOKEN" "${u}"` : `curl "${u}"`
 
   function copy(text, which) {
     navigator.clipboard.writeText(text)
@@ -32,12 +40,12 @@ export function ApiEndpoint({ ep, url }) {
     setTimeout(() => setCopied(''), 1500)
   }
 
-  async function run() {
-    setRunning(true)
-    setResult(null)
+  async function run(u) {
+    setRunningUrl(u)
+    setResults((r) => ({ ...r, [u]: null }))
     try {
       const token = session ? localStorage.getItem('auth_token') : null
-      const res = await fetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      const res = await fetch(u, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       const text = await res.text()
       let body
       try {
@@ -45,13 +53,68 @@ export function ApiEndpoint({ ep, url }) {
       } catch {
         body = text
       }
-      setResult({ status: res.status, body })
+      setResults((r) => ({ ...r, [u]: { status: res.status, body } }))
     } catch (err) {
-      setResult({ status: 'ERR', body: String(err) })
+      setResults((r) => ({ ...r, [u]: { status: 'ERR', body: String(err) } }))
     } finally {
-      setRunning(false)
+      setRunningUrl('')
     }
   }
+
+  // One runnable URL: copy, open, run, and its own response. Used for the
+  // primary example and for every extra, so an extra is not a second-class
+  // citizen you can read but not try.
+  const Runnable = ({ u, id, label, hint }) => {
+    const result = results[id]
+    return (
+      <div className="endpoint-example">
+        <div className="field-label">{label}</div>
+        {hint ? <p className="card-sub endpoint-example-hint">{hint}</p> : null}
+        <div className="code-block">
+          <code className="code-text">{u}</code>
+          <div className="code-actions">
+            <button className="btn btn--ghost btn--icon" title="Copy URL"
+                    onClick={() => copy(u, `url:${id}`)}>
+              {copied === `url:${id}` ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+            <a className="btn btn--ghost btn--icon" title="Open in browser"
+               href={u} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        </div>
+        <div className="code-block">
+          <code className="code-text">{asCurl(u)}</code>
+          <div className="code-actions">
+            <button className="btn btn--ghost btn--icon" title="Copy curl"
+                    onClick={() => copy(asCurl(u), `curl:${id}`)}>
+              {copied === `curl:${id}` ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+          </div>
+        </div>
+        <div className="endpoint-run">
+          <button className="btn btn--primary" onClick={() => run(u)} disabled={!!runningUrl}>
+            <Play size={16} strokeWidth={2} />
+            {runningUrl === u ? 'Running…' : 'Run'}
+          </button>
+        </div>
+        {result && (
+          <div className="response">
+            <div className="response-head">
+              <span className={`pill ${result.status === 200 ? 'pill--ok' : 'pill--warn'}`}>
+                {result.status === 200 ? '200 OK' : `Status ${result.status}`}
+              </span>
+            </div>
+            <pre className="response-body">{result.body}</pre>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Extras need `base` to build their own URL. A guide that has not passed it
+  // simply shows the primary example rather than rendering something broken.
+  const extras = (base && ep.examples) ? ep.examples : []
 
   return (
     <section className="card endpoint">
@@ -86,46 +149,17 @@ export function ApiEndpoint({ ep, url }) {
           </tbody>
         </table>
 
-        <div className="field-label">Runnable URL</div>
-        <div className="code-block">
-          <code className="code-text">{url}</code>
-          <div className="code-actions">
-            <button className="btn btn--ghost btn--icon" title="Copy URL" onClick={() => copy(url, 'url')}>
-              {copied === 'url' ? <Check size={16} /> : <Copy size={16} />}
-            </button>
-            <a className="btn btn--ghost btn--icon" title="Open in browser" href={url} target="_blank" rel="noreferrer">
-              <ExternalLink size={16} />
-            </a>
-          </div>
-        </div>
+        <Runnable u={url} id="main" label="Runnable URL" />
 
-        <div className="field-label">curl</div>
-        <div className="code-block">
-          <code className="code-text">{curl}</code>
-          <div className="code-actions">
-            <button className="btn btn--ghost btn--icon" title="Copy curl" onClick={() => copy(curl, 'curl')}>
-              {copied === 'curl' ? <Check size={16} /> : <Copy size={16} />}
-            </button>
-          </div>
-        </div>
-
-        <div className="endpoint-run">
-          <button className="btn btn--primary" onClick={run} disabled={running}>
-            <Play size={16} strokeWidth={2} />
-            {running ? 'Running…' : 'Run'}
-          </button>
-        </div>
-
-        {result && (
-          <div className="response">
-            <div className="response-head">
-              <span className={`pill ${result.status === 200 ? 'pill--ok' : 'pill--warn'}`}>
-                {result.status === 200 ? '200 OK' : `Status ${result.status}`}
-              </span>
-            </div>
-            <pre className="response-body">{result.body}</pre>
-          </div>
-        )}
+        {extras.map((ex, i) => (
+          <Runnable
+            key={ex.label || i}
+            u={buildUrl(base, ep, apiKey, ex.params)}
+            id={`ex${i}`}
+            label={ex.label || 'Example'}
+            hint={ex.hint}
+          />
+        ))}
       </div>
     </section>
   )

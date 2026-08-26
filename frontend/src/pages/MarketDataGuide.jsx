@@ -35,6 +35,11 @@ const ENDPOINTS = [
       { name: 'end', example: '', level: O, desc: 'Walk back from a past moment instead of now — ISO (2026-07-20T00:00:00Z) or epoch ms.' },
           ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
   },
   {
     id: 'chart',
@@ -48,6 +53,11 @@ const ENDPOINTS = [
       { name: 'account', example: '', level: O, desc: 'Whose trades to mark (defaults to the active account).' },
           ...PRETEND,
     ],
+      examples: [
+        { label: 'Point in time — as of 25 Aug 2026, 13:12 UTC',
+          hint: 'Run this and compare it with the URL above. Anything published after that moment is gone; a release scheduled for later is still listed, with its actual blanked.',
+          params: { pretend_date: '2026-08-25', pretend_time: '13:12' } },
+      ],
   },
   {
     id: 'quote',
@@ -105,7 +115,7 @@ export default function MarketDataGuide() {
         <CandleExplorer apiKey={apiKey} base={base} />
 
         {ENDPOINTS.map((ep) => (
-          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} />
+          <ApiEndpoint key={ep.id} ep={ep} url={buildUrl(base, ep, apiKey)} base={base} apiKey={apiKey} />
         ))}
       </div>
     </DashboardLayout>
