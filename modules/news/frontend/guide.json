@@ -286,6 +286,12 @@
           "example": "",
           "level": "optional",
           "desc": "UTC time of day to pair with pretend_date, e.g. 13:12. Omitted, the moment is midnight — not the whole day."
+        },
+        {
+          "name": "range",
+          "example": "",
+          "level": "optional",
+          "desc": "last-<N>-<unit> — last-30-minutes, last-6-hours, last-3-days, last-2-weeks, last-6-months, last-1-years."
         }
       ],
       "examples": [

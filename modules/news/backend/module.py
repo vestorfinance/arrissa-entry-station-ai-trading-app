@@ -36,10 +36,11 @@ def news_query(api_key: str = Query(...), symbol: str = Query(None), impact: str
 
 @router.get("/news/latest")
 def news_latest(api_key: str = Query(...), symbol: str = Query(None),
-                impact: str = Query(None), limit: int = Query(10)):
+                impact: str = Query(None), limit: int = Query(10),
+                range: str = Query(None)):
     """The most recent articles, newest first."""
     _api_user(api_key)
-    return news.query(symbol=symbol, impact=impact, limit=limit)
+    return news.query(symbol=symbol, impact=impact, limit=limit, range=range)
 
 
 @router.get("/news/status")
