@@ -46,9 +46,9 @@ export function ApiEndpoint({ ep, url, base, apiKey }) {
     setTimeout(() => setCopied(''), 1500)
   }
 
-  async function run(u) {
-    setRunningUrl(u)
-    setResults((r) => ({ ...r, [u]: null }))
+  async function run(id, u) {
+    setRunningUrl(id)
+    setResults((r) => ({ ...r, [id]: null }))
     try {
       const token = session ? localStorage.getItem('auth_token') : null
       const res = await fetch(u, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
@@ -59,9 +59,9 @@ export function ApiEndpoint({ ep, url, base, apiKey }) {
       } catch {
         body = text
       }
-      setResults((r) => ({ ...r, [u]: { status: res.status, body } }))
+      setResults((r) => ({ ...r, [id]: { status: res.status, body } }))
     } catch (err) {
-      setResults((r) => ({ ...r, [u]: { status: 'ERR', body: String(err) } }))
+      setResults((r) => ({ ...r, [id]: { status: 'ERR', body: String(err) } }))
     } finally {
       setRunningUrl('')
     }
@@ -70,10 +70,14 @@ export function ApiEndpoint({ ep, url, base, apiKey }) {
   // One runnable URL: copy, open, run, and its own response. Used for the
   // primary example and for every extra, so an extra is not a second-class
   // citizen you can read but not try.
-  const Runnable = ({ u, id, label, hint }) => {
+  //
+  // A plain function, NOT a nested component. Declared as a component inside
+  // this body it would be a different type on every render, and React would
+  // discard and rebuild the whole subtree each time a result arrived.
+  const runnable = (u, id, label, hint) => {
     const result = results[id]
     return (
-      <div className="endpoint-example">
+      <div className="endpoint-example" key={id}>
         <div className="field-label">{label}</div>
         {hint ? <p className="card-sub endpoint-example-hint">{hint}</p> : null}
         <div className="code-block">
@@ -99,9 +103,10 @@ export function ApiEndpoint({ ep, url, base, apiKey }) {
           </div>
         </div>
         <div className="endpoint-run">
-          <button className="btn btn--primary" onClick={() => run(u)} disabled={!!runningUrl}>
+          <button className="btn btn--primary" onClick={() => run(id, u)}
+                  disabled={runningUrl === id}>
             <Play size={16} strokeWidth={2} />
-            {runningUrl === u ? 'Running…' : 'Run'}
+            {runningUrl === id ? 'Running…' : 'Run'}
           </button>
         </div>
         {result && (
@@ -155,17 +160,11 @@ export function ApiEndpoint({ ep, url, base, apiKey }) {
           </tbody>
         </table>
 
-        <Runnable u={url} id="main" label="Runnable URL" />
+        {runnable(url, "main", "Runnable URL")}
 
-        {extras.map((ex, i) => (
-          <Runnable
-            key={ex.label || i}
-            u={buildUrl(base, ep, apiKey, ex.params)}
-            id={`ex${i}`}
-            label={ex.label || 'Example'}
-            hint={ex.hint}
-          />
-        ))}
+        {extras.map((ex, i) =>
+          runnable(buildUrl(base, ep, apiKey, ex.params), `ex${i}`,
+                   ex.label || 'Example', ex.hint))}
       </div>
     </section>
   )

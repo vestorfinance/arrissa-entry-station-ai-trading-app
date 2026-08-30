@@ -35,7 +35,12 @@ _pretend = contextvars.ContextVar("pretend_now", default=None)
 
 # Fields that mean "when this happened / is due". Ordered by how specific they
 # are, so a row carrying several is read by the most meaningful one.
+# Tried in order, so the most specific name wins for a row carrying several.
+# `fetched_at` is here because leaving it out was not a small gap: a fedwatch
+# snapshot has no other readable timestamp, so prune() saw no time at all, kept
+# every row, and a replay of last Tuesday quietly answered with today.
 TIME_FIELDS = ("time", "datetime", "posted_at", "created_at", "published_at",
+               "fetched_at", "recorded_at", "observed_at",
                "at", "date", "timestamp", "release_time", "event_time")
 
 # A row carrying any of these is a SCHEDULED thing, not a published one — it was
